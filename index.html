@@ -1,0 +1,3783 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#022c43" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Asystent Treningowy 2026</title>
+  <style>
+    /* ==========================================================================
+       1. ZMIENNE I RESET (Stylistyka Farmada Formatki + Pełna obsługa iOS Safari)
+       ========================================================================== */
+    :root {
+      --bg-dark: #022c43;
+      --bg-card: #053f5e;
+      --bg-card-hover: #074e74;
+      --bg-input: #022538;
+      --border-color: #146b97;
+      --border-accent: #ffd700;
+      --text-main: #ffffff;
+      --text-muted: #9fc3d6;
+      --accent-gold: #ffd700;
+      --accent-gold-hover: #ffea75;
+      --success-green: #00e676;
+      --success-bg: rgba(0, 230, 118, 0.15);
+      --danger-red: #ff5252;
+      --danger-bg: rgba(255, 82, 82, 0.15);
+      --font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      --bottom-nav-height: 64px;
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-family);
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    button {
+      touch-action: manipulation;
+      cursor: pointer;
+      -webkit-appearance: none;
+      appearance: none;
+      font-family: inherit;
+    }
+
+    /* Kluczowe dla iOS: dotknięcie ikony/tekstu wewnątrz przycisku trafia w button */
+    button * {
+      pointer-events: none;
+    }
+
+    /* ==========================================================================
+       2. GŁÓWNA STRUKTURA I NAWIGACJA
+       ========================================================================== */
+    .app-header {
+      background: linear-gradient(180deg, #011d2d 0%, var(--bg-dark) 100%);
+      border-bottom: 1px solid var(--border-color);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .app-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-icon {
+      font-size: 24px;
+      color: var(--accent-gold);
+    }
+
+    .logo-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: #fff;
+    }
+
+    .logo-badge {
+      font-size: 0.75rem;
+      background: rgba(255, 215, 0, 0.15);
+      border: 1px solid var(--accent-gold);
+      color: var(--accent-gold);
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-weight: 700;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .workout-active-pill {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      background: rgba(0, 230, 118, 0.2);
+      border: 1px solid var(--success-green);
+      color: var(--success-green);
+      padding: 5px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.8; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.03); }
+      100% { opacity: 0.8; transform: scale(1); }
+    }
+
+    .main-content {
+      flex: 1;
+      padding: 16px;
+      padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 32px);
+      max-width: 720px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .tab-view {
+      display: none;
+      animation: fadeIn 0.2s ease-out;
+    }
+
+    .tab-view.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Pasek nawigacyjny na dole - dostosowany do iPhone (Safe Area Inset) */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: calc(var(--bottom-nav-height) + var(--safe-bottom));
+      padding-bottom: var(--safe-bottom);
+      box-sizing: border-box;
+      background: #022031;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-around;
+      align-items: flex-start;
+      padding-top: 4px;
+      z-index: 1000;
+      box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.4);
+    }
+
+    .nav-item {
+      flex: 1;
+      height: var(--bottom-nav-height);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+      gap: 3px;
+      position: relative;
+    }
+
+    .nav-item .nav-icon {
+      font-size: 1.25rem;
+    }
+
+    .nav-item .nav-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
+    .nav-item.active {
+      color: var(--accent-gold);
+    }
+
+    .nav-item.active::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 20%;
+      right: 20%;
+      height: 3px;
+      background: var(--accent-gold);
+      border-radius: 0 0 3px 3px;
+    }
+
+    .nav-badge-dot {
+      position: absolute;
+      top: 10px;
+      right: calc(50% - 16px);
+      width: 8px;
+      height: 8px;
+      background: var(--success-green);
+      border-radius: 50%;
+      display: none;
+    }
+
+    /* ==========================================================================
+       3. WSPÓLNE KOMPONENTY (Karty, Przyciski, Tytuły)
+       ========================================================================== */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    }
+
+    .btn {
+      font-family: inherit;
+      border: none;
+      cursor: pointer;
+      border-radius: 8px;
+      font-weight: 700;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-align: center;
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    .btn-gold {
+      background: linear-gradient(135deg, #ffd700 0%, #ffb700 100%);
+      color: #022c43;
+      box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+    }
+
+    .btn-gold:hover {
+      background: linear-gradient(135deg, #ffea75 0%, #ffd700 100%);
+    }
+
+    .btn-primary {
+      background: #146b97;
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: #1a7aa8;
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border-color);
+      color: #e0e0e0;
+    }
+
+    .btn-outline:hover {
+      border-color: var(--accent-gold);
+      color: var(--accent-gold);
+    }
+
+    .btn-success {
+      background: #00e676;
+      color: #022c43;
+    }
+
+    .btn-danger {
+      background: var(--danger-bg);
+      border: 1px solid var(--danger-red);
+      color: var(--danger-red);
+    }
+
+    .btn-danger:hover {
+      background: var(--danger-red);
+      color: #fff;
+    }
+
+    .btn-large {
+      width: 100%;
+      padding: 16px;
+      font-size: 1.15rem;
+      border-radius: 12px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-gold {
+      background: rgba(255, 215, 0, 0.15);
+      border: 1px solid var(--accent-gold);
+      color: var(--accent-gold);
+    }
+
+    .badge-green {
+      background: var(--success-bg);
+      border: 1px solid var(--success-green);
+      color: var(--success-green);
+    }
+
+    .badge-blue {
+      background: rgba(20, 107, 151, 0.3);
+      border: 1px solid var(--border-color);
+      color: #9fc3d6;
+    }
+
+    /* ==========================================================================
+       4. EKRAN START
+       ========================================================================== */
+    .start-hero {
+      text-align: center;
+      padding: 24px 16px;
+      background: linear-gradient(145deg, #043652 0%, var(--bg-card) 100%);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      margin-bottom: 20px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+    }
+
+    .start-subtitle {
+      font-size: 0.85rem;
+      color: var(--accent-gold);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+
+    .start-title {
+      font-size: 2.2rem;
+      font-weight: 900;
+      margin-bottom: 14px;
+      color: #fff;
+    }
+
+    .start-meta-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .week-stepper {
+      display: inline-flex;
+      align-items: center;
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 4px 10px;
+      gap: 10px;
+    }
+
+    .stepper-btn {
+      background: transparent;
+      border: none;
+      color: var(--accent-gold);
+      font-size: 1.1rem;
+      font-weight: 800;
+      width: 28px;
+      height: 28px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+    }
+
+    .stepper-btn:hover {
+      background: rgba(255, 215, 0, 0.2);
+    }
+
+    .stepper-val {
+      font-size: 0.9rem;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: 0.5px;
+    }
+
+    .preview-box {
+      background: rgba(2, 44, 67, 0.6);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin: 16px 0 20px 0;
+      text-align: left;
+      border: 1px solid rgba(20, 107, 151, 0.5);
+    }
+
+    .preview-title {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .preview-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .preview-item {
+      font-size: 0.88rem;
+      color: #e6e6e6;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .preview-item span.num {
+      color: var(--accent-gold);
+      font-weight: 700;
+      font-size: 0.8rem;
+      min-width: 18px;
+    }
+
+    .manual-picker-label {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-top: 20px;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .workout-selector-pills {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .pill-btn {
+      flex: 1;
+      padding: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .pill-btn:hover, .pill-btn.active {
+      border-color: var(--accent-gold);
+      background: rgba(255, 215, 0, 0.12);
+      color: var(--accent-gold);
+    }
+
+    /* ==========================================================================
+       5. EKRAN TRENING (Wybór A/B/C oraz Asystent)
+       ========================================================================== */
+    .workout-picker-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .workout-choice-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 18px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .workout-choice-card:hover {
+      border-color: var(--accent-gold);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+    }
+
+    .w-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .w-card-title {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .w-card-meta {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .w-card-exercises {
+      font-size: 0.85rem;
+      color: #cbdbe3;
+      line-height: 1.4;
+      margin-bottom: 14px;
+    }
+
+    /* ==========================================================================
+       6. NAJWAŻNIEJSZY EKRAN — ASYSTENT ĆWICZENIA (Podczas Treningu)
+       ========================================================================== */
+    .assistant-topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .assistant-ex-count {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-plan-toggle {
+      background: rgba(20, 107, 151, 0.4);
+      border: 1px solid var(--border-color);
+      color: var(--accent-gold);
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-plan-toggle:hover {
+      background: var(--border-color);
+    }
+
+    .exercise-main-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+      margin-bottom: 16px;
+      position: relative;
+    }
+
+    .exercise-name-header {
+      font-size: 1.55rem;
+      font-weight: 900;
+      color: #fff;
+      margin-bottom: 8px;
+      letter-spacing: -0.3px;
+      line-height: 1.25;
+    }
+
+    .exercise-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .tag {
+      background: rgba(2, 44, 67, 0.8);
+      border: 1px solid var(--border-color);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #d1e5f0;
+    }
+
+    .tag-tempo {
+      color: var(--accent-gold);
+      border-color: rgba(255, 215, 0, 0.3);
+    }
+
+    /* Sekcja poprzedniego wyniku */
+    .history-prev-box {
+      background: rgba(2, 44, 67, 0.6);
+      border-left: 4px solid var(--border-color);
+      border-radius: 0 8px 8px 0;
+      padding: 10px 14px;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .history-prev-label {
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+
+    .history-prev-value {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .history-prev-date {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      text-align: right;
+    }
+
+    /* Sekcja Proponowanego Ciężaru */
+    .target-weight-box {
+      background: linear-gradient(135deg, rgba(20, 107, 151, 0.3) 0%, rgba(5, 63, 94, 0.5) 100%);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .target-weight-box.progres-hit {
+      border-color: var(--accent-gold);
+      background: linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(5, 63, 94, 0.7) 100%);
+    }
+
+    .target-left {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .target-label {
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: var(--accent-gold);
+      text-transform: uppercase;
+    }
+
+    .target-val {
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: #fff;
+    }
+
+    .progres-badge {
+      background: var(--accent-gold);
+      color: #022c43;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Ciężar — Duży panel i szybkie zmiany */
+    .weight-adjuster-section {
+      margin-bottom: 20px;
+    }
+
+    .weight-display-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+    }
+
+    .weight-display-btn {
+      background: var(--bg-input);
+      border: 2px solid var(--accent-gold);
+      color: #fff;
+      font-size: 2.3rem;
+      font-weight: 900;
+      padding: 10px 24px;
+      border-radius: 16px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: baseline;
+      gap: 6px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+      transition: all 0.15s;
+    }
+
+    .weight-display-btn:active {
+      transform: scale(0.98);
+    }
+
+    .weight-unit {
+      font-size: 1.1rem;
+      color: var(--accent-gold);
+      font-weight: 700;
+    }
+
+    .weight-quick-buttons {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 6px;
+    }
+
+    .btn-step {
+      background: rgba(20, 107, 151, 0.4);
+      border: 1px solid var(--border-color);
+      color: #fff;
+      padding: 10px 4px;
+      font-size: 0.85rem;
+      font-weight: 800;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.1s;
+    }
+
+    .btn-step:active {
+      background: var(--accent-gold);
+      color: #022c43;
+    }
+
+    .btn-step.step-plus {
+      border-color: rgba(0, 230, 118, 0.4);
+    }
+
+    .btn-step.step-minus {
+      border-color: rgba(255, 82, 82, 0.4);
+    }
+
+    /* Serie i Postęp */
+    .sets-progress-box {
+      background: rgba(2, 44, 67, 0.7);
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 20px;
+      border: 1px solid rgba(20, 107, 151, 0.4);
+    }
+
+    .sets-header {
+      font-size: 0.75rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .sets-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .set-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      border-radius: 6px;
+      background: rgba(5, 63, 94, 0.4);
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+
+    .set-row.active {
+      background: rgba(255, 215, 0, 0.15);
+      border: 1px solid var(--accent-gold);
+      color: var(--accent-gold);
+    }
+
+    .set-row.completed {
+      background: rgba(0, 230, 118, 0.12);
+      border: 1px solid rgba(0, 230, 118, 0.3);
+      color: #fff;
+    }
+
+    .set-status-icon {
+      margin-right: 8px;
+    }
+
+    .set-actions-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 0.85rem;
+      padding: 4px;
+    }
+
+    .set-actions-btn:hover {
+      color: var(--danger-red);
+    }
+
+    /* Inteligentne Przyciski Powtórzeń — DUŻE, ŁATWE W KLIKANIU */
+    .reps-picker-container {
+      margin-bottom: 20px;
+    }
+
+    .reps-picker-label {
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--accent-gold);
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .reps-buttons-grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .rep-btn {
+      flex: 1;
+      min-width: 58px;
+      height: 64px;
+      background: linear-gradient(145deg, #074e74 0%, #053f5e 100%);
+      border: 2px solid var(--border-color);
+      border-radius: 12px;
+      color: #fff;
+      font-size: 1.55rem;
+      font-weight: 900;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.12s;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+    }
+
+    .rep-btn:active {
+      background: var(--accent-gold);
+      color: #022c43;
+      transform: scale(0.92);
+      border-color: var(--accent-gold);
+    }
+
+    .rep-btn.rep-max {
+      flex: 2;
+      min-width: 90px;
+      background: linear-gradient(145deg, #ff9800 0%, #e65100 100%);
+      border-color: #ffb74d;
+      font-size: 1.25rem;
+    }
+
+    .rep-btn-custom {
+      background: rgba(2, 44, 67, 0.8);
+      border: 1px dashed var(--border-color);
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      font-weight: 700;
+      min-width: 58px;
+      height: 64px;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+
+    .rep-btn-custom:hover {
+      border-color: var(--accent-gold);
+      color: var(--accent-gold);
+    }
+
+    /* Timer odpoczynku */
+    .rest-timer-box {
+      margin-top: 10px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .timer-btn-main {
+      width: 100%;
+      background: rgba(2, 44, 67, 0.9);
+      border: 2px solid var(--border-color);
+      border-radius: 12px;
+      padding: 14px;
+      color: #fff;
+      font-size: 1.15rem;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.2s;
+    }
+
+    .timer-btn-main.timer-running {
+      border-color: var(--accent-gold);
+      background: rgba(255, 215, 0, 0.1);
+      color: var(--accent-gold);
+      box-shadow: 0 0 15px rgba(255, 215, 0, 0.25);
+    }
+
+    .timer-btn-main.timer-done {
+      border-color: var(--success-green);
+      background: rgba(0, 230, 118, 0.2);
+      color: var(--success-green);
+      animation: pulse 1s infinite;
+    }
+
+    .timer-controls {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+      justify-content: center;
+    }
+
+    .timer-ctrl-btn {
+      flex: 1;
+      padding: 8px;
+      background: rgba(20, 107, 151, 0.3);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .timer-ctrl-btn:hover {
+      color: #fff;
+      border-color: var(--accent-gold);
+    }
+
+    /* Nawigacja ćwiczeń na dole karty */
+    .exercise-nav-footer {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .btn-prev-ex {
+      flex: 1;
+      padding: 14px;
+      background: rgba(2, 44, 67, 0.8);
+      border: 1px solid var(--border-color);
+      color: #fff;
+      border-radius: 10px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn-next-ex {
+      flex: 2;
+      padding: 14px;
+      background: var(--border-color);
+      border: 1px solid #1a7aa8;
+      color: #fff;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .btn-next-ex.completed-prompt {
+      background: linear-gradient(135deg, #00e676 0%, #00b0ff 100%);
+      color: #022c43;
+      border: none;
+      box-shadow: 0 4px 15px rgba(0, 230, 118, 0.3);
+    }
+
+    /* Status ukończonego ćwiczenia */
+    .exercise-completed-banner {
+      display: none;
+      background: rgba(0, 230, 118, 0.15);
+      border: 1px solid var(--success-green);
+      color: var(--success-green);
+      padding: 12px;
+      border-radius: 10px;
+      text-align: center;
+      font-weight: 800;
+      font-size: 0.95rem;
+      margin-bottom: 14px;
+      animation: fadeIn 0.3s;
+    }
+
+    /* ==========================================================================
+       7. PANEL / SZUFLADA SZYBKIEGO PODGLĄDU PLANU (Przycisk [ ☰ PLAN ])
+       ========================================================================== */
+    .plan-drawer-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(3px);
+      z-index: 2000;
+      display: none;
+      justify-content: flex-end;
+    }
+
+    .plan-drawer {
+      width: 85%;
+      max-width: 360px;
+      background: #032a3f;
+      height: 100%;
+      border-left: 1px solid var(--border-color);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: -6px 0 25px rgba(0, 0, 0, 0.5);
+      overflow-y: auto;
+    }
+
+    .plan-drawer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .drawer-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--accent-gold);
+    }
+
+    .drawer-close-btn {
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 1.3rem;
+      cursor: pointer;
+      padding: 4px;
+    }
+
+    .drawer-exercises-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+    }
+
+    .drawer-ex-item {
+      padding: 12px;
+      border-radius: 8px;
+      background: rgba(5, 63, 94, 0.5);
+      border: 1px solid transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      font-weight: 700;
+      transition: all 0.15s;
+    }
+
+    .drawer-ex-item.current {
+      border-color: var(--accent-gold);
+      background: rgba(255, 215, 0, 0.12);
+      color: var(--accent-gold);
+    }
+
+    .drawer-ex-item.done {
+      border-color: rgba(0, 230, 118, 0.3);
+      color: var(--text-muted);
+    }
+
+    .drawer-ex-item:hover {
+      background: rgba(20, 107, 151, 0.4);
+    }
+
+    /* ==========================================================================
+       8. ZAKŁADKA PLAN (Pełna edycja)
+       ========================================================================== */
+    .plan-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .plan-tab-btn {
+      flex: 1;
+      padding: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+
+    .plan-tab-btn.active {
+      background: rgba(255, 215, 0, 0.15);
+      border-color: var(--accent-gold);
+      color: var(--accent-gold);
+    }
+
+    .plan-edit-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .plan-item-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .plan-item-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .plan-item-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .plan-item-details {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .plan-item-actions {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      margin-top: 4px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(20, 107, 151, 0.3);
+    }
+
+    .btn-mini {
+      padding: 6px 10px;
+      font-size: 0.78rem;
+      border-radius: 6px;
+    }
+
+    /* ==========================================================================
+       9. ZAKŁADKA HISTORIA
+       ========================================================================== */
+    .history-filter-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .history-filter-btn {
+      flex: 1;
+      padding: 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .history-filter-btn.active {
+      border-color: var(--accent-gold);
+      color: var(--accent-gold);
+      background: rgba(255, 215, 0, 0.1);
+    }
+
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .history-session-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .session-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(20, 107, 151, 0.3);
+    }
+
+    .session-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--accent-gold);
+    }
+
+    .session-date {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .session-ex-row {
+      margin-bottom: 8px;
+      font-size: 0.88rem;
+    }
+
+    .session-ex-name {
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 2px;
+    }
+
+    .session-ex-sets {
+      color: #9fc3d6;
+      font-size: 0.82rem;
+      padding-left: 8px;
+    }
+
+    /* ==========================================================================
+       10. ZAKŁADKA USTAWIENIA
+       ========================================================================== */
+    .settings-section-title {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: var(--accent-gold);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+      margin-top: 16px;
+    }
+
+    .settings-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(20, 107, 151, 0.3);
+    }
+
+    /* ==========================================================================
+       11. MODALE (Zgodne z Farmada Formatki)
+       ========================================================================== */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(3px);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+      padding: 16px;
+    }
+
+    .modal-box {
+      background: #053f5e;
+      border: 1px solid var(--border-color);
+      padding: 22px;
+      border-radius: 14px;
+      width: 100%;
+      max-width: 440px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+      animation: modalPop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes modalPop {
+      from { transform: scale(0.92); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .modal-title {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--accent-gold);
+      margin-bottom: 16px;
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+
+    .modal-input, .modal-select {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background: #022538;
+      color: white;
+      font-family: inherit;
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+
+    .modal-input:focus, .modal-select:focus {
+      outline: none;
+      border-color: var(--accent-gold);
+    }
+
+    .modal-buttons {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    /* ==========================================================================
+       12. POWIADOMIENIA (TOAST)
+       ========================================================================== */
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      left: 20px;
+      max-width: 380px;
+      margin: 0 auto;
+      background-color: #00e676;
+      color: #022c43;
+      padding: 12px 18px;
+      border-radius: 10px;
+      z-index: 20000;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s ease;
+      font-weight: 800;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+      transform: translateY(-20px);
+    }
+
+    .notification.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .notification.error {
+      background-color: var(--danger-red);
+      color: #fff;
+    }
+
+    .notification.gold {
+      background-color: var(--accent-gold);
+      color: #022c43;
+    }
+
+    /* ==========================================================================
+       13. DŹWIĘK I FLOATING TIMER (Gdy użytkownik wyjdzie z asystenta)
+       ========================================================================== */
+    .floating-timer-bar {
+      display: none;
+      position: fixed;
+      bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 10px);
+      left: 16px;
+      right: 16px;
+      max-width: 688px;
+      margin: 0 auto;
+      background: #011d2d;
+      border: 1px solid var(--accent-gold);
+      border-radius: 12px;
+      padding: 10px 16px;
+      z-index: 999;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+      align-items: center;
+      justify-content: space-between;
+    }
+  </style>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+    }
+  </script>
+</head>
+
+<body>
+
+  <!-- POWIADOMIENIE TOAST -->
+  <div id="notification" class="notification">
+    <span id="notif-icon">✓</span>
+    <span id="notif-msg">Powiadomienie</span>
+  </div>
+
+  <!-- PŁYWAJĄCY PASEK TIMERA (Widoczny w innych zakładkach) -->
+  <div id="floatingTimerBar" class="floating-timer-bar">
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span style="color:var(--accent-gold); font-size:1.1rem;">⏱</span>
+      <span style="font-weight:800; font-size:0.9rem;" id="floatingTimerTime">00:00</span>
+      <span style="font-size:0.75rem; color:var(--text-muted);">(Odpoczynek w toku)</span>
+    </div>
+    <button type="button" class="btn btn-primary btn-mini" onclick="switchTab('workout')">Wróć do ćwiczenia</button>
+  </div>
+
+  <!-- NAGŁÓWEK GŁÓWNY -->
+  <header class="app-header">
+    <div class="app-logo">
+      <span class="logo-icon">🏋️</span>
+      <span class="logo-title">SIŁOWNIA</span>
+      <span class="logo-badge" id="headerWeekBadge">TYDZIEŃ 1</span>
+    </div>
+    <div class="header-right">
+      <div id="activeWorkoutHeaderPill" class="workout-active-pill" onclick="switchTab('workout')">
+        <span>⚡ TRENING W TOKU</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- KONTENER GŁÓWNY -->
+  <main class="main-content">
+
+    <!-- ====================================================================
+         ZAKŁADKA 1: START
+         ==================================================================== -->
+    <section id="view-start" class="tab-view active">
+      <div class="start-hero">
+        <div class="start-subtitle">DZISIEJSZY TRENING</div>
+        <h1 class="start-title" id="startHeroWorkoutName">TRENING A</h1>
+
+        <div class="start-meta-row">
+          <div class="week-stepper">
+            <button type="button" class="stepper-btn" onclick="adjustWeek(-1)" title="Poprzedni tydzień">−</button>
+            <span class="stepper-val" id="startWeekLabel">TYDZIEŃ 1</span>
+            <button type="button" class="stepper-btn" onclick="adjustWeek(1)" title="Następny tydzień">+</button>
+          </div>
+        </div>
+
+        <button type="button" class="btn btn-gold btn-large" id="btnStartWorkoutHero" onclick="startSuggestedWorkout()">
+          🚀 ROZPOCZNIJ TRENING
+        </button>
+
+        <div class="preview-box">
+          <div class="preview-title">
+            <span>PLAN NA DZISIAJ</span>
+            <span id="startExerciseCount">7 ćwiczeń</span>
+          </div>
+          <ul class="preview-list" id="startExercisePreviewList">
+            <!-- Wypełniane dynamicznie JS -->
+          </ul>
+        </div>
+
+        <div class="manual-picker-label">Chcesz wybrać inny trening na dziś?</div>
+        <div class="workout-selector-pills">
+          <button type="button" class="pill-btn" onclick="selectStartWorkout('A')">TRENING A</button>
+          <button type="button" class="pill-btn" onclick="selectStartWorkout('B')">TRENING B</button>
+          <button type="button" class="pill-btn" onclick="selectStartWorkout('C')">TRENING C</button>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ====================================================================
+         ZAKŁADKA 2: TRENING (Wybór A/B/C lub Aktywny Asystent)
+         ==================================================================== -->
+    <section id="view-workout" class="tab-view">
+      
+      <!-- STAN 1: BRAK AKTYWNEGO TRENINGU (WYBÓR A / B / C) -->
+      <div id="workoutSelectionContainer">
+        <div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
+          <h2 style="font-size:1.3rem; font-weight:800; color:#fff;">Wybierz trening</h2>
+          <div class="week-stepper">
+            <button type="button" class="stepper-btn" onclick="adjustWeek(-1)">−</button>
+            <span class="stepper-val" id="workoutWeekLabel">TYDZIEŃ 1</span>
+            <button type="button" class="stepper-btn" onclick="adjustWeek(1)">+</button>
+          </div>
+        </div>
+
+        <div class="workout-picker-grid" id="workoutCardsGrid">
+          <!-- Karty A, B, C generowane przez JS -->
+        </div>
+      </div>
+
+      <!-- STAN 2: AKTYWNY ASYSTENT ĆWICZENIA (NAJWAŻNIEJSZY EKRAN) -->
+      <div id="workoutActiveAssistant" style="display:none;">
+        
+        <!-- Pasek górny asystenta -->
+        <div class="assistant-topbar">
+          <div class="assistant-ex-count" id="assistantExerciseCounter">
+            ĆWICZENIE 1 Z 7
+          </div>
+          <button type="button" class="btn-plan-toggle" onclick="openPlanDrawer()">
+            <span>☰ PLAN</span>
+          </button>
+        </div>
+
+        <!-- Główna karta ćwiczenia -->
+        <div class="exercise-main-card">
+          
+          <h2 class="exercise-name-header" id="curExName">PRZYSIAD ZE SZTANGĄ</h2>
+          
+          <div class="exercise-tags">
+            <span class="tag" id="curExSetsReps">3 serie × 3–5 powt.</span>
+            <span class="tag tag-tempo" id="curExTempo">Tempo: 2010</span>
+            <span class="tag" id="curExRestTag">Odpoczynek: 180s</span>
+          </div>
+
+          <!-- Ostatni wynik -->
+          <div class="history-prev-box">
+            <div>
+              <div class="history-prev-label">OSTATNIO</div>
+              <div class="history-prev-value" id="curExPrevResult">100 kg • 5 / 5 / 5</div>
+            </div>
+            <div class="history-prev-date" id="curExPrevDate">Poprzedni trening</div>
+          </div>
+
+          <!-- Proponowany ciężar & progresja -->
+          <div class="target-weight-box" id="curExTargetBox">
+            <div class="target-left">
+              <span class="target-label" id="curExTargetLabel">🎯 DZISIAJ</span>
+              <span class="target-val" id="curExTargetVal">102,5 kg</span>
+            </div>
+            <div id="curExProgresBadge" class="progres-badge">
+              <span>PROGRES +2,5 kg</span>
+            </div>
+          </div>
+
+          <!-- Szybkie korekty ciężaru -->
+          <div class="weight-adjuster-section">
+            <div class="weight-display-wrapper">
+              <button type="button" class="weight-display-btn" onclick="openManualWeightModal()" title="Kliknij, aby wpisać ręcznie">
+                <span id="curWeightValue">102,5</span>
+                <span class="weight-unit">kg</span>
+              </button>
+            </div>
+
+            <div class="weight-quick-buttons">
+              <button type="button" class="btn-step step-minus" onclick="adjustCurrentWeight(-2.5)">−2,5</button>
+              <button type="button" class="btn-step step-minus" onclick="adjustCurrentWeight(-1.0)">−1</button>
+              <button type="button" class="btn-step step-minus" onclick="adjustCurrentWeight(-0.5)">−0,5</button>
+              <button type="button" class="btn-step step-plus" onclick="adjustCurrentWeight(0.5)">+0,5</button>
+              <button type="button" class="btn-step step-plus" onclick="adjustCurrentWeight(1.0)">+1</button>
+              <button type="button" class="btn-step step-plus" onclick="adjustCurrentWeight(2.5)">+2,5</button>
+            </div>
+          </div>
+
+          <!-- Postęp serii -->
+          <div class="sets-progress-box">
+            <div class="sets-header">
+              <span>SERIE W TYM ĆWICZENIU</span>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span id="curExSetsProgressText">0 / 3</span>
+                <button type="button" class="btn btn-outline btn-mini" style="padding:2px 6px; font-size:0.7rem;" onclick="addSetTargetOnTheFly()" title="Dodaj dodatkową serię">+ seria</button>
+              </div>
+            </div>
+            <div class="sets-list" id="curExSetsList">
+              <!-- Dynamicznie: seria 1, seria 2... -->
+            </div>
+          </div>
+
+          <!-- Status ukończenia ćwiczenia -->
+          <div id="exerciseCompletedBanner" class="exercise-completed-banner">
+            🎉 ĆWICZENIE UKOŃCZONE! Wszystkie serie wykonane.
+          </div>
+
+          <!-- Inteligentne Przyciski Powtórzeń -->
+          <div class="reps-picker-container" id="repsPickerSection">
+            <div class="reps-picker-label">KLIKNIJ POWTÓRZENIA, ABY ZAPISAĆ SERIĘ:</div>
+            <div class="reps-buttons-grid" id="repsButtonsGrid">
+              <!-- Przyciski: [3] [4] [5] itp. -->
+            </div>
+          </div>
+
+          <!-- Timer odpoczynku -->
+          <div class="rest-timer-box">
+            <button type="button" class="timer-btn-main" id="timerMainBtn" onclick="toggleTimer()">
+              <span id="timerIcon">⏱</span>
+              <span id="timerText">START 3:00</span>
+            </button>
+            <div class="timer-controls" id="timerSubControls">
+              <button type="button" class="timer-ctrl-btn" onclick="adjustTimer(-30)">−30s</button>
+              <button type="button" class="timer-ctrl-btn" onclick="adjustTimer(30)">+30s</button>
+              <button type="button" class="timer-ctrl-btn" onclick="resetTimer()">Reset</button>
+            </div>
+          </div>
+
+          <!-- Nawigacja dolna w karcie ćwiczenia -->
+          <div class="exercise-nav-footer">
+            <button type="button" class="btn-prev-ex" onclick="navigateExercise(-1)">← Poprzednie</button>
+            <button type="button" class="btn-next-ex" id="btnNextExercise" onclick="navigateExercise(1)">Następne ćwiczenie →</button>
+          </div>
+
+        </div>
+
+        <button type="button" class="btn btn-outline btn-large" style="margin-top:10px; border-color:#ff5252; color:#ff5252;" onclick="promptFinishWorkout()">
+          Zakończ ten trening
+        </button>
+
+      </div>
+
+    </section>
+
+
+    <!-- ====================================================================
+         ZAKŁADKA 3: PLAN (Edycja Treningów i Ćwiczeń)
+         ==================================================================== -->
+    <section id="view-plan" class="tab-view">
+      <div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
+        <h2 style="font-size:1.3rem; font-weight:800; color:#fff;">Edycja Planu</h2>
+        <button type="button" class="btn btn-primary btn-mini" onclick="openAddExerciseModal()">+ Dodaj ćwiczenie</button>
+      </div>
+
+      <div class="plan-tabs">
+        <button type="button" class="plan-tab-btn active" id="planTabA" onclick="selectPlanTab('A')">TRENING A</button>
+        <button type="button" class="plan-tab-btn" id="planTabB" onclick="selectPlanTab('B')">TRENING B</button>
+        <button type="button" class="plan-tab-btn" id="planTabC" onclick="selectPlanTab('C')">TRENING C</button>
+      </div>
+
+      <div class="plan-edit-list" id="planExercisesList">
+        <!-- Generowane dynamicznie -->
+      </div>
+
+      <div style="margin-top:20px; text-align:center;">
+        <button type="button" class="btn btn-outline btn-mini" style="color:var(--text-muted);" onclick="promptResetDefaultPlan()">
+          🔄 Przywróć domyślny plan treningowy
+        </button>
+      </div>
+    </section>
+
+
+    <!-- ====================================================================
+         ZAKŁADKA 4: HISTORIA (Zapisane sesje i postępy)
+         ==================================================================== -->
+    <section id="view-history" class="tab-view">
+      <div style="margin-bottom:16px;">
+        <h2 style="font-size:1.3rem; font-weight:800; color:#fff; margin-bottom:12px;">Historia Treningów</h2>
+        
+        <div class="history-filter-bar">
+          <button type="button" class="history-filter-btn active" id="histFilterAll" onclick="setHistoryFilter('all')">Wszystkie sesje</button>
+          <button type="button" class="history-filter-btn" id="histFilterByEx" onclick="setHistoryFilter('byExercise')">Wg ćwiczenia</button>
+        </div>
+
+        <div id="exerciseHistorySelectWrapper" style="display:none; margin-bottom:14px;">
+          <select id="exerciseHistorySelect" class="modal-select" onchange="renderHistory()">
+            <!-- Wypełniane unikalnymi ćwiczeniami z historii -->
+          </select>
+        </div>
+      </div>
+
+      <div class="history-list" id="historyListContainer">
+        <!-- Generowane z localStorage -->
+      </div>
+    </section>
+
+
+    <!-- ====================================================================
+         ZAKŁADKA 5: USTAWIENIA (Kopia zapasowa, Dźwięki, Info)
+         ==================================================================== -->
+    <section id="view-settings" class="tab-view">
+      <div class="card">
+        <h2 style="font-size:1.25rem; font-weight:800; color:var(--accent-gold); margin-bottom:16px;">Ustawienia Aplikacji</h2>
+
+        <div class="settings-section-title">Kopia zapasowa danych</div>
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:14px;">
+          Wszystkie Twoje plany i historia treningów zapisują się w pamięci tej przeglądarki. Możesz w każdej chwili pobrać plik kopii zapasowej.
+        </p>
+
+        <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px;">
+          <button type="button" class="btn btn-primary" onclick="exportDataJSON()">
+            💾 Pobierz kopię zapasową (JSON)
+          </button>
+          <button type="button" class="btn btn-outline" onclick="triggerImportJSON()">
+            📥 Wczytaj kopię z pliku (JSON)
+          </button>
+          <input type="file" id="importJsonFileInput" accept=".json" style="display:none;" onchange="handleImportFile(event)" />
+        </div>
+
+        <div class="settings-section-title">Dźwięki i wibracje</div>
+        <div class="settings-row">
+          <span>Dźwięki timera i zapisu</span>
+          <input type="checkbox" id="settingSoundToggle" style="width:20px; height:20px;" onchange="toggleSoundSetting(this.checked)" checked />
+        </div>
+        <div class="settings-row">
+          <span>Wibracje na telefonie</span>
+          <input type="checkbox" id="settingVibrateToggle" style="width:20px; height:20px;" onchange="toggleVibrateSetting(this.checked)" checked />
+        </div>
+
+        <div class="settings-section-title">Zarządzanie danymi</div>
+        <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
+          <button type="button" class="btn btn-danger" onclick="promptClearHistory()">
+            🗑️ Wyczyść całą historię treningów
+          </button>
+        </div>
+
+        <div style="margin-top:24px; padding-top:12px; border-top:1px solid rgba(20, 107, 151, 0.3); font-size:0.75rem; color:var(--text-muted); text-align:center;">
+          Trening 2026 • Wersja lokalna offline • Montserrat & Native Web Audio
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+
+  <!-- ====================================================================
+       PASEK NAWIGACYJNY (DOLNY - MOBILNY)
+       ==================================================================== -->
+  <nav class="bottom-nav">
+    <button type="button" class="nav-item active" id="nav-start" onclick="switchTab('start')">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Start</span>
+    </button>
+    <button type="button" class="nav-item" id="nav-workout" onclick="switchTab('workout')">
+      <span class="nav-icon">🏋️</span>
+      <span class="nav-label">Trening</span>
+      <span class="nav-badge-dot" id="navWorkoutDot"></span>
+    </button>
+    <button type="button" class="nav-item" id="nav-plan" onclick="switchTab('plan')">
+      <span class="nav-icon">📋</span>
+      <span class="nav-label">Plan</span>
+    </button>
+    <button type="button" class="nav-item" id="nav-history" onclick="switchTab('history')">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">Historia</span>
+    </button>
+    <button type="button" class="nav-item" id="nav-settings" onclick="switchTab('settings')">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-label">Ustawienia</span>
+    </button>
+  </nav>
+
+
+  <!-- ====================================================================
+       SZUFLADA PODGLĄDU PLANU W TRAKCIE TRENINGU ([ ☰ PLAN ])
+       ==================================================================== -->
+  <div id="planDrawerOverlay" class="plan-drawer-overlay" onclick="closePlanDrawer()">
+    <div class="plan-drawer" onclick="event.stopPropagation()">
+      <div class="plan-drawer-header">
+        <span class="drawer-title" id="drawerWorkoutTitle">TRENING A</span>
+        <button type="button" class="drawer-close-btn" onclick="closePlanDrawer()">✕</button>
+      </div>
+      <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:12px;">
+        Kliknij ćwiczenie, aby natychmiast do niego przejść:
+      </p>
+      <ul class="drawer-exercises-list" id="drawerExercisesList">
+        <!-- Dynamiczne ćwiczenia -->
+      </ul>
+      <button type="button" class="btn btn-danger" style="margin-top:20px;" onclick="closePlanDrawer(); promptFinishWorkout();">
+        Zakończ trening
+      </button>
+    </div>
+  </div>
+
+
+  <!-- ====================================================================
+       MODAL 1: EDYCJA / DODANIE ĆWICZENIA W PLANIE
+       ==================================================================== -->
+  <div id="exerciseModal" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-title" id="exerciseModalTitle">Edytuj ćwiczenie</div>
+      
+      <div class="form-group">
+        <label class="form-label">Nazwa ćwiczenia</label>
+        <input type="text" id="modalExName" class="modal-input" placeholder="np. Przysiad ze sztangą" />
+      </div>
+
+      <div style="display:flex; gap:10px;">
+        <div class="form-group" style="flex:1;">
+          <label class="form-label">Liczba serii</label>
+          <input type="number" id="modalExSets" class="modal-input" min="1" max="10" value="3" />
+        </div>
+        <div class="form-group" style="flex:1;">
+          <label class="form-label">Min powtórzeń</label>
+          <input type="number" id="modalExRepsMin" class="modal-input" min="1" max="50" value="8" />
+        </div>
+        <div class="form-group" style="flex:1;">
+          <label class="form-label">Max powtórzeń</label>
+          <input type="text" id="modalExRepsMax" class="modal-input" placeholder="np. 12 lub MAX" value="12" />
+        </div>
+      </div>
+
+      <div style="display:flex; gap:10px;">
+        <div class="form-group" style="flex:1;">
+          <label class="form-label">Tempo</label>
+          <input type="text" id="modalExTempo" class="modal-input" placeholder="np. 2010" value="2010" />
+        </div>
+        <div class="form-group" style="flex:1;">
+          <label class="form-label">Krok progresji (kg)</label>
+          <input type="text" inputmode="decimal" id="modalExStep" class="modal-input" value="2,5" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Czas odpoczynku (sekundy)</label>
+        <input type="number" id="modalExRest" class="modal-input" min="15" max="600" step="15" value="90" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Reguła Progresji Ciężaru</label>
+        <select id="modalExProgressionType" class="modal-select">
+          <option value="top_all_sets">Górny zakres we wszystkich seriach (np. 5/5/5 lub 12/12)</option>
+          <option value="top_first_set">Górny zakres w 1. serii (np. 12 w pierwszej serii)</option>
+          <option value="manual">Ręczna / brak automatycznej sugestii</option>
+        </select>
+      </div>
+
+      <div class="modal-buttons">
+        <button type="button" class="btn btn-outline" onclick="closeExerciseModal()">Anuluj</button>
+        <button type="button" class="btn btn-gold" onclick="saveExerciseModal()">Zapisz ćwiczenie</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ====================================================================
+       MODAL 2: RĘCZNE WPISANIE CIĘŻARU
+       ==================================================================== -->
+  <div id="weightModal" class="modal-overlay">
+    <div class="modal-box" style="max-width:320px; text-align:center;">
+      <div class="modal-title">Wpisz ciężar (kg)</div>
+      <input type="text" inputmode="decimal" id="modalWeightInput" class="modal-input" style="font-size:1.8rem; text-align:center; font-weight:900;" />
+      <div class="modal-buttons" style="justify-content:center;">
+        <button type="button" class="btn btn-outline" onclick="closeWeightModal()">Anuluj</button>
+        <button type="button" class="btn btn-gold" onclick="saveManualWeight()">Ustaw ciężar</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ====================================================================
+       MODAL 3: RĘCZNE WPISANIE POWTÓRZEŃ (Dla nietypowych liczb)
+       ==================================================================== -->
+  <div id="customRepsModal" class="modal-overlay">
+    <div class="modal-box" style="max-width:320px; text-align:center;">
+      <div class="modal-title">Liczba powtórzeń</div>
+      <input type="number" id="modalCustomRepsInput" class="modal-input" style="font-size:1.8rem; text-align:center; font-weight:900;" min="1" max="100" />
+      <div class="modal-buttons" style="justify-content:center;">
+        <button type="button" class="btn btn-outline" onclick="closeCustomRepsModal()">Anuluj</button>
+        <button type="button" class="btn btn-gold" onclick="saveCustomRepsAndRecord()">Zapisz serię</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ====================================================================
+       MODAL 4: PODSUMOWANIE UKOŃCZONEGO TRENINGU
+       ==================================================================== -->
+  <div id="workoutSummaryModal" class="modal-overlay">
+    <div class="modal-box" style="text-align:center;">
+      <div style="font-size:3rem; margin-bottom:10px;">🏆</div>
+      <div class="modal-title" style="margin-bottom:8px;">Trening Ukończony!</div>
+      <p id="summarySubtitle" style="color:var(--text-muted); font-size:0.9rem; margin-bottom:16px;">
+        Świetna robota! Trening został zapisany w historii.
+      </p>
+
+      <div style="background:rgba(2, 44, 67, 0.7); border-radius:10px; padding:14px; margin-bottom:20px; text-align:left;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:0.9rem;">
+          <span style="color:var(--text-muted);">Trening:</span>
+          <span style="font-weight:800; color:#fff;" id="sumWorkoutName">TRENING A</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:0.9rem;">
+          <span style="color:var(--text-muted);">Tydzień:</span>
+          <span style="font-weight:800; color:#fff;" id="sumWeekNum">Tydzień 1</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:0.9rem;">
+          <span style="color:var(--text-muted);">Liczba serii ogółem:</span>
+          <span style="font-weight:800; color:var(--accent-gold);" id="sumTotalSets">17</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:0.9rem;">
+          <span style="color:var(--text-muted);">Objętość (tonaż):</span>
+          <span style="font-weight:800; color:var(--success-green);" id="sumTotalVolume">4 850 kg</span>
+        </div>
+      </div>
+
+      <button type="button" class="btn btn-gold btn-large" onclick="closeSummaryAndGoHome()">
+        Super, przejdź do historii
+      </button>
+    </div>
+  </div>
+
+
+  <!-- ====================================================================
+       JAVASCRIPT — LOGIKA APLIKACJI (Zabezpieczona pod iOS WebKit)
+       ==================================================================== -->
+  <script>
+    /* ==========================================================================
+       0. GLOBALNY DEBUGGER I OBSŁUGA BŁĘDÓW NA TELEFONIE
+       ========================================================================== */
+    window.onerror = function(message, source, lineno, colno, error) {
+      console.error('JS Error:', message, lineno, error);
+      showNotification('Błąd: ' + message, 'error');
+      return false;
+    };
+
+    // Aktywacja natychmiastowych dotknięć na iOS Safari
+    try {
+      document.addEventListener('touchstart', function() {}, { passive: true });
+    } catch (e) {}
+
+    /* ==========================================================================
+       1. DOMYŚLNY PLAN TRENINGOWY
+       ========================================================================== */
+    const DEFAULT_PLAN = {
+      "A": {
+        id: "A",
+        name: "TRENING A",
+        exercises: [
+          {
+            id: "ex_a_1",
+            name: "Przysiad z sztangą na plecach",
+            sets: 3,
+            repsMin: 3,
+            repsMax: 5,
+            tempo: "2010",
+            progressionStep: 2.5,
+            restSeconds: 180,
+            progressionType: "top_all_sets"
+          },
+          {
+            id: "ex_a_2",
+            name: "Wyciskanie hantli siedząc",
+            sets: 3,
+            repsMin: 6,
+            repsMax: 8,
+            tempo: "2010",
+            progressionStep: 2.5,
+            restSeconds: 120,
+            progressionType: "top_all_sets"
+          },
+          {
+            id: "ex_a_3",
+            name: "Ściąganie drążka do klatki",
+            sets: 3,
+            repsMin: 8,
+            repsMax: 12,
+            tempo: "2010",
+            progressionStep: 2.5,
+            restSeconds: 90,
+            progressionType: "top_all_sets"
+          },
+          {
+            id: "ex_a_4",
+            name: "Uginanie ramion z supinacją",
+            sets: 2,
+            repsMin: 8,
+            repsMax: 12,
+            tempo: "2111",
+            progressionStep: 1.0,
+            restSeconds: 90,
+            progressionType: "top_all_sets"
+          },
+          {
+            id: "ex_a_5",
+            name: "Wznosy w bok",
+            sets: 2,
+            repsMin: 8,
+            repsMax: 12,
+            tempo: "2010",
+            progressionStep: 1.0,
+            restSeconds: 90,
+            progressionType: "top_all_sets"
+          },
+          {
+            id: "ex_a_6",
+            name: "Łydka stojąc",
+            sets: 2,
+            repsMin: 8,
+            repsMax: 12,
+            tempo: "2111",
+            progressionStep: 2.5,
+            restSeconds: 90,
+            progressionType: "top_all_sets"
+          },
+          {
+            id: "ex_a_7",
+            name: "Wznosy nóg do klatki",
+            sets: 2,
+            repsMin: 10,
+            repsMax: "MAX",
+            tempo: "1111",
+            progressionStep: 0,
+            restSeconds: 60,
+            progressionType: "manual"
+          }
+        ]
+      },
+      "B": {
+        id: "B",
+        name: "TRENING B",
+        exercises: [
+          {
+            id: "ex_b_1",
+            name: "Martwy ciąg na prostych nogach",
+            sets: 3,
+            repsMin: 6,
+            repsMax: 8,
+            tempo: "2010",
+            progressionStep: 2.5,
+            restSeconds: 180,
+            progressionType: "top_all_sets"
+          },
+          {
+            id: "ex_b_2",
+            name: "Leg press",
+            sets: 3,
+            repsMin: 8,
+            repsMax: 12,
+            tempo: "2010",
+            progressionStep: 5.0,
+            restSeconds: 120,
+            progressionType: "top_all_sets"
+          },
+          {
+            id: "ex_b_3",
+            name: "Wiosłowanie na hammerze",
+            sets: 3,
+            repsMin: 8,
+            repsMax: 12,
+            tempo: "2010",
+            progressionStep: 2.5,
+            restSeconds: 90,
+            progressionType: "top_all_sets"
+          },
+          {
+            id: "ex_b_4",
+            name: "Wyciskanie na hammerze",
+            sets: 3,
+            repsMin: 8,
+            repsMax: 12,
+            tempo: "2010",
+            progressionStep: 2.5,
+            restSeconds: 90,
+            progressionType: "top_all_sets"
+          },
+          {
+            id: "ex_b_5",
+            name: "Prostowanie ramion na wyciągu",
+            sets: 2,
+            repsMin: 8,
+            repsMax: 12,
+            tempo: "2111",
+            progressionStep: 1.25,
+            restSeconds: 90,
+            progressionType: "top_all_sets"
+          },
+          {
+            id: "ex_b_6",
+            name: "Wznosy w bok na wyciągu",
+            sets: 2,
+            repsMin: 8,
+            repsMax: 12,
+            tempo: "2111",
+            progressionStep: 1.0,
+            restSeconds: 90,
+            progressionType: "top_all_sets"
+          },
+          {
+            id: "ex_b_7",
+            name: "Allahy",
+            sets: 2,
+            repsMin: 8,
+            repsMax: 12,
+            tempo: "2111",
+            progressionStep: 2.5,
+            restSeconds: 60,
+            progressionType: "top_all_sets"
+          }
+        ]
+      },
+      "C": {
+        id: "C",
+        name: "TRENING C",
+        exercises: [
+          {
+            id: "ex_c_1",
+            name: "Pompki na poręczach",
+            sets: 3,
+            repsMin: 5,
+            repsMax: 7,
+            tempo: "2010",
+            progressionStep: 2.5,
+            restSeconds: 120,
+            progressionType: "top_all_sets"
+          },
+          {
+            id: "ex_c_2",
+            name: "Ściąganie drążka do klatki",
+            sets: 3,
+            repsMin: 8,
+            repsMax: 12,
+            tempo: "2010",
+            progressionStep: 2.5,
+            restSeconds: 90,
+            progressionType: "top_all_sets"
+          },
+          {
+            id: "ex_c_3",
+            name: "Uginanie nóg",
+            sets: 3,
+            repsMin: 8,
+            repsMax: 12,
+            tempo: "2010",
+            progressionStep: 2.5,
+            restSeconds: 90,
+            progressionType: "top_all_sets"
+          },
+          {
+            id: "ex_c_4",
+            name: "Wyciskanie francuskie hantlami",
+            sets: 2,
+            repsMin: 8,
+            repsMax: 12,
+            tempo: "2010",
+            progressionStep: 1.0,
+            restSeconds: 90,
+            progressionType: "top_all_sets"
+          },
+          {
+            id: "ex_c_5",
+            name: "Uginanie ramion z oparciem o kolano",
+            sets: 2,
+            repsMin: 8,
+            repsMax: 12,
+            tempo: "2111",
+            progressionStep: 1.0,
+            restSeconds: 90,
+            progressionType: "top_all_sets"
+          },
+          {
+            id: "ex_c_6",
+            name: "Odwrotny butterfly",
+            sets: 2,
+            repsMin: 8,
+            repsMax: 12,
+            tempo: "2111",
+            progressionStep: 1.0,
+            restSeconds: 90,
+            progressionType: "top_all_sets"
+          },
+          {
+            id: "ex_c_7",
+            name: "Wznosy nóg do klatki",
+            sets: 2,
+            repsMin: 10,
+            repsMax: "MAX",
+            tempo: "1111",
+            progressionStep: 0,
+            restSeconds: 60,
+            progressionType: "manual"
+          }
+        ]
+      }
+    };
+
+    /* ==========================================================================
+       2. BEZPIECZNY STORAGE (Pamięć podręczna + localStorage, działa w iOS Files)
+       ========================================================================== */
+    const STORAGE_KEY_PLAN = 'trening2026_plan_v1';
+    const STORAGE_KEY_HISTORY = 'trening2026_history_v1';
+    const STORAGE_KEY_SETTINGS = 'trening2026_settings_v1';
+    const STORAGE_KEY_ACTIVE = 'trening2026_active_session_v1';
+
+    const memoryStore = {};
+
+    function loadFromStorage(key, fallback) {
+      try {
+        if (typeof localStorage !== 'undefined' && localStorage) {
+          const raw = localStorage.getItem(key);
+          if (raw !== null && raw !== undefined) {
+            return JSON.parse(raw);
+          }
+        }
+      } catch (e) {
+        console.warn('Odczyt localStorage zablokowany, używam pamięci:', e);
+      }
+      return memoryStore[key] !== undefined ? memoryStore[key] : fallback;
+    }
+
+    function saveToStorage(key, data) {
+      memoryStore[key] = data;
+      try {
+        if (typeof localStorage !== 'undefined' && localStorage) {
+          localStorage.setItem(key, JSON.stringify(data));
+        }
+      } catch (e) {
+        console.warn('Zapis localStorage zablokowany, zapisano w pamięci:', e);
+      }
+    }
+
+    let appPlan = loadFromStorage(STORAGE_KEY_PLAN, DEFAULT_PLAN);
+    let appHistory = loadFromStorage(STORAGE_KEY_HISTORY, []);
+    let appSettings = loadFromStorage(STORAGE_KEY_SETTINGS, {
+      currentWeek: 1,
+      selectedStartWorkoutId: "A",
+      soundEnabled: true,
+      vibrateEnabled: true
+    });
+    let activeSession = loadFromStorage(STORAGE_KEY_ACTIVE, null);
+
+    let currentTab = 'start';
+    let currentPlanTab = 'A';
+    let currentExerciseIndex = 0;
+    let editingExerciseData = null;
+    let historyFilter = 'all';
+
+    let timerState = {
+      intervalId: null,
+      remaining: 0,
+      total: 0,
+      isRunning: false
+    };
+
+    function formatWeightDisplay(num) {
+      if (num === null || num === undefined || isNaN(num)) return '0';
+      return String(num).replace('.', ',');
+    }
+
+    function parseWeightInput(str) {
+      if (!str) return 0;
+      const clean = String(str).replace(',', '.').trim();
+      const val = parseFloat(clean);
+      return isNaN(val) ? 0 : val;
+    }
+
+    /* ==========================================================================
+       3. SYNTEZA DŹWIĘKÓW I WIBRACJA (Web Audio API)
+       ========================================================================== */
+    let audioCtx = null;
+
+    function getAudioContext() {
+      try {
+        if (!audioCtx) {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioContextClass) audioCtx = new AudioContextClass();
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        return audioCtx;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function playTone(freq, duration, type = 'sine', gainVal = 0.15) {
+      if (!appSettings.soundEnabled) return;
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        gain.gain.setValueAtTime(gainVal, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    function soundSetLogged() {
+      playTone(587.33, 0.08, 'triangle', 0.2);
+      setTimeout(() => playTone(880, 0.12, 'sine', 0.2), 60);
+      vibrate([40]);
+    }
+
+    function soundTimerFinished() {
+      playTone(523.25, 0.2, 'square', 0.25);
+      setTimeout(() => playTone(659.25, 0.2, 'square', 0.25), 250);
+      setTimeout(() => playTone(783.99, 0.4, 'sine', 0.3), 500);
+      vibrate([200, 100, 200, 100, 300]);
+    }
+
+    function vibrate(pattern) {
+      if (appSettings.vibrateEnabled && navigator.vibrate) {
+        try { navigator.vibrate(pattern); } catch (e) {}
+      }
+    }
+
+    /* ==========================================================================
+       4. POWIADOMIENIA (TOAST)
+       ========================================================================== */
+    let notifTimeout = null;
+    function showNotification(message, type = 'success') {
+      try {
+        const el = document.getElementById('notification');
+        const icon = document.getElementById('notif-icon');
+        const msg = document.getElementById('notif-msg');
+
+        if (!el || !msg) return;
+
+        el.className = 'notification show ' + type;
+        msg.textContent = message;
+
+        if (type === 'error') icon.textContent = '✕';
+        else if (type === 'gold') icon.textContent = '★';
+        else icon.textContent = '✓';
+
+        clearTimeout(notifTimeout);
+        notifTimeout = setTimeout(() => {
+          el.classList.remove('show');
+        }, 2600);
+      } catch (e) {}
+    }
+
+    /* ==========================================================================
+       5. NAWIGACJA ZAKŁADEK
+       ========================================================================== */
+    function switchTab(tabId) {
+      try {
+        currentTab = tabId;
+
+        document.querySelectorAll('.tab-view').forEach(v => v.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+
+        const targetView = document.getElementById('view-' + tabId);
+        const targetNav = document.getElementById('nav-' + tabId);
+
+        if (targetView) targetView.classList.add('active');
+        if (targetNav) targetNav.classList.add('active');
+
+        if (tabId === 'start') {
+          renderStartScreen();
+        } else if (tabId === 'workout') {
+          renderWorkoutView();
+        } else if (tabId === 'plan') {
+          renderPlanView();
+        } else if (tabId === 'history') {
+          renderHistory();
+        } else if (tabId === 'settings') {
+          renderSettings();
+        }
+
+        updateFloatingTimerBar();
+        window.scrollTo(0, 0);
+      } catch (err) {
+        console.error('Błąd switchTab:', err);
+      }
+    }
+
+    function updateHeaderBadges() {
+      const headerWeekBadge = document.getElementById('headerWeekBadge');
+      if (headerWeekBadge) {
+        headerWeekBadge.textContent = 'TYDZIEŃ ' + (appSettings.currentWeek || 1);
+      }
+
+      const pill = document.getElementById('activeWorkoutHeaderPill');
+      const dot = document.getElementById('navWorkoutDot');
+      if (activeSession) {
+        if (pill) pill.style.display = 'flex';
+        if (dot) dot.style.display = 'block';
+      } else {
+        if (pill) pill.style.display = 'none';
+        if (dot) dot.style.display = 'none';
+      }
+    }
+
+    /* ==========================================================================
+       6. LOGIKA START
+       ========================================================================== */
+    function getNextSuggestedWorkoutId() {
+      if (appHistory && appHistory.length > 0) {
+        const last = appHistory[0];
+        if (last && last.workoutId === 'A') return 'B';
+        if (last && last.workoutId === 'B') return 'C';
+        if (last && last.workoutId === 'C') return 'A';
+      }
+      return (appSettings && appSettings.selectedStartWorkoutId) ? appSettings.selectedStartWorkoutId : 'A';
+    }
+
+    function renderStartScreen() {
+      try {
+        updateHeaderBadges();
+
+        const workoutId = (appSettings && appSettings.selectedStartWorkoutId) ? appSettings.selectedStartWorkoutId : getNextSuggestedWorkoutId();
+        const plan = appPlan[workoutId] || appPlan['A'];
+
+        const heroName = document.getElementById('startHeroWorkoutName');
+        const weekLabel = document.getElementById('startWeekLabel');
+        const btnHero = document.getElementById('btnStartWorkoutHero');
+        const exCount = document.getElementById('startExerciseCount');
+        const previewList = document.getElementById('startExercisePreviewList');
+
+        if (heroName) heroName.textContent = plan.name;
+        if (weekLabel) weekLabel.textContent = 'TYDZIEŃ ' + (appSettings.currentWeek || 1);
+
+        if (btnHero) {
+          if (activeSession) {
+            btnHero.textContent = '⚡ KONTYNUUJ TRWAJĄCY TRENING';
+            btnHero.className = 'btn btn-large btn-success';
+            btnHero.onclick = function(e) {
+              if (e) e.preventDefault();
+              switchTab('workout');
+            };
+          } else {
+            btnHero.textContent = '🚀 ROZPOCZNIJ TRENING';
+            btnHero.className = 'btn btn-large btn-gold';
+            btnHero.onclick = function(e) {
+              if (e) e.preventDefault();
+              startSuggestedWorkout();
+            };
+          }
+        }
+
+        if (exCount) exCount.textContent = plan.exercises.length + ' ćwiczeń';
+
+        if (previewList) {
+          previewList.innerHTML = '';
+          plan.exercises.forEach((ex, idx) => {
+            const li = document.createElement('li');
+            li.className = 'preview-item';
+            const repsStr = ex.repsMax === 'MAX' ? `${ex.repsMin}+ MAX` : `${ex.repsMin}–${ex.repsMax}`;
+            li.innerHTML = `<span class="num">${idx + 1}.</span> <strong>${ex.name}</strong> <span style="color:var(--text-muted); font-size:0.8rem;">(${ex.sets} × ${repsStr})</span>`;
+            previewList.appendChild(li);
+          });
+        }
+
+        document.querySelectorAll('.workout-selector-pills .pill-btn').forEach(btn => {
+          const text = btn.textContent;
+          if (text.includes('TRENING ' + workoutId)) {
+            btn.classList.add('active');
+          } else {
+            btn.classList.remove('active');
+          }
+        });
+      } catch (err) {
+        console.error('Błąd renderStartScreen:', err);
+      }
+    }
+
+    function selectStartWorkout(workoutId) {
+      appSettings.selectedStartWorkoutId = workoutId;
+      saveToStorage(STORAGE_KEY_SETTINGS, appSettings);
+      renderStartScreen();
+    }
+
+    function adjustWeek(delta) {
+      appSettings.currentWeek = Math.max(1, (appSettings.currentWeek || 1) + delta);
+      saveToStorage(STORAGE_KEY_SETTINGS, appSettings);
+      const startW = document.getElementById('startWeekLabel');
+      const workW = document.getElementById('workoutWeekLabel');
+      if (startW) startW.textContent = 'TYDZIEŃ ' + appSettings.currentWeek;
+      if (workW) workW.textContent = 'TYDZIEŃ ' + appSettings.currentWeek;
+      updateHeaderBadges();
+      showNotification('Ustawiono tydzień ' + appSettings.currentWeek, 'gold');
+    }
+
+    function startSuggestedWorkout() {
+      try {
+        const workoutId = (appSettings && appSettings.selectedStartWorkoutId) ? appSettings.selectedStartWorkoutId : getNextSuggestedWorkoutId() || 'A';
+        startWorkoutSession(workoutId);
+      } catch (err) {
+        alert('Błąd uruchamiania treningu: ' + err.message);
+      }
+    }
+
+    /* ==========================================================================
+       7. ASYSTENT TRENINGOWY — SILNIK PROGRESJI I HISTORII
+       ========================================================================== */
+    function getLastExerciseResult(exerciseName) {
+      if (!appHistory || appHistory.length === 0) return null;
+
+      for (const session of appHistory) {
+        if (!session.exercises) continue;
+        const match = session.exercises.find(e => e.name && e.name.trim().toLowerCase() === exerciseName.trim().toLowerCase());
+        if (match && match.sets && match.sets.length > 0) {
+          return {
+            sessionDate: session.date,
+            sessionWeek: session.week,
+            sets: match.sets,
+            targetSets: match.targetSets || match.sets.length
+          };
+        }
+      }
+      return null;
+    }
+
+    function calculateProgression(exerciseDef) {
+      const lastResult = getLastExerciseResult(exerciseDef.name);
+
+      if (!lastResult) {
+        return {
+          hasHistory: false,
+          suggestedWeight: 0,
+          isProgression: false,
+          progressionBadgeText: '',
+          lastSummaryText: 'BRAK POPRZEDNIEGO WYNIKU',
+          lastDateText: ''
+        };
+      }
+
+      const sets = lastResult.sets;
+      const lastWeight = sets[0].weight || 0;
+      
+      const allSameWeight = sets.every(s => s.weight === lastWeight);
+      let lastSummaryText = '';
+      if (allSameWeight) {
+        const repsSummary = sets.map(s => s.reps).join(' / ');
+        lastSummaryText = `${formatWeightDisplay(lastWeight)} kg • ${repsSummary}`;
+      } else {
+        lastSummaryText = sets.map(s => `${formatWeightDisplay(s.weight)}kg × ${s.reps}`).join(' / ');
+      }
+
+      const dateObj = new Date(lastResult.sessionDate);
+      const dateStr = !isNaN(dateObj) ? `${dateObj.toLocaleDateString('pl-PL')} (Tydz. ${lastResult.sessionWeek})` : `Tydzień ${lastResult.sessionWeek}`;
+
+      let shouldProgress = false;
+      const maxReps = typeof exerciseDef.repsMax === 'number' ? exerciseDef.repsMax : parseInt(exerciseDef.repsMax, 10);
+
+      if (exerciseDef.progressionType === 'top_all_sets') {
+        if (!isNaN(maxReps) && maxReps > 0) {
+          const completedEnoughSets = sets.length >= exerciseDef.sets;
+          const allAtMax = sets.every(s => {
+            const r = typeof s.reps === 'number' ? s.reps : parseInt(s.reps, 10);
+            return !isNaN(r) && r >= maxReps;
+          });
+          if (completedEnoughSets && allAtMax) {
+            shouldProgress = true;
+          }
+        }
+      } else if (exerciseDef.progressionType === 'top_first_set') {
+        if (!isNaN(maxReps) && maxReps > 0 && sets[0]) {
+          const r0 = typeof sets[0].reps === 'number' ? sets[0].reps : parseInt(sets[0].reps, 10);
+          if (!isNaN(r0) && r0 >= maxReps) {
+            shouldProgress = true;
+          }
+        }
+      }
+
+      let step = exerciseDef.progressionStep || 0;
+      let suggestedWeight = lastWeight;
+
+      if (shouldProgress && step > 0) {
+        suggestedWeight = Number((lastWeight + step).toFixed(2));
+      }
+
+      return {
+        hasHistory: true,
+        lastWeight: lastWeight,
+        suggestedWeight: suggestedWeight,
+        isProgression: shouldProgress,
+        progressionBadgeText: shouldProgress ? `PROGRES +${formatWeightDisplay(step)} kg` : '',
+        lastSummaryText: lastSummaryText,
+        lastDateText: dateStr
+      };
+    }
+
+    /* ==========================================================================
+       8. ASYSTENT TRENINGOWY — ROZPOCZYNANIE I ZARZĄDZANIE SESJĄ
+       ========================================================================== */
+    function startWorkoutSession(workoutId) {
+      try {
+        const plan = appPlan[workoutId];
+        if (!plan) {
+          alert('Błąd: nie znaleziono planu ' + workoutId);
+          return;
+        }
+
+        if (activeSession && activeSession.workoutId === workoutId) {
+          switchTab('workout');
+          return;
+        }
+
+        const sessionExercises = plan.exercises.map(exDef => {
+          const prog = calculateProgression(exDef);
+          return {
+            id: exDef.id,
+            name: exDef.name,
+            setsTarget: exDef.sets,
+            repsMin: exDef.repsMin,
+            repsMax: exDef.repsMax,
+            tempo: exDef.tempo,
+            restSeconds: exDef.restSeconds,
+            progressionStep: exDef.progressionStep,
+            progressionType: exDef.progressionType,
+            currentWeight: (prog && prog.hasHistory) ? prog.suggestedWeight : 0,
+            suggestedWeight: (prog && prog.suggestedWeight) ? prog.suggestedWeight : 0,
+            isProgressionHit: prog ? prog.isProgression : false,
+            lastSummary: prog ? prog.lastSummaryText : 'BRAK POPRZEDNIEGO WYNIKU',
+            lastDate: prog ? prog.lastDateText : '',
+            completedSets: []
+          };
+        });
+
+        activeSession = {
+          sessionId: 'sess_' + Date.now(),
+          workoutId: workoutId,
+          workoutName: plan.name,
+          week: appSettings.currentWeek || 1,
+          startTime: new Date().toISOString(),
+          currentExerciseIndex: 0,
+          exercises: sessionExercises
+        };
+
+        currentExerciseIndex = 0;
+        saveToStorage(STORAGE_KEY_ACTIVE, activeSession);
+        updateHeaderBadges();
+        switchTab('workout');
+        showNotification(`Rozpoczęto ${plan.name} (Tydzień ${appSettings.currentWeek})!`);
+      } catch (err) {
+        alert('Błąd startWorkoutSession: ' + err.message);
+      }
+    }
+
+    function renderWorkoutView() {
+      try {
+        updateHeaderBadges();
+        const selectionDiv = document.getElementById('workoutSelectionContainer');
+        const assistantDiv = document.getElementById('workoutActiveAssistant');
+
+        if (!activeSession) {
+          if (selectionDiv) selectionDiv.style.display = 'block';
+          if (assistantDiv) assistantDiv.style.display = 'none';
+          renderWorkoutCards();
+        } else {
+          if (selectionDiv) selectionDiv.style.display = 'none';
+          if (assistantDiv) assistantDiv.style.display = 'block';
+          renderActiveExercise();
+        }
+      } catch (err) {
+        console.error('Błąd renderWorkoutView:', err);
+      }
+    }
+
+    function renderWorkoutCards() {
+      const container = document.getElementById('workoutCardsGrid');
+      const weekLabel = document.getElementById('workoutWeekLabel');
+      if (weekLabel) weekLabel.textContent = 'TYDZIEŃ ' + (appSettings.currentWeek || 1);
+      if (!container) return;
+
+      container.innerHTML = '';
+      const order = ['A', 'B', 'C'];
+
+      order.forEach(wId => {
+        const plan = appPlan[wId];
+        if (!plan) return;
+
+        const card = document.createElement('div');
+        card.className = 'workout-choice-card';
+
+        const exercisesText = plan.exercises.map(e => e.name).slice(0, 4).join(', ') + (plan.exercises.length > 4 ? '...' : '');
+
+        card.innerHTML = `
+          <div class="w-card-header">
+            <span class="w-card-title">${plan.name}</span>
+            <span class="badge badge-gold">${plan.exercises.length} ćwiczeń</span>
+          </div>
+          <div class="w-card-exercises">${exercisesText}</div>
+          <button type="button" class="btn btn-gold btn-large" style="margin-top:8px;" onclick="startWorkoutSession('${wId}')">
+            ROZPOCZNIJ ${plan.name}
+          </button>
+        `;
+
+        card.onclick = () => startWorkoutSession(wId);
+        container.appendChild(card);
+      });
+    }
+
+    /* ==========================================================================
+       9. NAJWAŻNIEJSZY EKRAN — WYŚWIETLANIE AKTYWNEGO ĆWICZENIA
+       ========================================================================== */
+    function renderActiveExercise() {
+      try {
+        if (!activeSession || !activeSession.exercises) return;
+
+        const exList = activeSession.exercises;
+        if (currentExerciseIndex < 0) currentExerciseIndex = 0;
+        if (currentExerciseIndex >= exList.length) currentExerciseIndex = exList.length - 1;
+
+        activeSession.currentExerciseIndex = currentExerciseIndex;
+        saveToStorage(STORAGE_KEY_ACTIVE, activeSession);
+
+        const ex = exList[currentExerciseIndex];
+
+        const counterEl = document.getElementById('assistantExerciseCounter');
+        if (counterEl) counterEl.textContent = `ĆWICZENIE ${currentExerciseIndex + 1} Z ${exList.length}`;
+
+        const nameEl = document.getElementById('curExName');
+        if (nameEl) nameEl.textContent = ex.name;
+
+        const repsDisplay = ex.repsMax === 'MAX' ? `${ex.repsMin}+ MAX` : `${ex.repsMin}–${ex.repsMax}`;
+        const setsRepsEl = document.getElementById('curExSetsReps');
+        if (setsRepsEl) setsRepsEl.textContent = `${ex.setsTarget} serie × ${repsDisplay} powt.`;
+
+        const tempoEl = document.getElementById('curExTempo');
+        if (tempoEl) tempoEl.textContent = `Tempo: ${ex.tempo || '2010'}`;
+
+        const restTagEl = document.getElementById('curExRestTag');
+        if (restTagEl) restTagEl.textContent = `Odpoczynek: ${ex.restSeconds || 90}s`;
+
+        const prevResEl = document.getElementById('curExPrevResult');
+        if (prevResEl) prevResEl.textContent = ex.lastSummary || 'BRAK POPRZEDNIEGO WYNIKU';
+
+        const prevDateEl = document.getElementById('curExPrevDate');
+        if (prevDateEl) prevDateEl.textContent = ex.lastDate || '';
+
+        const targetBox = document.getElementById('curExTargetBox');
+        const targetLabel = document.getElementById('curExTargetLabel');
+        const targetVal = document.getElementById('curExTargetVal');
+        const targetBadge = document.getElementById('curExProgresBadge');
+
+        if (targetBox && targetLabel && targetVal && targetBadge) {
+          if (ex.isProgressionHit) {
+            targetBox.classList.add('progres-hit');
+            targetLabel.textContent = '🎯 DZISIAJ';
+            targetVal.textContent = `${formatWeightDisplay(ex.suggestedWeight)} kg`;
+            targetBadge.style.display = 'flex';
+            targetBadge.innerHTML = `<span>PROGRES +${formatWeightDisplay(ex.progressionStep)} kg</span>`;
+          } else {
+            targetBox.classList.remove('progres-hit');
+            targetBadge.style.display = 'none';
+            if (ex.suggestedWeight > 0) {
+              targetLabel.textContent = 'DZISIAJ';
+              targetVal.textContent = `${formatWeightDisplay(ex.suggestedWeight)} kg`;
+            } else {
+              targetLabel.textContent = 'DZISIAJ (NOWE ĆWICZENIE)';
+              targetVal.textContent = 'Wybierz ciężar';
+            }
+          }
+        }
+
+        const weightValEl = document.getElementById('curWeightValue');
+        if (weightValEl) weightValEl.textContent = formatWeightDisplay(ex.currentWeight);
+
+        renderSetsList(ex);
+        renderRepButtons(ex);
+        initExerciseTimer(ex.restSeconds || 90);
+
+        const btnNext = document.getElementById('btnNextExercise');
+        const completedBanner = document.getElementById('exerciseCompletedBanner');
+        const isCompleted = ex.completedSets.length >= ex.setsTarget;
+
+        if (completedBanner) {
+          completedBanner.style.display = isCompleted ? 'block' : 'none';
+          if (isCompleted) {
+            completedBanner.textContent = `🎉 ĆWICZENIE UKOŃCZONE! (${ex.completedSets.length}/${ex.setsTarget} serie)`;
+          }
+        }
+
+        if (btnNext) {
+          if (isCompleted) {
+            btnNext.classList.add('completed-prompt');
+            if (currentExerciseIndex === exList.length - 1) {
+              btnNext.textContent = '🏆 ZAKOŃCZ TRENING';
+              btnNext.onclick = promptFinishWorkout;
+            } else {
+              btnNext.textContent = 'NASTĘPNE ĆWICZENIE →';
+              btnNext.onclick = () => navigateExercise(1);
+            }
+          } else {
+            btnNext.classList.remove('completed-prompt');
+            if (currentExerciseIndex === exList.length - 1) {
+              btnNext.textContent = 'Podsumuj trening';
+              btnNext.onclick = promptFinishWorkout;
+            } else {
+              btnNext.textContent = 'Następne ćwiczenie →';
+              btnNext.onclick = () => navigateExercise(1);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Błąd renderActiveExercise:', err);
+      }
+    }
+
+    function renderSetsList(ex) {
+      const container = document.getElementById('curExSetsList');
+      const textProgress = document.getElementById('curExSetsProgressText');
+      if (!container) return;
+
+      container.innerHTML = '';
+      const totalSets = ex.setsTarget;
+      const completed = ex.completedSets || [];
+
+      if (textProgress) textProgress.textContent = `${completed.length} / ${totalSets} serie`;
+
+      for (let i = 0; i < totalSets; i++) {
+        const row = document.createElement('div');
+        const setNum = i + 1;
+
+        if (i < completed.length) {
+          const setRecord = completed[i];
+          row.className = 'set-row completed';
+          row.innerHTML = `
+            <div>
+              <span class="set-status-icon" style="color:var(--success-green);">✓</span>
+              <span>${setNum}. <strong>${formatWeightDisplay(setRecord.weight)} kg × ${setRecord.reps}</strong></span>
+            </div>
+            <button type="button" class="set-actions-btn" onclick="removeSetRecord(${i})" title="Usuń tę serię">✕ Usuń</button>
+          `;
+        } else if (i === completed.length) {
+          row.className = 'set-row active';
+          row.innerHTML = `
+            <div>
+              <span class="set-status-icon">○</span>
+              <span>${setNum}. <strong>${formatWeightDisplay(ex.currentWeight)} kg × ?</strong></span>
+            </div>
+            <span style="font-size:0.75rem; text-transform:uppercase; color:var(--accent-gold);">Aktualna</span>
+          `;
+        } else {
+          row.className = 'set-row';
+          row.innerHTML = `
+            <div>
+              <span class="set-status-icon" style="color:var(--text-muted);">○</span>
+              <span>${setNum}. <span style="color:var(--text-muted);">${formatWeightDisplay(ex.currentWeight)} kg × ?</span></span>
+            </div>
+            <span style="font-size:0.75rem; color:var(--text-muted);">Oczekuje</span>
+          `;
+        }
+
+        container.appendChild(row);
+      }
+    }
+
+    function addSetTargetOnTheFly() {
+      if (!activeSession) return;
+      const ex = activeSession.exercises[currentExerciseIndex];
+      if (!ex) return;
+      ex.setsTarget++;
+      saveToStorage(STORAGE_KEY_ACTIVE, activeSession);
+      renderActiveExercise();
+      showNotification(`Dodano serię (cel: ${ex.setsTarget} serii)`);
+    }
+
+    /* ==========================================================================
+       10. INTELIGENTNE PRZYCISKI POWTÓRZEŃ I AUTOMATYCZNY ZAPIS SERII
+       ========================================================================== */
+    function renderRepButtons(ex) {
+      const container = document.getElementById('repsButtonsGrid');
+      if (!container) return;
+      container.innerHTML = '';
+
+      let min = typeof ex.repsMin === 'number' ? ex.repsMin : parseInt(ex.repsMin, 10);
+      let max = typeof ex.repsMax === 'number' ? ex.repsMax : parseInt(ex.repsMax, 10);
+      const isMaxTag = ex.repsMax === 'MAX' || isNaN(max);
+
+      let repValues = [];
+
+      if (isMaxTag) {
+        repValues = ['MAX'];
+      } else if (!isNaN(min) && !isNaN(max)) {
+        if (min <= max && (max - min) <= 7) {
+          for (let r = min; r <= max; r++) {
+            repValues.push(r);
+          }
+        } else {
+          for (let r = min; r <= max; r += 2) {
+            repValues.push(r);
+          }
+        }
+      } else {
+        repValues = [6, 8, 10, 12];
+      }
+
+      repValues.forEach(val => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = val === 'MAX' ? 'rep-btn rep-max' : 'rep-btn';
+        btn.textContent = val;
+        btn.onclick = () => recordSetAutomatically(val);
+        container.appendChild(btn);
+      });
+
+      const customBtn = document.createElement('button');
+      customBtn.type = 'button';
+      customBtn.className = 'rep-btn-custom';
+      customBtn.textContent = 'Inne...';
+      customBtn.onclick = openCustomRepsModal;
+      container.appendChild(customBtn);
+    }
+
+    function recordSetAutomatically(repsValue) {
+      if (!activeSession) return;
+      const ex = activeSession.exercises[currentExerciseIndex];
+      if (!ex) return;
+
+      const weight = ex.currentWeight || 0;
+
+      ex.completedSets.push({
+        weight: weight,
+        reps: repsValue
+      });
+
+      saveToStorage(STORAGE_KEY_ACTIVE, activeSession);
+
+      soundSetLogged();
+      showNotification(`✓ Zapisano serię: ${formatWeightDisplay(weight)} kg × ${repsValue}`);
+
+      renderActiveExercise();
+
+      if (ex.completedSets.length >= ex.setsTarget) {
+        showNotification(`🎉 Ukończono: ${ex.name}!`, 'gold');
+      } else {
+        resetTimer();
+      }
+    }
+
+    function removeSetRecord(setIndex) {
+      if (!activeSession) return;
+      const ex = activeSession.exercises[currentExerciseIndex];
+      if (!ex || !ex.completedSets) return;
+
+      ex.completedSets.splice(setIndex, 1);
+      saveToStorage(STORAGE_KEY_ACTIVE, activeSession);
+      renderActiveExercise();
+      showNotification('Usunięto serię');
+    }
+
+    /* ==========================================================================
+       11. CIĘŻAR — SZYBKIE ZMIANY
+       ========================================================================== */
+    function adjustCurrentWeight(delta) {
+      if (!activeSession) return;
+      const ex = activeSession.exercises[currentExerciseIndex];
+      if (!ex) return;
+
+      let newWeight = Number(((ex.currentWeight || 0) + delta).toFixed(2));
+      if (newWeight < 0) newWeight = 0;
+
+      ex.currentWeight = newWeight;
+      saveToStorage(STORAGE_KEY_ACTIVE, activeSession);
+      const wVal = document.getElementById('curWeightValue');
+      if (wVal) wVal.textContent = formatWeightDisplay(newWeight);
+      renderSetsList(ex);
+      playTone(440, 0.04, 'sine', 0.05);
+    }
+
+    function openManualWeightModal() {
+      if (!activeSession) return;
+      const ex = activeSession.exercises[currentExerciseIndex];
+      const input = document.getElementById('modalWeightInput');
+      input.value = formatWeightDisplay(ex.currentWeight || 0);
+      document.getElementById('weightModal').style.display = 'flex';
+      setTimeout(() => input.select(), 100);
+    }
+
+    function closeWeightModal() {
+      document.getElementById('weightModal').style.display = 'none';
+    }
+
+    function saveManualWeight() {
+      if (!activeSession) return;
+      const input = document.getElementById('modalWeightInput');
+      const val = parseWeightInput(input.value);
+
+      if (!isNaN(val) && val >= 0) {
+        const ex = activeSession.exercises[currentExerciseIndex];
+        ex.currentWeight = val;
+        saveToStorage(STORAGE_KEY_ACTIVE, activeSession);
+        renderActiveExercise();
+        closeWeightModal();
+        showNotification(`Ustawiono ciężar ${formatWeightDisplay(val)} kg`);
+      } else {
+        showNotification('Podaj prawidłowy ciężar', 'error');
+      }
+    }
+
+    function openCustomRepsModal() {
+      const input = document.getElementById('modalCustomRepsInput');
+      input.value = '';
+      document.getElementById('customRepsModal').style.display = 'flex';
+      setTimeout(() => input.focus(), 100);
+    }
+
+    function closeCustomRepsModal() {
+      document.getElementById('customRepsModal').style.display = 'none';
+    }
+
+    function saveCustomRepsAndRecord() {
+      const input = document.getElementById('modalCustomRepsInput');
+      const val = parseInt(input.value, 10);
+      if (!isNaN(val) && val > 0) {
+        closeCustomRepsModal();
+        recordSetAutomatically(val);
+      } else {
+        showNotification('Podaj prawidłową liczbę powtórzeń', 'error');
+      }
+    }
+
+    /* ==========================================================================
+       12. PRZEJŚCIE MIĘDZY ĆWICZENIAMI I PLAN DRAWER
+       ========================================================================== */
+    function navigateExercise(direction) {
+      if (!activeSession) return;
+      const newIndex = currentExerciseIndex + direction;
+      if (newIndex >= 0 && newIndex < activeSession.exercises.length) {
+        currentExerciseIndex = newIndex;
+        renderActiveExercise();
+        window.scrollTo(0, 0);
+      }
+    }
+
+    function openPlanDrawer() {
+      if (!activeSession) return;
+      const overlay = document.getElementById('planDrawerOverlay');
+      const title = document.getElementById('drawerWorkoutTitle');
+      const list = document.getElementById('drawerExercisesList');
+
+      title.textContent = `${activeSession.workoutName} (Tydz. ${activeSession.week})`;
+      list.innerHTML = '';
+
+      activeSession.exercises.forEach((ex, idx) => {
+        const li = document.createElement('li');
+        const isCurrent = idx === currentExerciseIndex;
+        const isDone = ex.completedSets.length >= ex.setsTarget;
+
+        li.className = `drawer-ex-item ${isCurrent ? 'current' : ''} ${isDone ? 'done' : ''}`;
+
+        let icon = '○';
+        if (isDone) icon = '✓';
+        else if (isCurrent) icon = '▶';
+
+        li.innerHTML = `
+          <span>${icon} ${idx + 1}. ${ex.name}</span>
+          <span style="font-size:0.75rem; color:var(--text-muted);">${ex.completedSets.length}/${ex.setsTarget}</span>
+        `;
+
+        li.onclick = () => {
+          currentExerciseIndex = idx;
+          closePlanDrawer();
+          renderActiveExercise();
+        };
+
+        list.appendChild(li);
+      });
+
+      overlay.style.display = 'flex';
+    }
+
+    function closePlanDrawer() {
+      document.getElementById('planDrawerOverlay').style.display = 'none';
+    }
+
+    /* ==========================================================================
+       13. TIMER ODPOCZYNKU
+       ========================================================================== */
+    function formatTime(seconds) {
+      const m = Math.floor(seconds / 60);
+      const s = seconds % 60;
+      return `${m}:${s < 10 ? '0' : ''}${s}`;
+    }
+
+    function initExerciseTimer(restSeconds) {
+      if (!timerState.isRunning) {
+        timerState.total = restSeconds;
+        timerState.remaining = restSeconds;
+        updateTimerDisplay();
+      }
+    }
+
+    function updateTimerDisplay() {
+      const btn = document.getElementById('timerMainBtn');
+      const icon = document.getElementById('timerIcon');
+      const text = document.getElementById('timerText');
+
+      if (!btn) return;
+
+      if (timerState.isRunning) {
+        btn.className = 'timer-btn-main timer-running';
+        if (icon) icon.textContent = '⏳';
+        if (text) text.textContent = formatTime(timerState.remaining);
+      } else if (timerState.remaining === 0 && timerState.total > 0) {
+        btn.className = 'timer-btn-main timer-done';
+        if (icon) icon.textContent = '🔔';
+        if (text) text.textContent = 'CZAS MINĄŁ!';
+      } else {
+        btn.className = 'timer-btn-main';
+        if (icon) icon.textContent = '⏱';
+        if (text) text.textContent = `START ${formatTime(timerState.remaining)}`;
+      }
+
+      updateFloatingTimerBar();
+    }
+
+    function updateFloatingTimerBar() {
+      const bar = document.getElementById('floatingTimerBar');
+      const timeLabel = document.getElementById('floatingTimerTime');
+      if (!bar) return;
+
+      if (timerState.isRunning && currentTab !== 'workout') {
+        bar.style.display = 'flex';
+        if (timeLabel) timeLabel.textContent = formatTime(timerState.remaining);
+      } else {
+        bar.style.display = 'none';
+      }
+    }
+
+    function toggleTimer() {
+      if (timerState.isRunning) {
+        pauseTimer();
+      } else {
+        startTimer();
+      }
+    }
+
+    function startTimer() {
+      if (timerState.remaining <= 0) {
+        const ex = activeSession ? activeSession.exercises[currentExerciseIndex] : null;
+        timerState.remaining = ex ? (ex.restSeconds || 90) : 90;
+      }
+
+      clearInterval(timerState.intervalId);
+      timerState.isRunning = true;
+      updateTimerDisplay();
+
+      timerState.intervalId = setInterval(() => {
+        if (timerState.remaining > 0) {
+          timerState.remaining--;
+          updateTimerDisplay();
+        } else {
+          clearInterval(timerState.intervalId);
+          timerState.isRunning = false;
+          soundTimerFinished();
+          updateTimerDisplay();
+          showNotification('⏱ Czas odpoczynku minął!', 'gold');
+        }
+      }, 1000);
+    }
+
+    function pauseTimer() {
+      clearInterval(timerState.intervalId);
+      timerState.isRunning = false;
+      updateTimerDisplay();
+    }
+
+    function adjustTimer(seconds) {
+      timerState.remaining = Math.max(0, timerState.remaining + seconds);
+      updateTimerDisplay();
+    }
+
+    function resetTimer() {
+      clearInterval(timerState.intervalId);
+      timerState.isRunning = false;
+      const ex = activeSession ? activeSession.exercises[currentExerciseIndex] : null;
+      const rest = ex ? (ex.restSeconds || 90) : 90;
+      timerState.remaining = rest;
+      timerState.total = rest;
+      updateTimerDisplay();
+    }
+
+    /* ==========================================================================
+       14. ZAKOŃCZENIE TRENINGU I ZAPIS HISTORII
+       ========================================================================== */
+    function promptFinishWorkout() {
+      if (!activeSession) return;
+
+      const anySets = activeSession.exercises.some(e => e.completedSets && e.completedSets.length > 0);
+      if (!anySets) {
+        if (confirm('Nie wykonano jeszcze żadnej serii. Czy na pewno chcesz anulować ten trening?')) {
+          activeSession = null;
+          saveToStorage(STORAGE_KEY_ACTIVE, null);
+          switchTab('start');
+          showNotification('Anulowano trening');
+        }
+        return;
+      }
+
+      if (confirm('Czy na pewno chcesz zakończyć ten trening i zapisać wyniki do historii?')) {
+        finishAndSaveWorkout();
+      }
+    }
+
+    function finishAndSaveWorkout() {
+      if (!activeSession) return;
+
+      let totalSets = 0;
+      let totalVolume = 0;
+
+      const savedExercises = activeSession.exercises.map(ex => {
+        const setsData = (ex.completedSets || []).map(s => {
+          totalSets++;
+          const repsNum = typeof s.reps === 'number' ? s.reps : parseInt(s.reps, 10);
+          if (!isNaN(repsNum)) {
+            totalVolume += (s.weight * repsNum);
+          }
+          return {
+            weight: s.weight,
+            reps: s.reps
+          };
+        });
+
+        return {
+          id: ex.id,
+          name: ex.name,
+          targetSets: ex.setsTarget,
+          tempo: ex.tempo,
+          sets: setsData
+        };
+      });
+
+      const historyRecord = {
+        sessionId: activeSession.sessionId,
+        workoutId: activeSession.workoutId,
+        workoutName: activeSession.workoutName,
+        week: activeSession.week,
+        date: new Date().toISOString(),
+        totalSets: totalSets,
+        totalVolume: Math.round(totalVolume),
+        exercises: savedExercises
+      };
+
+      appHistory.unshift(historyRecord);
+      saveToStorage(STORAGE_KEY_HISTORY, appHistory);
+
+      let nextW = 'A';
+      if (activeSession.workoutId === 'A') nextW = 'B';
+      else if (activeSession.workoutId === 'B') nextW = 'C';
+      else if (activeSession.workoutId === 'C') nextW = 'A';
+      appSettings.selectedStartWorkoutId = nextW;
+      saveToStorage(STORAGE_KEY_SETTINGS, appSettings);
+
+      const sessionSummaryData = {
+        name: activeSession.workoutName,
+        week: activeSession.week,
+        sets: totalSets,
+        volume: Math.round(totalVolume)
+      };
+
+      activeSession = null;
+      saveToStorage(STORAGE_KEY_ACTIVE, null);
+      clearInterval(timerState.intervalId);
+      timerState.isRunning = false;
+
+      showWorkoutSummaryModal(sessionSummaryData);
+    }
+
+    function showWorkoutSummaryModal(data) {
+      document.getElementById('sumWorkoutName').textContent = data.name;
+      document.getElementById('sumWeekNum').textContent = 'Tydzień ' + data.week;
+      document.getElementById('sumTotalSets').textContent = data.sets + ' serii';
+      document.getElementById('sumTotalVolume').textContent = data.volume.toLocaleString('pl-PL') + ' kg';
+      document.getElementById('workoutSummaryModal').style.display = 'flex';
+      playTone(523.25, 0.3, 'sine', 0.2);
+    }
+
+    function closeSummaryAndGoHome() {
+      document.getElementById('workoutSummaryModal').style.display = 'none';
+      switchTab('history');
+      showNotification('Trening zapisany pomyślnie!', 'gold');
+    }
+
+    /* ==========================================================================
+       15. ZAKŁADKA PLAN — PEŁNA EDYCJA TRENINGÓW
+       ========================================================================== */
+    function selectPlanTab(tabKey) {
+      currentPlanTab = tabKey;
+      document.querySelectorAll('.plan-tabs .plan-tab-btn').forEach(btn => {
+        if (btn.id === 'planTab' + tabKey) btn.classList.add('active');
+        else btn.classList.remove('active');
+      });
+      renderPlanView();
+    }
+
+    function renderPlanView() {
+      const container = document.getElementById('planExercisesList');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const plan = appPlan[currentPlanTab];
+      if (!plan || !plan.exercises) return;
+
+      plan.exercises.forEach((ex, idx) => {
+        const card = document.createElement('div');
+        card.className = 'plan-item-card';
+
+        const repsDisplay = ex.repsMax === 'MAX' ? `${ex.repsMin}+ MAX` : `${ex.repsMin}–${ex.repsMax}`;
+        const progRuleText = ex.progressionType === 'top_all_sets'
+          ? 'Górny zakres we wszystkich seriach'
+          : (ex.progressionType === 'top_first_set' ? 'Górny zakres w 1. serii' : 'Ręczna');
+
+        card.innerHTML = `
+          <div class="plan-item-top">
+            <div>
+              <div class="plan-item-title">${idx + 1}. ${ex.name}</div>
+              <div class="plan-item-details" style="margin-top:4px;">
+                <span>🎯 ${ex.sets} serie × ${repsDisplay}</span>
+                <span>⏱ Tempo: ${ex.tempo || '-'}</span>
+                <span>⏳ Odpoczynek: ${ex.restSeconds}s</span>
+                <span>📈 Progres: +${formatWeightDisplay(ex.progressionStep)} kg (${progRuleText})</span>
+              </div>
+            </div>
+          </div>
+          <div class="plan-item-actions">
+            <button type="button" class="btn btn-outline btn-mini" onclick="openEditExerciseModal(${idx})">✏️ Edytuj</button>
+            <button type="button" class="btn btn-outline btn-mini" onclick="moveExerciseInPlan(${idx}, -1)" ${idx === 0 ? 'disabled' : ''}>⬆️</button>
+            <button type="button" class="btn btn-outline btn-mini" onclick="moveExerciseInPlan(${idx}, 1)" ${idx === plan.exercises.length - 1 ? 'disabled' : ''}>⬇️</button>
+            <button type="button" class="btn btn-danger btn-mini" style="margin-left:auto;" onclick="deleteExerciseFromPlan(${idx})">🗑️ Usuń</button>
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
+    function moveExerciseInPlan(index, direction) {
+      const plan = appPlan[currentPlanTab];
+      const targetIdx = index + direction;
+      if (targetIdx < 0 || targetIdx >= plan.exercises.length) return;
+
+      const item = plan.exercises.splice(index, 1)[0];
+      plan.exercises.splice(targetIdx, 0, item);
+
+      saveToStorage(STORAGE_KEY_PLAN, appPlan);
+      renderPlanView();
+      showNotification('Zmieniono kolejność ćwiczeń');
+    }
+
+    function deleteExerciseFromPlan(index) {
+      const plan = appPlan[currentPlanTab];
+      const ex = plan.exercises[index];
+      if (confirm(`Czy na pewno chcesz usunąć ćwiczenie "${ex.name}" z ${plan.name}?\n(Twoja dotychczasowa historia wyników zostanie zachowana)`)) {
+        plan.exercises.splice(index, 1);
+        saveToStorage(STORAGE_KEY_PLAN, appPlan);
+        renderPlanView();
+        showNotification('Usunięto ćwiczenie z planu');
+      }
+    }
+
+    function openAddExerciseModal() {
+      editingExerciseData = { isNew: true, index: -1 };
+      document.getElementById('exerciseModalTitle').textContent = `Dodaj ćwiczenie do ${appPlan[currentPlanTab].name}`;
+      document.getElementById('modalExName').value = '';
+      document.getElementById('modalExSets').value = 3;
+      document.getElementById('modalExRepsMin').value = 8;
+      document.getElementById('modalExRepsMax').value = 12;
+      document.getElementById('modalExTempo').value = '2010';
+      document.getElementById('modalExStep').value = '2,5';
+      document.getElementById('modalExRest').value = 90;
+      document.getElementById('modalExProgressionType').value = 'top_all_sets';
+      document.getElementById('exerciseModal').style.display = 'flex';
+    }
+
+    function openEditExerciseModal(index) {
+      const plan = appPlan[currentPlanTab];
+      const ex = plan.exercises[index];
+      editingExerciseData = { isNew: false, index: index };
+
+      document.getElementById('exerciseModalTitle').textContent = `Edytuj: ${ex.name}`;
+      document.getElementById('modalExName').value = ex.name;
+      document.getElementById('modalExSets').value = ex.sets;
+      document.getElementById('modalExRepsMin').value = ex.repsMin;
+      document.getElementById('modalExRepsMax').value = ex.repsMax;
+      document.getElementById('modalExTempo').value = ex.tempo || '2010';
+      document.getElementById('modalExStep').value = formatWeightDisplay(ex.progressionStep || 0);
+      document.getElementById('modalExRest').value = ex.restSeconds || 90;
+      document.getElementById('modalExProgressionType').value = ex.progressionType || 'top_all_sets';
+      document.getElementById('exerciseModal').style.display = 'flex';
+    }
+
+    function closeExerciseModal() {
+      document.getElementById('exerciseModal').style.display = 'none';
+    }
+
+    function saveExerciseModal() {
+      const name = document.getElementById('modalExName').value.trim();
+      const sets = parseInt(document.getElementById('modalExSets').value, 10);
+      const repsMin = parseInt(document.getElementById('modalExRepsMin').value, 10);
+      let repsMaxInput = document.getElementById('modalExRepsMax').value.trim();
+      let repsMax = repsMaxInput.toUpperCase() === 'MAX' ? 'MAX' : parseInt(repsMaxInput, 10);
+      const tempo = document.getElementById('modalExTempo').value.trim();
+      const step = parseWeightInput(document.getElementById('modalExStep').value);
+      const rest = parseInt(document.getElementById('modalExRest').value, 10);
+      const progType = document.getElementById('modalExProgressionType').value;
+
+      if (!name) {
+        showNotification('Podaj nazwę ćwiczenia', 'error');
+        return;
+      }
+      if (isNaN(sets) || sets < 1) {
+        showNotification('Podaj prawidłową liczbę serii', 'error');
+        return;
+      }
+
+      const plan = appPlan[currentPlanTab];
+
+      const exObject = {
+        id: editingExerciseData.isNew ? 'ex_' + Date.now() : plan.exercises[editingExerciseData.index].id,
+        name: name,
+        sets: sets,
+        repsMin: isNaN(repsMin) ? 8 : repsMin,
+        repsMax: repsMax,
+        tempo: tempo || '2010',
+        progressionStep: isNaN(step) ? 2.5 : step,
+        restSeconds: isNaN(rest) ? 90 : rest,
+        progressionType: progType
+      };
+
+      if (editingExerciseData.isNew) {
+        plan.exercises.push(exObject);
+        showNotification(`Dodano "${name}" do ${plan.name}`);
+      } else {
+        plan.exercises[editingExerciseData.index] = exObject;
+        showNotification(`Zapisano zmiany w "${name}"`);
+      }
+
+      saveToStorage(STORAGE_KEY_PLAN, appPlan);
+      closeExerciseModal();
+      renderPlanView();
+    }
+
+    function promptResetDefaultPlan() {
+      if (confirm('Czy na pewno chcesz przywrócić domyślny plan treningowy A/B/C?\nTwoja historia wykonanych treningów pozostanie nienaruszona!')) {
+        appPlan = JSON.parse(JSON.stringify(DEFAULT_PLAN));
+        saveToStorage(STORAGE_KEY_PLAN, appPlan);
+        renderPlanView();
+        showNotification('Przywrócono domyślny plan treningowy', 'gold');
+      }
+    }
+
+    /* ==========================================================================
+       16. ZAKŁADKA HISTORIA — PRZEGLĄD TRENINGÓW I PROGRESU ĆWICZEŃ
+       ========================================================================== */
+    function setHistoryFilter(mode) {
+      historyFilter = mode;
+      document.getElementById('histFilterAll').classList.toggle('active', mode === 'all');
+      document.getElementById('histFilterByEx').classList.toggle('active', mode === 'byExercise');
+
+      const selectWrapper = document.getElementById('exerciseHistorySelectWrapper');
+      if (mode === 'byExercise') {
+        selectWrapper.style.display = 'block';
+        populateExerciseHistorySelect();
+      } else {
+        selectWrapper.style.display = 'none';
+      }
+      renderHistory();
+    }
+
+    function populateExerciseHistorySelect() {
+      const select = document.getElementById('exerciseHistorySelect');
+      if (!select) return;
+
+      const uniqueNames = new Set();
+      appHistory.forEach(s => {
+        if (s.exercises) s.exercises.forEach(e => uniqueNames.add(e.name));
+      });
+      Object.values(appPlan).forEach(p => {
+        p.exercises.forEach(e => uniqueNames.add(e.name));
+      });
+
+      const currentVal = select.value;
+      select.innerHTML = '';
+
+      Array.from(uniqueNames).sort().forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        select.appendChild(opt);
+      });
+
+      if (currentVal && uniqueNames.has(currentVal)) {
+        select.value = currentVal;
+      }
+    }
+
+    function renderHistory() {
+      const container = document.getElementById('historyListContainer');
+      if (!container) return;
+      container.innerHTML = '';
+
+      if (!appHistory || appHistory.length === 0) {
+        container.innerHTML = `
+          <div class="card" style="text-align:center; padding:30px 20px; color:var(--text-muted);">
+            <div style="font-size:2.5rem; margin-bottom:10px;">📊</div>
+            <div style="font-size:1.1rem; font-weight:800; color:#fff; margin-bottom:6px;">Brak zapisanych treningów</div>
+            <p style="font-size:0.85rem;">Gdy ukończysz swój pierwszy trening, pojawią się tutaj wszystkie szczegóły serii, ciężary i progresja.</p>
+          </div>
+        `;
+        return;
+      }
+
+      if (historyFilter === 'all') {
+        renderAllSessionsHistory(container);
+      } else {
+        renderSingleExerciseHistory(container);
+      }
+    }
+
+    function renderAllSessionsHistory(container) {
+      appHistory.forEach((session, idx) => {
+        const card = document.createElement('div');
+        card.className = 'history-session-card';
+
+        const d = new Date(session.date);
+        const dateFormatted = !isNaN(d) ? d.toLocaleString('pl-PL', {
+          weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+        }) : session.date;
+
+        let exercisesHtml = '';
+        if (session.exercises) {
+          session.exercises.forEach(ex => {
+            const setsStr = ex.sets.map(s => `${formatWeightDisplay(s.weight)}kg × ${s.reps}`).join('  |  ');
+            exercisesHtml += `
+              <div class="session-ex-row">
+                <div class="session-ex-name"><strong>${ex.name}</strong></div>
+                <div class="session-ex-sets">${setsStr || 'Brak wykonanych serii'}</div>
+              </div>
+            `;
+          });
+        }
+
+        card.innerHTML = `
+          <div class="session-header">
+            <div>
+              <span class="session-title">${session.workoutName}</span>
+              <span class="badge badge-gold" style="margin-left:8px;">TYDZIEŃ ${session.week}</span>
+            </div>
+            <span class="session-date">${dateFormatted}</span>
+          </div>
+          <div style="margin-bottom:12px;">
+            ${exercisesHtml}
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(20, 107, 151, 0.3); padding-top:8px; font-size:0.8rem; color:var(--text-muted);">
+            <span>Objętość: <strong>${(session.totalVolume || 0).toLocaleString('pl-PL')} kg</strong> (${session.totalSets || 0} serii)</span>
+            <button type="button" class="btn btn-outline btn-mini" style="color:var(--danger-red); border-color:transparent;" onclick="deleteSessionFromHistory(${idx})">
+              Usuń wpis
+            </button>
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
+    function renderSingleExerciseHistory(container) {
+      const select = document.getElementById('exerciseHistorySelect');
+      const chosenName = select ? select.value : '';
+
+      if (!chosenName) {
+        container.innerHTML = '<div style="color:var(--text-muted); text-align:center;">Wybierz ćwiczenie z listy powyżej</div>';
+        return;
+      }
+
+      const matchingEntries = [];
+      appHistory.forEach(sess => {
+        if (!sess.exercises) return;
+        const found = sess.exercises.find(e => e.name && e.name.trim().toLowerCase() === chosenName.trim().toLowerCase());
+        if (found && found.sets && found.sets.length > 0) {
+          matchingEntries.push({
+            date: sess.date,
+            week: sess.week,
+            workoutName: sess.workoutName,
+            sets: found.sets
+          });
+        }
+      });
+
+      if (matchingEntries.length === 0) {
+        container.innerHTML = `
+          <div class="card" style="text-align:center; color:var(--text-muted);">
+            Brak historii dla ćwiczenia: <strong>${chosenName}</strong>
+          </div>
+        `;
+        return;
+      }
+
+      const summaryCard = document.createElement('div');
+      summaryCard.className = 'card';
+      summaryCard.innerHTML = `
+        <h3 style="font-size:1.15rem; color:var(--accent-gold); margin-bottom:6px;">${chosenName}</h3>
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:14px;">Historia wykonania w kolejnych treningach:</p>
+      `;
+
+      matchingEntries.forEach(entry => {
+        const d = new Date(entry.date);
+        const dateStr = !isNaN(d) ? d.toLocaleDateString('pl-PL') : entry.date;
+        const setsText = entry.sets.map(s => `${formatWeightDisplay(s.weight)} kg × ${s.reps}`).join('  |  ');
+
+        const row = document.createElement('div');
+        row.style.padding = '10px 0';
+        row.style.borderBottom = '1px solid rgba(20, 107, 151, 0.3)';
+        row.innerHTML = `
+          <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:0.85rem;">
+            <strong style="color:#fff;">${entry.workoutName} • Tydzień ${entry.week}</strong>
+            <span style="color:var(--text-muted);">${dateStr}</span>
+          </div>
+          <div style="font-size:0.95rem; font-weight:700; color:var(--accent-gold);">${setsText}</div>
+        `;
+        summaryCard.appendChild(row);
+      });
+
+      container.appendChild(summaryCard);
+    }
+
+    function deleteSessionFromHistory(index) {
+      if (confirm('Czy na pewno chcesz usunąć ten trening z historii?')) {
+        appHistory.splice(index, 1);
+        saveToStorage(STORAGE_KEY_HISTORY, appHistory);
+        renderHistory();
+        showNotification('Usunięto sesję z historii');
+      }
+    }
+
+    /* ==========================================================================
+       17. ZAKŁADKA USTAWIENIA — EKSPORT / IMPORT DANYCH
+       ========================================================================== */
+    function renderSettings() {
+      const soundT = document.getElementById('settingSoundToggle');
+      const vibT = document.getElementById('settingVibrateToggle');
+      if (soundT) soundT.checked = appSettings.soundEnabled !== false;
+      if (vibT) vibT.checked = appSettings.vibrateEnabled !== false;
+    }
+
+    function toggleSoundSetting(enabled) {
+      appSettings.soundEnabled = enabled;
+      saveToStorage(STORAGE_KEY_SETTINGS, appSettings);
+      showNotification(`Dźwięki: ${enabled ? 'Włączone' : 'Wyłączone'}`);
+    }
+
+    function toggleVibrateSetting(enabled) {
+      appSettings.vibrateEnabled = enabled;
+      saveToStorage(STORAGE_KEY_SETTINGS, appSettings);
+      showNotification(`Wibracje: ${enabled ? 'Włączone' : 'Wyłączone'}`);
+    }
+
+    function exportDataJSON() {
+      const exportObject = {
+        version: 'trening2026_1.0',
+        exportDate: new Date().toISOString(),
+        settings: appSettings,
+        plan: appPlan,
+        history: appHistory
+      };
+
+      const jsonStr = JSON.stringify(exportObject, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const datePart = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `trening2026_backup_${datePart}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      showNotification('Wyeksportowano kopię zapasową JSON!', 'gold');
+    }
+
+    function triggerImportJSON() {
+      document.getElementById('importJsonFileInput').click();
+    }
+
+    function handleImportFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const imported = JSON.parse(e.target.result);
+          if (!imported.plan || !imported.history) {
+            throw new Error('Plik nie zawiera poprawnych danych planu lub historii');
+          }
+
+          if (confirm('Czy na pewno chcesz wczytać dane z tego pliku?\nObecne plany i historia zostaną zastąpione danymi z kopii.')) {
+            appPlan = imported.plan;
+            appHistory = imported.history;
+            if (imported.settings) appSettings = imported.settings;
+
+            saveToStorage(STORAGE_KEY_PLAN, appPlan);
+            saveToStorage(STORAGE_KEY_HISTORY, appHistory);
+            saveToStorage(STORAGE_KEY_SETTINGS, appSettings);
+
+            showNotification('Pomyślnie wczytano kopię zapasową!', 'gold');
+            renderStartScreen();
+          }
+        } catch (ex) {
+          alert('Błąd wczytywania pliku JSON: ' + ex.message);
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = '';
+    }
+
+    function promptClearHistory() {
+      if (confirm('UWAGA! Czy na pewno chcesz trwale usunąć całą historię treningów?\nTej operacji nie można cofnąć!')) {
+        appHistory = [];
+        saveToStorage(STORAGE_KEY_HISTORY, appHistory);
+        showNotification('Historia treningów została wyczyszczona', 'error');
+        renderHistory();
+      }
+    }
+
+    /* ==========================================================================
+       18. INICJALIZACJA STRONY (Obsługa szybkiego ładowania i stanu DOM)
+       ========================================================================== */
+    function initApp() {
+      try {
+        updateHeaderBadges();
+        if (activeSession) {
+          switchTab('workout');
+        } else {
+          switchTab('start');
+        }
+      } catch (err) {
+        console.error('Błąd inicjalizacji initApp:', err);
+      }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initApp);
+    } else {
+      initApp();
+    }
+
+    window.addEventListener('beforeunload', (e) => {
+      if (activeSession) {
+        e.preventDefault();
+        e.returnValue = 'Trwa aktywny trening. Czy na pewno chcesz opuścić stronę?';
+      }
+    });
+
+    window.appPlan = appPlan;
+    window.appHistory = appHistory;
+    window.appSettings = appSettings;
+    window.getActiveSession = () => activeSession;
+    window.calculateProgression = calculateProgression;
+    window.recordSetAutomatically = recordSetAutomatically;
+    window.startWorkoutSession = startWorkoutSession;
+    window.finishAndSaveWorkout = finishAndSaveWorkout;
+  </script>
+</body>
+
+</html>
