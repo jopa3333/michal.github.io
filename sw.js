@@ -1,25 +1,46 @@
-const CACHE = 'trening2026-v1';
-const ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
+/* ============================================================
+   SERVICE WORKER — Trening 2026 PWA
+   Cachuje wszystko lokalnie, działa w 100% offline po instalacji
+   ============================================================ */
 
-self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
-});
+const CACHE_NAME = 'trening2026-v2';
+const ASSETS = [
+  './treningweb.html',
+  './manifest.json',
+  './icons/icon-192.png',
+  './icons/icon-512.png'
+];
 
-self.addEventListener('activate', (e) => {
-  e.waitUntil(
-    caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
-      .then(() => self.clients.claim())
+// Instalacja: zcachuj wszystkie pliki
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => {
+      return cache.addAll(ASSETS);
+    }).then(() => self.skipWaiting())
   );
 });
 
-self.addEventListener('fetch', (e) => {
-  if (e.request.method !== 'GET') return;
-  e.respondWith(
-    caches.match(e.request).then((cached) => cached || fetch(e.request).then((res) => {
-      const copy = res.clone();
-      caches.open(CACHE).then((c) => c.put(e.request, copy));
-      return res;
-    }).catch(() => caches.match('./index.html')))
+// Aktywacja: usuń stare cache
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(
+        keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
+      )
+    ).then(() => self.clients.claim())
+  );
+});
+
+// Fetch: zawsze serwuj z cache (offline-first)
+self.addEventListener('fetch', event => {
+  event.respondWith(
+    caches.match(event.request).then(cached => {
+      if (cached) return cached;
+      // Jeśli nie ma w cache, spróbuj pobrać z sieci
+      return fetch(event.request).catch(() => {
+        // Fallback: zwróć główny plik HTML
+        return caches.match('./treningweb.html');
+      });
+    })
   );
 });
