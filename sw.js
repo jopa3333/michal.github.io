@@ -1,26 +1,26 @@
 /* ============================================================
-   SERVICE WORKER — Trening 2026 PWA
-   Cachuje wszystko lokalnie, działa w 100% offline po instalacji
+   SERVICE WORKER — Trening 2026 PWA (Wersja v10)
+   Network-first dla natychmiastowych aktualizacji + 100% offline fallback
    ============================================================ */
 
-const CACHE_NAME = 'trening2026-v2';
+const CACHE_NAME = 'trening2026-v10';
 const ASSETS = [
+  './',
+  './index.html',
   './treningweb.html',
   './manifest.json',
-  './icons/icon-192.png',
-  './icons/icon-512.png'
+  './icon-192.png',
+  './icon-512.png'
 ];
 
-// Instalacja: zcachuj wszystkie pliki
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(ASSETS);
+      return cache.addAll(ASSETS).catch(err => console.warn('Cachowanie:', err));
     }).then(() => self.skipWaiting())
   );
 });
 
-// Aktywacja: usuń stare cache
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys =>
@@ -31,16 +31,23 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Fetch: zawsze serwuj z cache (offline-first)
 self.addEventListener('fetch', event => {
+  if (event.request.method !== 'GET') return;
+
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      if (cached) return cached;
-      // Jeśli nie ma w cache, spróbuj pobrać z sieci
-      return fetch(event.request).catch(() => {
-        // Fallback: zwróć główny plik HTML
-        return caches.match('./treningweb.html');
-      });
-    })
+    fetch(event.request)
+      .then(response => {
+        if (response && response.status === 200) {
+          const respClone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, respClone));
+        }
+        return response;
+      })
+      .catch(() => {
+        return caches.match(event.request).then(cached => {
+          if (cached) return cached;
+          return caches.match('./index.html');
+        });
+      })
   );
 });
