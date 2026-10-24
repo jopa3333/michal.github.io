@@ -12,10 +12,10 @@
   <meta name="application-name" content="Trening 2026" />
   <meta name="description" content="Asystent do treningu siłowego — działa offline" />
   <link rel="manifest" href="manifest.json" />
-  <link rel="apple-touch-icon" href="icons/icon-192.png" />
-  <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png" />
-  <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png" />
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
+  <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <title>Trening 2026</title>
   <style>
     /* ==========================================================================
@@ -3953,7 +3953,7 @@
        ========================================================================== */
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').then(reg => {
+        navigator.serviceWorker.register('./sw.js').then(reg => { reg.update();
           console.log('SW zarejestrowany:', reg.scope);
         }).catch(err => {
           console.warn('SW nie zarejestrowany (normalne przy file://):', err.message);
