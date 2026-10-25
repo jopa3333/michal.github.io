@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#022c43" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   <meta name="apple-mobile-web-app-title" content="Trening" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="application-name" content="Trening 2026" />
@@ -46,6 +46,10 @@
       margin: 0;
       padding: 0;
       -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+    }
+
+    html {
+      background-color: var(--bg-dark);
     }
 
     body {
@@ -2294,7 +2298,6 @@
        3. SYNTEZA DŹWIĘKÓW, GŁOS AI I WIBRACJA (Web Audio + Web Speech API)
        ========================================================================== */
     let audioCtx = null;
-    let silentAudioEl = null;
 
     function getAudioContext() {
       try {
@@ -2313,35 +2316,9 @@
 
     function unlockAudioAndSpeech() {
       try {
+        // Tylko przygotowanie AudioContext bez przejmowania sesji audio od Spotify
         const ctx = getAudioContext();
         if (ctx && ctx.state === 'suspended') ctx.resume();
-        if ('speechSynthesis' in window) {
-          // Pre-warm speech synthesis na iOS Safari
-          const empty = new SpeechSynthesisUtterance('');
-          empty.volume = 0;
-          window.speechSynthesis.speak(empty);
-        }
-      } catch (e) {}
-    }
-
-    function startBackgroundAudioKeepAlive() {
-      try {
-        if (!silentAudioEl) {
-          // 1s cichy wave base64 zapobiegający zamrożeniu procesów audio na iOS
-          silentAudioEl = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
-          silentAudioEl.loop = true;
-          silentAudioEl.volume = 0.01;
-        }
-        silentAudioEl.play().catch(() => {});
-      } catch (e) {}
-    }
-
-    function stopBackgroundAudioKeepAlive() {
-      try {
-        if (silentAudioEl) {
-          silentAudioEl.pause();
-          silentAudioEl.currentTime = 0;
-        }
       } catch (e) {}
     }
 
@@ -3287,10 +3264,9 @@
         timerState.isRunning = false;
         timerState.targetEndTime = null;
         clearInterval(timerState.intervalId);
-        stopBackgroundAudioKeepAlive();
         updateTimerDisplay();
 
-        // 1. Dźwięk potrójnego gongu
+        // 1. Dźwięk potrójnego gongu (miksuje się z dźwiękiem systemowym)
         soundTimerFinished();
 
         // 2. Głos lektora AI ("Koniec przerwy!")
@@ -3317,9 +3293,8 @@
       timerState.isRunning = true;
       updateTimerDisplay();
 
-      // Odblokuj audio, lektora mowy i powiadomienia
+      // Odblokuj audio context i poproś o powiadomienia (bez pauzowania Spotify!)
       unlockAudioAndSpeech();
-      startBackgroundAudioKeepAlive();
       requestNotificationPermissionIfNeeded();
 
       timerState.intervalId = setInterval(tickTimer, 400);
@@ -3327,7 +3302,6 @@
 
     function pauseTimer() {
       clearInterval(timerState.intervalId);
-      stopBackgroundAudioKeepAlive();
       timerState.isRunning = false;
       if (timerState.targetEndTime) {
         const now = Date.now();
@@ -3347,7 +3321,6 @@
 
     function resetTimer() {
       clearInterval(timerState.intervalId);
-      stopBackgroundAudioKeepAlive();
       timerState.isRunning = false;
       const ex = activeSession ? activeSession.exercises[currentExerciseIndex] : null;
       const rest = ex ? (ex.restSeconds || 90) : 90;
