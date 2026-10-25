@@ -1756,6 +1756,12 @@
           <span>Wibracje na telefonie</span>
           <input type="checkbox" id="settingVibrateToggle" style="width:20px; height:20px;" onchange="toggleVibrateSetting(this.checked)" checked />
         </div>
+        <button type="button" class="btn btn-outline" style="margin-top:10px; width:100%; border-color:var(--accent-gold); color:var(--accent-gold); font-size:0.85rem;" onclick="testAudioAndSpeech()">
+          🔊 Przetestuj dźwięk i lektora AI
+        </button>
+        <p style="font-size:0.75rem; color:var(--text-muted); margin-top:6px; line-height:1.3;">
+          ℹ️ <em>Jeśli na iPhonie nie słyszysz dźwięku, upewnij się, że przełącznik wyciszenia z boku telefonu (Silent Switch) jest wyłączony oraz głośność multimediów jest podkręcona.</em>
+        </p>
 
         <div class="settings-section-title">Zarządzanie danymi</div>
         <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
@@ -2298,6 +2304,7 @@
        3. SYNTEZA DŹWIĘKÓW, GŁOS AI I WIBRACJA (Web Audio + Web Speech API)
        ========================================================================== */
     let audioCtx = null;
+    let _activeUtterance = null;
 
     function getAudioContext() {
       try {
@@ -2316,66 +2323,101 @@
 
     function unlockAudioAndSpeech() {
       try {
-        // Tylko przygotowanie AudioContext bez przejmowania sesji audio od Spotify
         const ctx = getAudioContext();
         if (ctx && ctx.state === 'suspended') ctx.resume();
+        if ('speechSynthesis' in window && window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
       } catch (e) {}
     }
 
-    function playTone(freq, duration, type = 'sine', gainVal = 0.15) {
+    function playTone(freq, duration, type = 'sine', gainVal = 0.35) {
       if (!appSettings.soundEnabled) return;
       try {
         const ctx = getAudioContext();
         if (!ctx) return;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = type;
-        osc.frequency.setValueAtTime(freq, ctx.currentTime);
-        gain.gain.setValueAtTime(gainVal, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + duration);
+
+        const executeTone = () => {
+          try {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, ctx.currentTime);
+            gain.gain.setValueAtTime(gainVal, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + duration);
+          } catch (err) {}
+        };
+
+        if (ctx.state === 'suspended') {
+          ctx.resume().then(executeTone).catch(() => {});
+        } else {
+          executeTone();
+        }
       } catch (e) {}
     }
 
     function soundSetLogged() {
-      playTone(587.33, 0.08, 'triangle', 0.2);
-      setTimeout(() => playTone(880, 0.12, 'sine', 0.2), 60);
+      playTone(587.33, 0.08, 'triangle', 0.25);
+      setTimeout(() => playTone(880, 0.12, 'sine', 0.25), 60);
       vibrate([40]);
     }
 
     function soundTimerFinished() {
-      // Potrójny czysty gong zakończenia przerwy
-      playTone(523.25, 0.18, 'sine', 0.3);
-      setTimeout(() => playTone(659.25, 0.18, 'sine', 0.3), 180);
-      setTimeout(() => playTone(783.99, 0.35, 'triangle', 0.35), 360);
-      vibrate([200, 100, 200, 100, 300]);
+      // Potrójny czysty gong zakończenia przerwy (Bim-Bam-Bong)
+      playTone(523.25, 0.2, 'sine', 0.35);
+      setTimeout(() => playTone(659.25, 0.2, 'sine', 0.35), 180);
+      setTimeout(() => playTone(783.99, 0.4, 'triangle', 0.4), 360);
+      vibrate([300, 150, 300, 150, 450]);
     }
 
     function speakVoiceNotification(text = 'Koniec przerwy!') {
       if (!appSettings.soundEnabled) return;
       try {
         if ('speechSynthesis' in window) {
-          window.speechSynthesis.cancel();
+          // Na iOS: resume zapobiega zawieszeniu kolejki mowy
+          window.speechSynthesis.resume();
+          
           const utterance = new SpeechSynthesisUtterance(text);
+          _activeUtterance = utterance; // Zabezpieczenie przed usunięciem z pamięci przez iOS Garbage Collector
           utterance.lang = 'pl-PL';
-          utterance.rate = 1.05;
+          utterance.rate = 1.0;
           utterance.pitch = 1.0;
           utterance.volume = 1.0;
 
           const voices = window.speechSynthesis.getVoices();
           if (voices && voices.length > 0) {
-            const plVoice = voices.find(v => v.lang && (v.lang === 'pl-PL' || v.lang.startsWith('pl')));
+            const plVoice = voices.find(v => v.lang && (v.lang === 'pl-PL' || v.lang.startsWith('pl') || v.lang.includes('pl')));
             if (plVoice) utterance.voice = plVoice;
           }
 
+          utterance.onend = () => { _activeUtterance = null; };
+          utterance.onerror = () => { _activeUtterance = null; };
+
           window.speechSynthesis.speak(utterance);
+
+          // Wymuszenie resume na iOS WebKit
+          setTimeout(() => {
+            if (window.speechSynthesis && window.speechSynthesis.paused) {
+              window.speechSynthesis.resume();
+            }
+          }, 60);
         }
       } catch (e) {
         console.warn('SpeechSynthesis error:', e);
       }
+    }
+
+    function testAudioAndSpeech() {
+      unlockAudioAndSpeech();
+      soundTimerFinished();
+      setTimeout(() => {
+        speakVoiceNotification('Koniec przerwy! Czas na serię.');
+      }, 420);
+      showNotification('🔊 Odtworzono dźwięk i lektora', 'gold');
     }
 
     function requestNotificationPermissionIfNeeded() {
