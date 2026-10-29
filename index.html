@@ -1243,29 +1243,57 @@
       align-items: center;
     }
 
+    /* Rząd treningu A/B/C — wrap żeby zawsze były wszystkie na ekranie */
     .hist-pills-row {
       display: flex;
-      gap: 6px;
-      overflow-x: auto;
-      padding-bottom: 4px;
-      scrollbar-width: none;
+      gap: 5px;
+      flex-wrap: wrap;
+      padding-bottom: 2px;
     }
 
-    .hist-pills-row::-webkit-scrollbar {
+    /* Rząd tygodni — scrollowalny poziomo (może być ich dużo) */
+    .hist-pills-row.scrollable {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding-bottom: 4px;
+    }
+
+    .hist-pills-row.scrollable::-webkit-scrollbar {
       display: none;
     }
 
     .hist-pill {
-      padding: 6px 12px;
+      padding: 5px 10px;
       background: rgba(2, 44, 67, 0.7);
       border: 1px solid var(--border-color);
       border-radius: 8px;
       color: var(--text-muted);
-      font-size: 0.82rem;
+      font-size: 0.78rem;
       font-weight: 700;
       cursor: pointer;
       white-space: nowrap;
       transition: all 0.15s;
+      flex-shrink: 0;
+    }
+
+    /* Select rozwijany na tygodnie */
+    .hist-week-select {
+      flex: 1;
+      min-width: 0;
+      padding: 5px 10px;
+      background: rgba(2, 44, 67, 0.85);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      appearance: auto;
+    }
+    .hist-week-select:focus {
+      outline: none;
+      border-color: var(--accent-blue);
     }
 
     .hist-pill:hover {
@@ -1777,7 +1805,7 @@
         <!-- Panel segregacji i filtrów -->
         <div class="history-filters-box">
           
-          <!-- Rząd 1: Filtr Treningu (A / B / C) -->
+          <!-- Rząd 1: Filtr Treningu — wrap, wszystkie 4 widoczne -->
           <div>
             <div class="hist-filter-label">
               <span>Wybierz trening:</span>
@@ -1790,13 +1818,17 @@
             </div>
           </div>
 
-          <!-- Rząd 2: Filtr Tygodni (generowany automatycznie z historii) -->
+          <!-- Rząd 2: Filtr Tygodni — przycisk "Wszystkie" + select rozwijany -->
           <div>
             <div class="hist-filter-label">
               <span>Filtruj wg tygodnia:</span>
             </div>
-            <div class="hist-pills-row" id="historyWeeksPillsContainer">
-              <!-- Dynamicznie: [Wszystkie tyg.] [Tydzień 1] [Tydzień 2]... -->
+            <div style="display:flex; gap:6px; align-items:center;">
+              <button type="button" class="hist-pill active" id="histPillWeek_all" onclick="filterHistoryByWeek('all')">Wszystkie tyg.</button>
+              <select id="histWeekSelectDropdown" class="hist-week-select" onchange="filterHistoryByWeekSelect(this.value)">
+                <option value="all">— wybierz tydzień —</option>
+                <!-- Wypełniane dynamicznie -->
+              </select>
             </div>
           </div>
 
@@ -3815,10 +3847,11 @@
       });
     }
 
-    /* --- Buduj pigułki tygodni na podstawie danych --- */
+    /* --- Buduj opcje tygodni w select dropdown --- */
     function buildHistoryWeekPills() {
-      const container = document.getElementById('historyWeeksPillsContainer');
-      if (!container) return;
+      const dropdown = document.getElementById('histWeekSelectDropdown');
+      const allBtn   = document.getElementById('histPillWeek_all');
+      if (!dropdown) return;
 
       // Zbierz unikalne tygodnie z już przefiltrowanych (wg treningu) sesji
       const baseSessions = (appHistory || []).filter(s => {
@@ -3827,14 +3860,20 @@
       });
       const weeks = [...new Set(baseSessions.map(s => s.week).filter(w => w != null))].sort((a,b) => a-b);
 
-      let html = `<button type="button" class="hist-pill${historyFilterWeek === 'all' ? ' active' : ''}"
-        onclick="filterHistoryByWeek('all')">Wszystkie tyg.</button>`;
+      // Aktualizuj select
+      dropdown.innerHTML = '<option value="all">— wybierz tydzień —</option>';
       weeks.forEach(w => {
-        const active = String(historyFilterWeek) === String(w) ? ' active' : '';
-        html += `<button type="button" class="hist-pill${active}"
-          onclick="filterHistoryByWeek(${w})">Tydzień ${w}</button>`;
+        const opt = document.createElement('option');
+        opt.value = w;
+        opt.textContent = `Tydzień ${w}`;
+        if (String(historyFilterWeek) === String(w)) opt.selected = true;
+        dropdown.appendChild(opt);
       });
-      container.innerHTML = html;
+      // Jeśli "all" — zresetuj select do placeholder
+      if (historyFilterWeek === 'all') dropdown.value = 'all';
+
+      // Aktywność przycisku "Wszystkie tyg."
+      if (allBtn) allBtn.classList.toggle('active', historyFilterWeek === 'all');
     }
 
     /* --- Filtry --- */
@@ -3852,6 +3891,15 @@
 
     function filterHistoryByWeek(week) {
       historyFilterWeek = week;
+      // Sync select dropdown
+      const dd = document.getElementById('histWeekSelectDropdown');
+      if (dd) dd.value = week;
+      renderHistory();
+    }
+
+    /* Wywołana przez onchange na select dropdown */
+    function filterHistoryByWeekSelect(val) {
+      historyFilterWeek = val === 'all' ? 'all' : parseInt(val, 10);
       renderHistory();
     }
 
@@ -3872,6 +3920,11 @@
         const el = document.getElementById('histPillW_' + id);
         if (el) el.classList.toggle('active', id === 'all');
       });
+      // Reset tydzień
+      const allWeekBtn = document.getElementById('histPillWeek_all');
+      if (allWeekBtn) allWeekBtn.classList.add('active');
+      const dd = document.getElementById('histWeekSelectDropdown');
+      if (dd) dd.value = 'all';
       const wrapper = document.getElementById('exerciseHistorySelectWrapper');
       if (wrapper) wrapper.style.display = 'none';
       renderHistory();
