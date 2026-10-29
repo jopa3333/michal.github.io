@@ -1218,50 +1218,117 @@
     }
 
     /* ==========================================================================
-       9. ZAKŁADKA HISTORIA
+       9. ZAKŁADKA HISTORIA — NOWY SYSTEM SEGREGACJI I FILTRÓW
        ========================================================================== */
-    .history-filter-bar {
+    .history-filters-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 14px;
       display: flex;
-      gap: 8px;
-      margin-bottom: 16px;
+      flex-direction: column;
+      gap: 10px;
     }
 
-    .history-filter-btn {
-      flex: 1;
-      padding: 10px;
-      background: var(--bg-card);
+    .hist-filter-label {
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .hist-pills-row {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: none;
+    }
+
+    .hist-pills-row::-webkit-scrollbar {
+      display: none;
+    }
+
+    .hist-pill {
+      padding: 6px 12px;
+      background: rgba(2, 44, 67, 0.7);
       border: 1px solid var(--border-color);
       border-radius: 8px;
       color: var(--text-muted);
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       font-weight: 700;
       cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
     }
 
-    .history-filter-btn.active {
+    .hist-pill:hover {
+      border-color: var(--accent-gold);
+      color: #fff;
+    }
+
+    .hist-pill.active {
+      background: rgba(255, 215, 0, 0.15);
       border-color: var(--accent-gold);
       color: var(--accent-gold);
-      background: rgba(255, 215, 0, 0.1);
+      font-weight: 800;
+    }
+
+    .history-status-strip {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 10px;
+      background: rgba(2, 37, 56, 0.8);
+      border-radius: 8px;
+      border: 1px dashed rgba(20, 107, 151, 0.4);
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .history-status-strip strong {
+      color: var(--accent-gold);
+    }
+
+    .btn-clear-filter {
+      background: transparent;
+      border: none;
+      color: var(--danger-red);
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: underline;
     }
 
     .history-list {
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 12px;
     }
 
     .history-session-card {
       background: var(--bg-card);
       border: 1px solid var(--border-color);
       border-radius: 12px;
-      padding: 16px;
+      padding: 14px;
+      transition: border-color 0.15s;
+    }
+
+    .history-session-card:hover {
+      border-color: rgba(255, 215, 0, 0.5);
     }
 
     .session-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
       padding-bottom: 8px;
       border-bottom: 1px solid rgba(20, 107, 151, 0.3);
     }
@@ -1704,19 +1771,60 @@
          ZAKŁADKA 4: HISTORIA (Zapisane sesje i postępy)
          ==================================================================== -->
     <section id="view-history" class="tab-view">
-      <div style="margin-bottom:16px;">
-        <h2 style="font-size:1.3rem; font-weight:800; color:#fff; margin-bottom:12px;">Historia Treningów</h2>
+      <div style="margin-bottom:12px;">
+        <h2 style="font-size:1.3rem; font-weight:800; color:#fff; margin-bottom:10px;">Historia Treningów</h2>
         
-        <div class="history-filter-bar">
-          <button type="button" class="history-filter-btn active" id="histFilterAll" onclick="setHistoryFilter('all')">Wszystkie sesje</button>
-          <button type="button" class="history-filter-btn" id="histFilterByEx" onclick="setHistoryFilter('byExercise')">Wg ćwiczenia</button>
+        <!-- Panel segregacji i filtrów -->
+        <div class="history-filters-box">
+          
+          <!-- Rząd 1: Filtr Treningu (A / B / C) -->
+          <div>
+            <div class="hist-filter-label">
+              <span>Wybierz trening:</span>
+            </div>
+            <div class="hist-pills-row">
+              <button type="button" class="hist-pill active" id="histPillW_all" onclick="filterHistoryByWorkout('all')">Wszystkie</button>
+              <button type="button" class="hist-pill" id="histPillW_A" onclick="filterHistoryByWorkout('A')">Trening A</button>
+              <button type="button" class="hist-pill" id="histPillW_B" onclick="filterHistoryByWorkout('B')">Trening B</button>
+              <button type="button" class="hist-pill" id="histPillW_C" onclick="filterHistoryByWorkout('C')">Trening C</button>
+            </div>
+          </div>
+
+          <!-- Rząd 2: Filtr Tygodni (generowany automatycznie z historii) -->
+          <div>
+            <div class="hist-filter-label">
+              <span>Filtruj wg tygodnia:</span>
+            </div>
+            <div class="hist-pills-row" id="historyWeeksPillsContainer">
+              <!-- Dynamicznie: [Wszystkie tyg.] [Tydzień 1] [Tydzień 2]... -->
+            </div>
+          </div>
+
+          <!-- Pasek statusu i przełącznik trybu ćwiczeń -->
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding-top:4px; border-top:1px solid rgba(20, 107, 151, 0.25);">
+            <button type="button" class="btn btn-outline btn-mini" id="btnToggleExerciseMode" onclick="toggleHistoryExerciseMode()" style="font-size:0.75rem;">
+              🔍 Podgląd wg ćwiczenia
+            </button>
+            <button type="button" class="btn-clear-filter" id="btnClearHistoryFilters" onclick="resetHistoryFilters()" style="display:none;">
+              ✕ Wyczyść filtry
+            </button>
+          </div>
+
+          <!-- Wybór pojedynczego ćwiczenia (gdy włączony tryb ćwiczenia) -->
+          <div id="exerciseHistorySelectWrapper" style="display:none; margin-top:6px;">
+            <select id="exerciseHistorySelect" class="modal-select" onchange="renderHistory()">
+              <!-- Wypełniane unikalnymi ćwiczeniami z historii -->
+            </select>
+          </div>
+
         </div>
 
-        <div id="exerciseHistorySelectWrapper" style="display:none; margin-bottom:14px;">
-          <select id="exerciseHistorySelect" class="modal-select" onchange="renderHistory()">
-            <!-- Wypełniane unikalnymi ćwiczeniami z historii -->
-          </select>
+        <!-- Pasek podsumowania filtrowania -->
+        <div class="history-status-strip" id="historyStatusStrip">
+          <span id="historyStatusText">Wszystkie zapisane sesje</span>
+          <span id="historyCountBadge">0 sesji</span>
         </div>
+
       </div>
 
       <div class="history-list" id="historyListContainer">
@@ -2278,7 +2386,7 @@
     let currentPlanTab = 'A';
     let currentExerciseIndex = 0;
     let editingExerciseData = null;
-    let historyFilter = 'all';
+    // historyFilter usunięty — zastąpiony przez historyFilterWorkout / historyFilterWeek / historyExerciseMode
 
     let timerState = {
       intervalId: null,
@@ -2305,6 +2413,7 @@
        ========================================================================== */
     let audioCtx = null;
     let _activeUtterance = null;
+    let _audioUnlocked = false;
 
     function getAudioContext() {
       try {
@@ -2321,12 +2430,36 @@
       }
     }
 
+    /* Odblokowanie AudioContext + SpeechSynthesis na iOS — MUSI być wywołane
+       bezpośrednio z user-gesture (np. tap na przycisk serii lub stoper).
+       Pierwsze wywołanie odtwarza ciche mp3 i mówi pustą frazę by "otworzyć"
+       oba kanały audio — bez tego iOS blokuje asynchroniczne odtwarzanie. */
     function unlockAudioAndSpeech() {
       try {
         const ctx = getAudioContext();
         if (ctx && ctx.state === 'suspended') ctx.resume();
         if ('speechSynthesis' in window && window.speechSynthesis.paused) {
           window.speechSynthesis.resume();
+        }
+        if (!_audioUnlocked) {
+          _audioUnlocked = true;
+          // Ciche mp3 "odgrzewa" AudioContext na iOS
+          try {
+            const buf = ctx ? ctx.createBuffer(1, 1, 22050) : null;
+            if (buf && ctx) {
+              const src = ctx.createBufferSource();
+              src.buffer = buf;
+              src.connect(ctx.destination);
+              src.start(0);
+            }
+          } catch(e2) {}
+          // Pusta fraza "otwiera" kolejkę SpeechSynthesis na iOS
+          if ('speechSynthesis' in window) {
+            const dummy = new SpeechSynthesisUtterance('\u200b');
+            dummy.volume = 0;
+            dummy.lang = 'pl-PL';
+            window.speechSynthesis.speak(dummy);
+          }
         }
       } catch (e) {}
     }
@@ -2378,33 +2511,46 @@
       if (!appSettings.soundEnabled) return;
       try {
         if ('speechSynthesis' in window) {
-          // Na iOS: resume zapobiega zawieszeniu kolejki mowy
-          window.speechSynthesis.resume();
-          
-          const utterance = new SpeechSynthesisUtterance(text);
-          _activeUtterance = utterance; // Zabezpieczenie przed usunięciem z pamięci przez iOS Garbage Collector
-          utterance.lang = 'pl-PL';
-          utterance.rate = 1.0;
-          utterance.pitch = 1.0;
-          utterance.volume = 1.0;
-
-          const voices = window.speechSynthesis.getVoices();
-          if (voices && voices.length > 0) {
-            const plVoice = voices.find(v => v.lang && (v.lang === 'pl-PL' || v.lang.startsWith('pl') || v.lang.includes('pl')));
-            if (plVoice) utterance.voice = plVoice;
-          }
-
-          utterance.onend = () => { _activeUtterance = null; };
-          utterance.onerror = () => { _activeUtterance = null; };
-
-          window.speechSynthesis.speak(utterance);
-
-          // Wymuszenie resume na iOS WebKit
+          // Na iOS: cancel + resume zapobiega zawieszeniu kolejki mowy
+          window.speechSynthesis.cancel();
           setTimeout(() => {
-            if (window.speechSynthesis && window.speechSynthesis.paused) {
+            try {
               window.speechSynthesis.resume();
-            }
-          }, 60);
+
+              const utterance = new SpeechSynthesisUtterance(text);
+              _activeUtterance = utterance; // Zabezpieczenie przed GC na iOS
+
+              utterance.lang = 'pl-PL';
+              utterance.rate = 0.88;   // Nieco wolniej = bardziej naturalny głos
+              utterance.pitch = 1.08;  // Lekko wyżej = przyjemniejsze brzmienie
+              utterance.volume = 1.0;
+
+              // Preferuj lokalny głos (offline = wyższa jakość na iPhone)
+              const pickVoice = () => {
+                const voices = window.speechSynthesis.getVoices();
+                if (voices && voices.length > 0) {
+                  // 1. Priorytet: lokalny polski
+                  let v = voices.find(v => v.localService && v.lang && v.lang.startsWith('pl'));
+                  // 2. Fallback: jakikolwiek polski
+                  if (!v) v = voices.find(v => v.lang && v.lang.startsWith('pl'));
+                  if (v) utterance.voice = v;
+                }
+              };
+              pickVoice();
+
+              utterance.onend = () => { _activeUtterance = null; };
+              utterance.onerror = () => { _activeUtterance = null; };
+
+              window.speechSynthesis.speak(utterance);
+
+              // Wymuszenie resume na iOS WebKit (kolejka może zawiesić się cicho)
+              setTimeout(() => {
+                if (window.speechSynthesis && window.speechSynthesis.paused) {
+                  window.speechSynthesis.resume();
+                }
+              }, 80);
+            } catch(e2) { console.warn('SpeechSynthesis inner error:', e2); }
+          }, 50);
         }
       } catch (e) {
         console.warn('SpeechSynthesis error:', e);
@@ -3652,54 +3798,117 @@
     }
 
     /* ==========================================================================
-       16. ZAKŁADKA HISTORIA — PRZEGLĄD TRENINGÓW I PROGRESU ĆWICZEŃ
+       16. ZAKŁADKA HISTORIA — NOWY SYSTEM FILTROWANIA (wg treningu A/B/C + tydzień)
        ========================================================================== */
-    function setHistoryFilter(mode) {
-      historyFilter = mode;
-      document.getElementById('histFilterAll').classList.toggle('active', mode === 'all');
-      document.getElementById('histFilterByEx').classList.toggle('active', mode === 'byExercise');
+    let historyFilterWorkout = 'all'; // 'all' | 'A' | 'B' | 'C'
+    let historyFilterWeek    = 'all'; // 'all' | number
+    let historyExerciseMode  = false; // true = tryb ćwiczenia (select)
 
-      const selectWrapper = document.getElementById('exerciseHistorySelectWrapper');
-      if (mode === 'byExercise') {
-        selectWrapper.style.display = 'block';
-        populateExerciseHistorySelect();
-      } else {
-        selectWrapper.style.display = 'none';
-      }
+    /* --- Pomocnicze: pobierz przefiltrowane sesje --- */
+    function getFilteredHistory() {
+      return (appHistory || []).filter(s => {
+        const wMatch = historyFilterWorkout === 'all' ||
+          (s.workoutName && s.workoutName.toUpperCase().includes(historyFilterWorkout));
+        const weekMatch = historyFilterWeek === 'all' ||
+          String(s.week) === String(historyFilterWeek);
+        return wMatch && weekMatch;
+      });
+    }
+
+    /* --- Buduj pigułki tygodni na podstawie danych --- */
+    function buildHistoryWeekPills() {
+      const container = document.getElementById('historyWeeksPillsContainer');
+      if (!container) return;
+
+      // Zbierz unikalne tygodnie z już przefiltrowanych (wg treningu) sesji
+      const baseSessions = (appHistory || []).filter(s => {
+        return historyFilterWorkout === 'all' ||
+          (s.workoutName && s.workoutName.toUpperCase().includes(historyFilterWorkout));
+      });
+      const weeks = [...new Set(baseSessions.map(s => s.week).filter(w => w != null))].sort((a,b) => a-b);
+
+      let html = `<button type="button" class="hist-pill${historyFilterWeek === 'all' ? ' active' : ''}"
+        onclick="filterHistoryByWeek('all')">Wszystkie tyg.</button>`;
+      weeks.forEach(w => {
+        const active = String(historyFilterWeek) === String(w) ? ' active' : '';
+        html += `<button type="button" class="hist-pill${active}"
+          onclick="filterHistoryByWeek(${w})">Tydzień ${w}</button>`;
+      });
+      container.innerHTML = html;
+    }
+
+    /* --- Filtry --- */
+    function filterHistoryByWorkout(wId) {
+      historyFilterWorkout = wId;
+      // Sync pill aktywne dla Trening A/B/C/Wszystkie
+      ['all','A','B','C'].forEach(id => {
+        const el = document.getElementById('histPillW_' + id);
+        if (el) el.classList.toggle('active', wId === id);
+      });
+      // Reset tygodnia przy zmianie treningu
+      historyFilterWeek = 'all';
       renderHistory();
     }
 
-    function populateExerciseHistorySelect() {
-      const select = document.getElementById('exerciseHistorySelect');
-      if (!select) return;
-
-      const uniqueNames = new Set();
-      appHistory.forEach(s => {
-        if (s.exercises) s.exercises.forEach(e => uniqueNames.add(e.name));
-      });
-      Object.values(appPlan).forEach(p => {
-        p.exercises.forEach(e => uniqueNames.add(e.name));
-      });
-
-      const currentVal = select.value;
-      select.innerHTML = '';
-
-      Array.from(uniqueNames).sort().forEach(name => {
-        const opt = document.createElement('option');
-        opt.value = name;
-        opt.textContent = name;
-        select.appendChild(opt);
-      });
-
-      if (currentVal && uniqueNames.has(currentVal)) {
-        select.value = currentVal;
-      }
+    function filterHistoryByWeek(week) {
+      historyFilterWeek = week;
+      renderHistory();
     }
 
+    function toggleHistoryExerciseMode() {
+      historyExerciseMode = !historyExerciseMode;
+      const wrapper = document.getElementById('exerciseHistorySelectWrapper');
+      if (wrapper) wrapper.style.display = historyExerciseMode ? 'block' : 'none';
+      if (historyExerciseMode) populateExerciseHistorySelect();
+      renderHistory();
+    }
+
+    function resetHistoryFilters() {
+      historyFilterWorkout = 'all';
+      historyFilterWeek    = 'all';
+      historyExerciseMode  = false;
+      // Reset pigułek treningowych
+      ['all','A','B','C'].forEach(id => {
+        const el = document.getElementById('histPillW_' + id);
+        if (el) el.classList.toggle('active', id === 'all');
+      });
+      const wrapper = document.getElementById('exerciseHistorySelectWrapper');
+      if (wrapper) wrapper.style.display = 'none';
+      renderHistory();
+    }
+
+    /* --- Pasek statusu --- */
+    function updateHistoryStatusStrip(filtered) {
+      const txtEl    = document.getElementById('historyStatusText');
+      const badgeEl  = document.getElementById('historyCountBadge');
+      const clearBtn = document.getElementById('btnClearHistoryFilters');
+      const total    = (appHistory || []).length;
+      const count    = filtered.length;
+
+      const isFiltered = historyFilterWorkout !== 'all' || historyFilterWeek !== 'all' || historyExerciseMode;
+
+      if (txtEl) {
+        if (!isFiltered) {
+          txtEl.textContent = `Wszystkie sesje`;
+        } else {
+          let label = '';
+          if (historyFilterWorkout !== 'all') label += `Trening ${historyFilterWorkout}`;
+          if (historyFilterWeek !== 'all') label += (label ? ' · ' : '') + `Tydzień ${historyFilterWeek}`;
+          if (historyExerciseMode) label += (label ? ' · ' : '') + 'wg ćwiczenia';
+          txtEl.textContent = label;
+        }
+      }
+      if (badgeEl) badgeEl.textContent = `${count} sesji`;
+      if (clearBtn) clearBtn.style.display = isFiltered ? 'inline-flex' : 'none';
+    }
+
+    /* --- Główna funkcja renderowania --- */
     function renderHistory() {
       const container = document.getElementById('historyListContainer');
       if (!container) return;
       container.innerHTML = '';
+
+      buildHistoryWeekPills();
 
       if (!appHistory || appHistory.length === 0) {
         container.innerHTML = `
@@ -3709,18 +3918,39 @@
             <p style="font-size:0.85rem;">Gdy ukończysz swój pierwszy trening, pojawią się tutaj wszystkie szczegóły serii, ciężary i progresja.</p>
           </div>
         `;
+        updateHistoryStatusStrip([]);
         return;
       }
 
-      if (historyFilter === 'all') {
-        renderAllSessionsHistory(container);
+      const filtered = getFilteredHistory();
+      updateHistoryStatusStrip(filtered);
+
+      if (historyExerciseMode) {
+        renderSingleExerciseHistory(container, filtered);
       } else {
-        renderSingleExerciseHistory(container);
+        renderAllSessionsHistory(container, filtered);
       }
     }
 
-    function renderAllSessionsHistory(container) {
-      appHistory.forEach((session, idx) => {
+    /* --- Renderowanie wszystkich sesji (od najnowszej) --- */
+    function renderAllSessionsHistory(container, sessions) {
+      if (!sessions || sessions.length === 0) {
+        container.innerHTML = `
+          <div class="card" style="text-align:center; padding:24px 16px; color:var(--text-muted);">
+            <div style="font-size:2rem; margin-bottom:8px;">🔍</div>
+            <div style="font-weight:700; color:#fff; margin-bottom:4px;">Brak wyników</div>
+            <p style="font-size:0.85rem;">Żaden trening nie pasuje do wybranych filtrów.</p>
+          </div>
+        `;
+        return;
+      }
+
+      // Wyświetlaj od najnowszej
+      const reversed = [...sessions].reverse();
+
+      reversed.forEach(session => {
+        // Znajdź prawdziwy indeks w oryginalnej tablicy (potrzebny do usunięcia)
+        const realIdx = appHistory.indexOf(session);
         const card = document.createElement('div');
         card.className = 'history-session-card';
 
@@ -3755,7 +3985,7 @@
           </div>
           <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(20, 107, 151, 0.3); padding-top:8px; font-size:0.8rem; color:var(--text-muted);">
             <span>Objętość: <strong>${(session.totalVolume || 0).toLocaleString('pl-PL')} kg</strong> (${session.totalSets || 0} serii)</span>
-            <button type="button" class="btn btn-outline btn-mini" style="color:var(--danger-red); border-color:transparent;" onclick="deleteSessionFromHistory(${idx})">
+            <button type="button" class="btn btn-outline btn-mini" style="color:var(--danger-red); border-color:transparent;" onclick="deleteSessionFromHistory(${realIdx})">
               Usuń wpis
             </button>
           </div>
@@ -3765,7 +3995,8 @@
       });
     }
 
-    function renderSingleExerciseHistory(container) {
+    /* --- Renderowanie historii pojedynczego ćwiczenia --- */
+    function renderSingleExerciseHistory(container, sessions) {
       const select = document.getElementById('exerciseHistorySelect');
       const chosenName = select ? select.value : '';
 
@@ -3775,7 +4006,7 @@
       }
 
       const matchingEntries = [];
-      appHistory.forEach(sess => {
+      (sessions || appHistory).forEach(sess => {
         if (!sess.exercises) return;
         const found = sess.exercises.find(e => e.name && e.name.trim().toLowerCase() === chosenName.trim().toLowerCase());
         if (found && found.sets && found.sets.length > 0) {
@@ -3814,7 +4045,7 @@
         row.style.borderBottom = '1px solid rgba(20, 107, 151, 0.3)';
         row.innerHTML = `
           <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:0.85rem;">
-            <strong style="color:#fff;">${entry.workoutName} • Tydzień ${entry.week}</strong>
+            <strong style="color:#fff;">${entry.workoutName} · Tydzień ${entry.week}</strong>
             <span style="color:var(--text-muted);">${dateStr}</span>
           </div>
           <div style="font-size:0.95rem; font-weight:700; color:var(--accent-gold);">${setsText}</div>
@@ -3825,6 +4056,35 @@
       container.appendChild(summaryCard);
     }
 
+    /* --- Wypełnij select ćwiczeń --- */
+    function populateExerciseHistorySelect() {
+      const select = document.getElementById('exerciseHistorySelect');
+      if (!select) return;
+
+      const uniqueNames = new Set();
+      appHistory.forEach(s => {
+        if (s.exercises) s.exercises.forEach(e => uniqueNames.add(e.name));
+      });
+      Object.values(appPlan).forEach(p => {
+        p.exercises.forEach(e => uniqueNames.add(e.name));
+      });
+
+      const currentVal = select.value;
+      select.innerHTML = '';
+
+      Array.from(uniqueNames).sort().forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        select.appendChild(opt);
+      });
+
+      if (currentVal && uniqueNames.has(currentVal)) {
+        select.value = currentVal;
+      }
+    }
+
+    /* --- Usuń sesję --- */
     function deleteSessionFromHistory(index) {
       if (confirm('Czy na pewno chcesz usunąć ten trening z historii?')) {
         appHistory.splice(index, 1);
