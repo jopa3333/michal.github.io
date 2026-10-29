@@ -1,10 +1,10 @@
 /* ============================================================
-   SERVICE WORKER — Trening 2026 PWA (Wersja v12)
+   SERVICE WORKER — Trening 2026 PWA (Wersja v13)
    Cache-First (Stale-While-Revalidate) — Natychmiastowe otwieranie (0s czarnego ekranu)
    oraz 100% działanie offline bez kolizji z odtwarzaczami muzyki (Spotify)
    ============================================================ */
 
-const CACHE_NAME = 'trening2026-v12';
+const CACHE_NAME = 'trening2026-v13';
 const ASSETS = [
   './',
   './index.html',
