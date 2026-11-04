@@ -82,7 +82,7 @@
     .app-header {
       background: linear-gradient(180deg, #011d2d 0%, var(--bg-dark) 100%);
       border-bottom: 1px solid var(--border-color);
-      padding: 12px 16px;
+      padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 10px 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -1138,8 +1138,110 @@
     }
 
     /* ==========================================================================
-       8. ZAKŁADKA PLAN (Pełna edycja)
+       8. ZAKŁADKA PLAN (Pełna edycja & Zarządzanie Planami)
        ========================================================================== */
+    .plan-management-card {
+      background: linear-gradient(135deg, rgba(2, 44, 67, 0.95), rgba(1, 26, 40, 0.95));
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 14px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    }
+
+    .plan-mgmt-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      gap: 10px;
+    }
+
+    .plan-mgmt-badge {
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: var(--accent-gold);
+      background: rgba(255, 215, 0, 0.12);
+      border: 1px solid rgba(255, 215, 0, 0.35);
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-bottom: 3px;
+    }
+
+    .plan-mgmt-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #fff;
+      margin: 0;
+      line-height: 1.2;
+    }
+
+    .plan-mgmt-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      border-top: 1px solid rgba(20, 107, 151, 0.25);
+      padding-top: 8px;
+    }
+
+    /* Modal Moje Plany */
+    .saved-plans-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 55vh;
+      overflow-y: auto;
+      padding-right: 4px;
+      margin: 12px 0;
+    }
+
+    .saved-plan-card {
+      background: rgba(2, 44, 67, 0.8);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+
+    .saved-plan-card.active-plan {
+      border-color: var(--accent-gold);
+      background: rgba(255, 215, 0, 0.08);
+    }
+
+    .saved-plan-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .saved-plan-name {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .saved-plan-meta {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      line-height: 1.3;
+    }
+
+    .saved-plan-btns {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 2px;
+    }
+
     .plan-tabs {
       display: flex;
       gap: 8px;
@@ -1356,20 +1458,48 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 8px;
       margin-bottom: 10px;
       padding-bottom: 8px;
       border-bottom: 1px solid rgba(20, 107, 151, 0.3);
+      flex-wrap: nowrap;
+    }
+
+    .session-header-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+      white-space: nowrap;
     }
 
     .session-title {
-      font-size: 1.1rem;
+      font-size: 1.05rem;
       font-weight: 800;
       color: var(--accent-gold);
+      white-space: nowrap;
+    }
+
+    .session-week-tag {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: var(--accent-gold);
+      background: rgba(255, 215, 0, 0.12);
+      border: 1px solid rgba(255, 215, 0, 0.4);
+      padding: 2px 7px;
+      border-radius: 6px;
+      white-space: nowrap;
+      letter-spacing: 0.3px;
+      flex-shrink: 0;
     }
 
     .session-date {
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       color: var(--text-muted);
+      white-space: nowrap;
+      text-align: right;
+      flex-shrink: 0;
     }
 
     .session-ex-row {
@@ -1769,12 +1899,32 @@
 
 
     <!-- ====================================================================
-         ZAKŁADKA 3: PLAN (Edycja Treningów i Ćwiczeń)
+         ZAKŁADKA 3: PLAN (Edycja Treningów i Zarządzanie Planami)
          ==================================================================== -->
     <section id="view-plan" class="tab-view">
-      <div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
-        <h2 style="font-size:1.3rem; font-weight:800; color:#fff;">Edycja Planu</h2>
-        <button type="button" class="btn btn-primary btn-mini" onclick="openAddExerciseModal()">+ Dodaj ćwiczenie</button>
+      
+      <!-- Panel Zarządzania Planami -->
+      <div class="plan-management-card">
+        <div class="plan-mgmt-header">
+          <div>
+            <span class="plan-mgmt-badge">AKTYWNY PLAN TRENINGOWY</span>
+            <h3 class="plan-mgmt-title" id="activePlanTitleDisplay">Mój Plan Główny (A/B/C)</h3>
+          </div>
+          <button type="button" class="btn btn-outline btn-mini" onclick="openSavedPlansModal()" style="white-space:nowrap;">
+            📂 Moje Plany (<span id="savedPlansCountBadge">1</span>)
+          </button>
+        </div>
+        <div class="plan-mgmt-actions">
+          <button type="button" class="btn btn-outline btn-mini" onclick="promptSaveCurrentPlanAs()">
+            💾 Zapisz jako...
+          </button>
+          <button type="button" class="btn btn-gold btn-mini" onclick="promptCreateNewPlan()">
+            ➕ Nowy plan
+          </button>
+          <button type="button" class="btn btn-primary btn-mini" style="margin-left:auto;" onclick="openAddExerciseModal()">
+            + Dodaj ćwiczenie
+          </button>
+        </div>
       </div>
 
       <div class="plan-tabs">
@@ -1976,9 +2126,21 @@
     <div class="modal-box">
       <div class="modal-title" id="exerciseModalTitle">Edytuj ćwiczenie</div>
       
+      <!-- Baza gotowych ćwiczeń -->
+      <div class="form-group" style="background:rgba(2, 44, 67, 0.6); padding:8px 10px; border-radius:8px; border:1px solid rgba(20, 107, 151, 0.35);">
+        <label class="form-label" style="display:flex; justify-content:space-between; margin-bottom:4px;">
+          <span>⚡ Baza ćwiczeń (gotowe)</span>
+          <span style="color:var(--accent-gold); font-size:0.75rem; font-weight:normal;">Wybierz lub wpisz niżej</span>
+        </label>
+        <select id="modalExQuickSelect" class="modal-select" onchange="onQuickSelectExercise(this.value)" style="font-size:0.85rem;">
+          <option value="">— Wybierz z bazy (lub wpisz własne poniżej) —</option>
+        </select>
+      </div>
+
       <div class="form-group">
         <label class="form-label">Nazwa ćwiczenia</label>
-        <input type="text" id="modalExName" class="modal-input" placeholder="np. Przysiad ze sztangą" />
+        <input type="text" id="modalExName" class="modal-input" placeholder="np. Przysiad ze sztangą na plecach" list="exerciseDatalist" />
+        <datalist id="exerciseDatalist"></datalist>
       </div>
 
       <div style="display:flex; gap:10px;">
@@ -2092,6 +2254,56 @@
       <button type="button" class="btn btn-gold btn-large" onclick="closeSummaryAndGoHome()">
         Super, przejdź do historii
       </button>
+    </div>
+  </div>
+
+
+  <!-- ====================================================================
+       MODAL 5: MOJE PLANY TRENINGOWE (Zarządzanie & Wczytywanie)
+       ==================================================================== -->
+  <div id="savedPlansModal" class="modal-overlay">
+    <div class="modal-box" style="max-width:440px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <div class="modal-title" style="margin-bottom:0;">📂 Moje Plany Treningowe</div>
+        <button type="button" class="btn btn-outline btn-mini" onclick="closeSavedPlansModal()">✕</button>
+      </div>
+      <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:12px;">
+        Możesz tworzyć i zapisywać różne plany. Przy wczytaniu innego planu, Twój bieżący układ automatycznie zapisze się w pamięci, a Twoja historia treningów pozostanie zachowana!
+      </p>
+
+      <!-- Lista zapisanych planów -->
+      <div class="saved-plans-list" id="savedPlansListContainer">
+        <!-- Renderowane dynamicznie -->
+      </div>
+
+      <div style="display:flex; gap:8px; margin-top:12px; border-top:1px solid rgba(20, 107, 151, 0.25); padding-top:12px;">
+        <button type="button" class="btn btn-gold btn-mini" style="flex:1;" onclick="closeSavedPlansModal(); promptCreateNewPlan();">
+          ➕ Stwórz nowy plan
+        </button>
+        <button type="button" class="btn btn-outline btn-mini" onclick="closeSavedPlansModal()">
+          Zamknij
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ====================================================================
+       MODAL 6: ZAPISZ JAKO / NOWY PLAN (Podanie nazwy)
+       ==================================================================== -->
+  <div id="savePlanAsModal" class="modal-overlay">
+    <div class="modal-box" style="max-width:340px;">
+      <div class="modal-title" id="savePlanAsTitle">Zapisz plan jako...</div>
+      
+      <div class="form-group">
+        <label class="form-label">Nazwa planu treningowego</label>
+        <input type="text" id="savePlanAsInput" class="modal-input" placeholder="np. Mój FBW Faza 2" />
+      </div>
+
+      <div class="modal-buttons">
+        <button type="button" class="btn btn-outline" onclick="closeSavePlanAsModal()">Anuluj</button>
+        <button type="button" class="btn btn-gold" id="btnConfirmSavePlanAs" onclick="confirmSavePlanAs()">Zapisz</button>
+      </div>
     </div>
   </div>
 
@@ -2373,6 +2585,7 @@
        2. BEZPIECZNY STORAGE (Pamięć podręczna + localStorage, działa w iOS Files)
        ========================================================================== */
     const STORAGE_KEY_PLAN = 'trening2026_plan_v1';
+    const STORAGE_KEY_SAVED_PLANS = 'trening2026_saved_plans_v1';
     const STORAGE_KEY_HISTORY = 'trening2026_history_v1';
     const STORAGE_KEY_SETTINGS = 'trening2026_settings_v1';
     const STORAGE_KEY_ACTIVE = 'trening2026_active_session_v1';
@@ -2409,10 +2622,110 @@
     let appSettings = loadFromStorage(STORAGE_KEY_SETTINGS, {
       currentWeek: 1,
       selectedStartWorkoutId: "A",
+      activePlanId: "plan_default",
+      activePlanName: "Mój Plan Główny (A/B/C)",
       soundEnabled: true,
       vibrateEnabled: true
     });
     let activeSession = loadFromStorage(STORAGE_KEY_ACTIVE, null);
+
+    // Inicjalizacja zapisanych planów (jeśli pusto, tworzymy pierwszy z bieżącego planu)
+    let savedPlans = loadFromStorage(STORAGE_KEY_SAVED_PLANS, null);
+    if (!savedPlans || !Array.isArray(savedPlans) || savedPlans.length === 0) {
+      savedPlans = [
+        {
+          id: 'plan_default',
+          name: appSettings.activePlanName || 'Mój Plan Główny (A/B/C)',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          workouts: JSON.parse(JSON.stringify(appPlan || DEFAULT_PLAN))
+        }
+      ];
+      saveToStorage(STORAGE_KEY_SAVED_PLANS, savedPlans);
+    }
+    if (!appSettings.activePlanId) {
+      appSettings.activePlanId = savedPlans[0].id;
+      appSettings.activePlanName = savedPlans[0].name;
+    }
+
+    /* ==========================================================================
+       BAZA ĆWICZEŃ (Podział na partie mięśniowe — do szybkiego wyboru)
+       ========================================================================== */
+    const EXERCISE_DATABASE = [
+      // 🦵 Nogi i Pośladki
+      { name: "Przysiad ze sztangą na plecach", category: "Nogi i Pośladki", rest: 180, tempo: "2010", step: 2.5 },
+      { name: "Przysiad ze sztangą z przodu (Front Squat)", category: "Nogi i Pośladki", rest: 150, tempo: "2010", step: 2.5 },
+      { name: "Hack Przysiad (maszyna)", category: "Nogi i Pośladki", rest: 120, tempo: "2010", step: 2.5 },
+      { name: "Suwnica na nogi (Leg Press)", category: "Nogi i Pośladki", rest: 120, tempo: "2010", step: 5.0 },
+      { name: "Wykroki chodzone z hantlami", category: "Nogi i Pośladki", rest: 90, tempo: "2010", step: 2.0 },
+      { name: "Przysiad bułgarski z hantlami", category: "Nogi i Pośladki", rest: 90, tempo: "2010", step: 2.0 },
+      { name: "Martwy ciąg rumuński ze sztangą (RDL)", category: "Nogi i Pośladki", rest: 120, tempo: "3010", step: 2.5 },
+      { name: "Martwy ciąg rumuński z hantlami", category: "Nogi i Pośladki", rest: 90, tempo: "3010", step: 2.0 },
+      { name: "Uginanie nóg leżąc na maszynie", category: "Nogi i Pośladki", rest: 75, tempo: "2011", step: 2.5 },
+      { name: "Uginanie nóg siedząc na maszynie", category: "Nogi i Pośladki", rest: 75, tempo: "2011", step: 2.5 },
+      { name: "Prostowanie nóg na maszynie", category: "Nogi i Pośladki", rest: 75, tempo: "2011", step: 2.5 },
+      { name: "Hip Thrust ze sztangą na biodrach", category: "Nogi i Pośladki", rest: 120, tempo: "2011", step: 5.0 },
+      { name: "Odwodzenie nóg na maszynie", category: "Nogi i Pośladki", rest: 60, tempo: "2011", step: 2.5 },
+      { name: "Wspięcia na łydki stojąc", category: "Nogi i Pośladki", rest: 60, tempo: "2111", step: 2.5 },
+      { name: "Wspięcia na łydki siedząc", category: "Nogi i Pośladki", rest: 60, tempo: "2111", step: 2.5 },
+
+      // 👕 Klatka Piersiowa
+      { name: "Wyciskanie sztangi leżąc na ławce poziomej", category: "Klatka Piersiowa", rest: 150, tempo: "2010", step: 2.5 },
+      { name: "Wyciskanie hantli na ławce skośnej dodatniej", category: "Klatka Piersiowa", rest: 120, tempo: "2010", step: 2.0 },
+      { name: "Wyciskanie hantli na ławce poziomej", category: "Klatka Piersiowa", rest: 120, tempo: "2010", step: 2.0 },
+      { name: "Wyciskanie sztangi na ławce skośnej dodatniej", category: "Klatka Piersiowa", rest: 120, tempo: "2010", step: 2.5 },
+      { name: "Pompki na poręczach (Dipsy na klatkę)", category: "Klatka Piersiowa", rest: 120, tempo: "2010", step: 1.25 },
+      { name: "Rozpiętki z hantlami na ławce poziomej", category: "Klatka Piersiowa", rest: 90, tempo: "2010", step: 1.0 },
+      { name: "Rozpiętki na bramie z linkami wyciągu", category: "Klatka Piersiowa", rest: 75, tempo: "2011", step: 1.25 },
+      { name: "Butterfly (maszyna rozpiętki)", category: "Klatka Piersiowa", rest: 75, tempo: "2011", step: 2.5 },
+      { name: "Wyciskanie na maszynie Chest Press", category: "Klatka Piersiowa", rest: 90, tempo: "2010", step: 2.5 },
+      { name: "Pompki klasyczne", category: "Klatka Piersiowa", rest: 60, tempo: "2010", step: 0.0 },
+
+      // 🚣 Plecy
+      { name: "Martwy ciąg klasyczny ze sztangą", category: "Plecy", rest: 180, tempo: "2010", step: 5.0 },
+      { name: "Martwy ciąg Sumo ze sztangą", category: "Plecy", rest: 180, tempo: "2010", step: 5.0 },
+      { name: "Podciąganie na drążku nachwytem", category: "Plecy", rest: 120, tempo: "2010", step: 1.25 },
+      { name: "Podciąganie na drążku podchwytem", category: "Plecy", rest: 120, tempo: "2010", step: 1.25 },
+      { name: "Ściąganie drążka wyciągu górnego do klatki", category: "Plecy", rest: 90, tempo: "2010", step: 2.5 },
+      { name: "Ściąganie uchwytu neutralnego wyciągu górnego", category: "Plecy", rest: 90, tempo: "2010", step: 2.5 },
+      { name: "Wiosłowanie sztangą w opadzie tułowia", category: "Plecy", rest: 120, tempo: "2010", step: 2.5 },
+      { name: "Wiosłowanie hantlem jednorącz w oparciu o ławkę", category: "Plecy", rest: 90, tempo: "2010", step: 2.0 },
+      { name: "Przyciąganie uchwytu wyciągu dolnego do brzucha", category: "Plecy", rest: 90, tempo: "2011", step: 2.5 },
+      { name: "Wiosłowanie na maszynie T-Bar", category: "Plecy", rest: 90, tempo: "2010", step: 2.5 },
+      { name: "Narciarz (ściąganie drążka prostymi ramionami)", category: "Plecy", rest: 75, tempo: "2011", step: 1.25 },
+      { name: "Szrugsy z hantlami / sztangą (kaptury)", category: "Plecy", rest: 75, tempo: "2111", step: 2.5 },
+
+      // 🏋️ Barki
+      { name: "Wyciskanie żołnierskie stojąc ze sztangą (OHP)", category: "Barki", rest: 150, tempo: "2010", step: 1.25 },
+      { name: "Wyciskanie hantli siedząc", category: "Barki", rest: 120, tempo: "2010", step: 2.0 },
+      { name: "Wznosy hantli bokiem stojąc", category: "Barki", rest: 75, tempo: "2011", step: 1.0 },
+      { name: "Wznosy bokiem na wyciągu jednorącz", category: "Barki", rest: 60, tempo: "2011", step: 1.25 },
+      { name: "Odwrotny butterfly na maszynie (tył barku)", category: "Barki", rest: 75, tempo: "2011", step: 2.5 },
+      { name: "Face Pull z linką wyciągu górnego", category: "Barki", rest: 75, tempo: "2011", step: 1.25 },
+      { name: "Wznosy hantli w opadzie tułowia", category: "Barki", rest: 60, tempo: "2011", step: 1.0 },
+      { name: "Wyciskanie na maszynie Shoulder Press", category: "Barki", rest: 90, tempo: "2010", step: 2.5 },
+
+      // 💪 Ramiona (Biceps i Triceps)
+      { name: "Uginanie przedramion ze sztangą stojąc", category: "Ramiona (Biceps & Triceps)", rest: 90, tempo: "2010", step: 1.25 },
+      { name: "Uginanie ramion z hantlami z supinacją", category: "Ramiona (Biceps & Triceps)", rest: 75, tempo: "2010", step: 1.0 },
+      { name: "Uginanie ramion z hantlami chwytem młotkowym", category: "Ramiona (Biceps & Triceps)", rest: 75, tempo: "2010", step: 1.0 },
+      { name: "Uginanie na modlitewniku ze sztangą łamaną", category: "Ramiona (Biceps & Triceps)", rest: 75, tempo: "2010", step: 1.25 },
+      { name: "Uginanie ramion na wyciągu dolnym", category: "Ramiona (Biceps & Triceps)", rest: 60, tempo: "2011", step: 1.25 },
+      { name: "Wyciskanie francuskie ze sztangą łamaną leżąc", category: "Ramiona (Biceps & Triceps)", rest: 90, tempo: "2010", step: 1.25 },
+      { name: "Wyciskanie francuskie hantla oburącz zza głowy", category: "Ramiona (Biceps & Triceps)", rest: 75, tempo: "2010", step: 2.0 },
+      { name: "Prostowanie ramion na wyciągu ze sznurem", category: "Ramiona (Biceps & Triceps)", rest: 60, tempo: "2011", step: 1.25 },
+      { name: "Prostowanie ramion na wyciągu z drążkiem prostym", category: "Ramiona (Biceps & Triceps)", rest: 60, tempo: "2011", step: 1.25 },
+      { name: "Pompki na poręczach (Dipsy na triceps)", category: "Ramiona (Biceps & Triceps)", rest: 90, tempo: "2010", step: 1.25 },
+      { name: "Wyciskanie sztangi leżąc wąskim chwytem", category: "Ramiona (Biceps & Triceps)", rest: 120, tempo: "2010", step: 2.5 },
+
+      // 🧱 Brzuch i Core
+      { name: "Allahy (spięcia brzucha klęcząc na wyciągu)", category: "Brzuch & Core", rest: 60, tempo: "2011", step: 2.5 },
+      { name: "Wznosy nóg w zwisie na drążku", category: "Brzuch & Core", rest: 60, tempo: "2010", step: 0.0 },
+      { name: "Wznosy nóg na poręczach stacyjnych", category: "Brzuch & Core", rest: 60, tempo: "2010", step: 0.0 },
+      { name: "Kółko do brzucha (Ab Wheel Rollout)", category: "Brzuch & Core", rest: 60, tempo: "2010", step: 0.0 },
+      { name: "Plank (deska klasyczna)", category: "Brzuch & Core", rest: 60, tempo: "1111", step: 0.0 },
+      { name: "Spięcia brzucha na ławce skośnej", category: "Brzuch & Core", rest: 60, tempo: "2010", step: 0.0 }
+    ];
 
     let currentTab = 'start';
     let currentPlanTab = 'A';
@@ -2714,16 +3027,60 @@
     }
 
     /* ==========================================================================
-       6. LOGIKA START
+       6. LOGIKA START & INTELIGENTNA SUGESTIA TRENINGU I TYGODNIA
        ========================================================================== */
+    function getRemainingWorkoutsThisWeek(targetWeek) {
+      const w = Number(targetWeek || appSettings.currentWeek || 1);
+      const sessionsThisWeek = (appHistory || []).filter(s => Number(s.week) === w);
+      const doneIds = new Set(sessionsThisWeek.map(s => (s.workoutId || '').toUpperCase()));
+      return ['A', 'B', 'C'].filter(id => !doneIds.has(id));
+    }
+
+    function checkAndUpdateWeekProgress() {
+      let changed = false;
+      let startWeek = Number(appSettings.currentWeek) || 1;
+      let cur = startWeek;
+
+      // Pętla sprawdzająca kolejne tygodnie, gdyby było zaległe przejście
+      while (true) {
+        const sessions = (appHistory || []).filter(s => Number(s.week) === cur);
+        const doneIds = new Set(sessions.map(s => (s.workoutId || '').toUpperCase()));
+        const allThreeDone = (doneIds.has('A') && doneIds.has('B') && doneIds.has('C')) || sessions.length >= 3;
+
+        if (allThreeDone) {
+          cur += 1;
+          changed = true;
+        } else {
+          break;
+        }
+      }
+
+      if (changed) {
+        appSettings.currentWeek = cur;
+        const remaining = getRemainingWorkoutsThisWeek(cur);
+        appSettings.selectedStartWorkoutId = remaining.length > 0 ? remaining[0] : 'A';
+        saveToStorage(STORAGE_KEY_SETTINGS, appSettings);
+        updateHeaderBadges();
+        return { advanced: true, newWeek: cur, previousWeek: startWeek };
+      }
+      return { advanced: false, currentWeek: startWeek };
+    }
+
     function getNextSuggestedWorkoutId() {
+      if (appSettings && appSettings.selectedStartWorkoutId) {
+        return appSettings.selectedStartWorkoutId;
+      }
+      const remaining = getRemainingWorkoutsThisWeek();
+      if (remaining.length > 0) {
+        return remaining[0];
+      }
       if (appHistory && appHistory.length > 0) {
         const last = appHistory[0];
         if (last && last.workoutId === 'A') return 'B';
         if (last && last.workoutId === 'B') return 'C';
         if (last && last.workoutId === 'C') return 'A';
       }
-      return (appSettings && appSettings.selectedStartWorkoutId) ? appSettings.selectedStartWorkoutId : 'A';
+      return 'A';
     }
 
     function renderStartScreen() {
@@ -3624,18 +3981,30 @@
       appHistory.unshift(historyRecord);
       saveToStorage(STORAGE_KEY_HISTORY, appHistory);
 
-      let nextW = 'A';
-      if (activeSession.workoutId === 'A') nextW = 'B';
-      else if (activeSession.workoutId === 'B') nextW = 'C';
-      else if (activeSession.workoutId === 'C') nextW = 'A';
-      appSettings.selectedStartWorkoutId = nextW;
-      saveToStorage(STORAGE_KEY_SETTINGS, appSettings);
+      // Sprawdź czy ukończono 3 treningi (komplet A, B, C lub 3 treningi) w tym tygodniu
+      const weekProg = checkAndUpdateWeekProgress();
+
+      if (!weekProg.advanced) {
+        // Jeśli ten sam tydzień trwa nadal: zasugeruj kolejny brakujący trening z tego tygodnia
+        const remaining = getRemainingWorkoutsThisWeek();
+        if (remaining.length > 0) {
+          appSettings.selectedStartWorkoutId = remaining[0];
+        } else {
+          let nextW = 'A';
+          if (activeSession.workoutId === 'A') nextW = 'B';
+          else if (activeSession.workoutId === 'B') nextW = 'C';
+          else if (activeSession.workoutId === 'C') nextW = 'A';
+          appSettings.selectedStartWorkoutId = nextW;
+        }
+        saveToStorage(STORAGE_KEY_SETTINGS, appSettings);
+      }
 
       const sessionSummaryData = {
         name: activeSession.workoutName,
         week: activeSession.week,
         sets: totalSets,
-        volume: Math.round(totalVolume)
+        volume: Math.round(totalVolume),
+        weekProg: weekProg
       };
 
       activeSession = null;
@@ -3651,6 +4020,18 @@
       document.getElementById('sumWeekNum').textContent = 'Tydzień ' + data.week;
       document.getElementById('sumTotalSets').textContent = data.sets + ' serii';
       document.getElementById('sumTotalVolume').textContent = data.volume.toLocaleString('pl-PL') + ' kg';
+      
+      const sub = document.getElementById('summarySubtitle');
+      if (sub) {
+        if (data.weekProg && data.weekProg.advanced) {
+          sub.innerHTML = `🎉 <strong>Świetna robota!</strong> Ukończyłeś wszystkie 3 treningi w Tygodniu ${data.weekProg.previousWeek}.<br><span style="color:var(--accent-gold); font-weight:800;">Aplikacja automatycznie przeszła do Tygodnia ${data.weekProg.newWeek}! 🚀</span>`;
+        } else {
+          const remaining = getRemainingWorkoutsThisWeek(data.week);
+          const remText = remaining.length > 0 ? `Do ukończenia tego tygodnia pozostał: <strong>Trening ${remaining.join(', ')}</strong>.` : '';
+          sub.innerHTML = `Świetna robota! Trening został zapisany w historii. ${remText}`;
+        }
+      }
+
       document.getElementById('workoutSummaryModal').style.display = 'flex';
       playTone(523.25, 0.3, 'sine', 0.2);
     }
@@ -3662,8 +4043,316 @@
     }
 
     /* ==========================================================================
-       15. ZAKŁADKA PLAN — PEŁNA EDYCJA TRENINGÓW
+       15. ZAKŁADKA PLAN — PEŁNA EDYCJA TRENINGÓW & BAZA ĆWICZEŃ & MOJE PLANY
        ========================================================================== */
+    function initExerciseDatabase() {
+      const select = document.getElementById('modalExQuickSelect');
+      const datalist = document.getElementById('exerciseDatalist');
+      if (!select) return;
+
+      const categories = {};
+      EXERCISE_DATABASE.forEach(item => {
+        if (!categories[item.category]) categories[item.category] = [];
+        categories[item.category].push(item);
+      });
+
+      select.innerHTML = '<option value="">— Wybierz z bazy (lub wpisz własne poniżej) —</option>';
+      if (datalist) datalist.innerHTML = '';
+
+      Object.keys(categories).forEach(cat => {
+        const group = document.createElement('optgroup');
+        group.label = cat;
+        categories[cat].forEach(ex => {
+          const opt = document.createElement('option');
+          opt.value = ex.name;
+          opt.textContent = ex.name;
+          group.appendChild(opt);
+
+          if (datalist) {
+            const dOpt = document.createElement('option');
+            dOpt.value = ex.name;
+            datalist.appendChild(dOpt);
+          }
+        });
+        select.appendChild(group);
+      });
+    }
+
+    function onQuickSelectExercise(exName) {
+      if (!exName) return;
+      const found = EXERCISE_DATABASE.find(e => e.name === exName);
+      const nameInput = document.getElementById('modalExName');
+      if (nameInput) nameInput.value = exName;
+
+      if (found) {
+        const tempoInput = document.getElementById('modalExTempo');
+        const restInput = document.getElementById('modalExRest');
+        const stepInput = document.getElementById('modalExStep');
+        if (tempoInput && (!tempoInput.value || tempoInput.value === '2010')) {
+          tempoInput.value = found.tempo || '2010';
+        }
+        if (restInput) {
+          restInput.value = found.rest || 90;
+        }
+        if (stepInput && found.step !== undefined) {
+          stepInput.value = formatWeightDisplay(found.step);
+        }
+      }
+    }
+
+    /* --- Zarządzanie Zapisami Planów (Moje Plany) --- */
+    function autoSaveCurrentPlan() {
+      if (!savedPlans || !Array.isArray(savedPlans)) savedPlans = [];
+      const currentId = appSettings.activePlanId || 'plan_default';
+      let planEntry = savedPlans.find(p => p.id === currentId);
+
+      if (planEntry) {
+        planEntry.workouts = JSON.parse(JSON.stringify(appPlan));
+        planEntry.updatedAt = new Date().toISOString();
+      } else {
+        planEntry = {
+          id: currentId,
+          name: appSettings.activePlanName || 'Mój Plan Główny (A/B/C)',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          workouts: JSON.parse(JSON.stringify(appPlan))
+        };
+        savedPlans.push(planEntry);
+      }
+      saveToStorage(STORAGE_KEY_SAVED_PLANS, savedPlans);
+      updatePlanManagementHeader();
+    }
+
+    function updatePlanManagementHeader() {
+      const titleEl = document.getElementById('activePlanTitleDisplay');
+      const countBadge = document.getElementById('savedPlansCountBadge');
+      if (titleEl) {
+        titleEl.textContent = appSettings.activePlanName || 'Mój Plan Główny (A/B/C)';
+      }
+      if (countBadge && savedPlans) {
+        countBadge.textContent = savedPlans.length;
+      }
+    }
+
+    function openSavedPlansModal() {
+      renderSavedPlansModal();
+      document.getElementById('savedPlansModal').style.display = 'flex';
+    }
+
+    function closeSavedPlansModal() {
+      document.getElementById('savedPlansModal').style.display = 'none';
+    }
+
+    function renderSavedPlansModal() {
+      const container = document.getElementById('savedPlansListContainer');
+      if (!container) return;
+      container.innerHTML = '';
+
+      if (!savedPlans || savedPlans.length === 0) {
+        container.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:20px;">Brak zapisanych planów</div>';
+        return;
+      }
+
+      const activeId = appSettings.activePlanId;
+
+      savedPlans.forEach(plan => {
+        const card = document.createElement('div');
+        const isActive = plan.id === activeId;
+        card.className = `saved-plan-card${isActive ? ' active-plan' : ''}`;
+
+        const countA = (plan.workouts && plan.workouts.A && plan.workouts.A.exercises) ? plan.workouts.A.exercises.length : 0;
+        const countB = (plan.workouts && plan.workouts.B && plan.workouts.B.exercises) ? plan.workouts.B.exercises.length : 0;
+        const countC = (plan.workouts && plan.workouts.C && plan.workouts.C.exercises) ? plan.workouts.C.exercises.length : 0;
+
+        const dateFormatted = plan.updatedAt ? new Date(plan.updatedAt).toLocaleDateString('pl-PL') : '';
+
+        card.innerHTML = `
+          <div class="saved-plan-top">
+            <div>
+              <div class="saved-plan-name">${plan.name}</div>
+              <div class="saved-plan-meta">
+                Trening A: ${countA} ćw. | B: ${countB} ćw. | C: ${countC} ćw.
+                ${dateFormatted ? ` • ${dateFormatted}` : ''}
+              </div>
+            </div>
+            ${isActive ? '<span class="badge badge-gold" style="font-size:0.7rem; font-weight:800;">✓ AKTYWNY</span>' : ''}
+          </div>
+          <div class="saved-plan-btns">
+            ${!isActive ? `
+              <button type="button" class="btn btn-gold btn-mini" onclick="loadPlanIntoActive('${plan.id}')">
+                ⚡ Wczytaj ten plan
+              </button>
+            ` : `
+              <span style="font-size:0.75rem; color:var(--accent-gold); font-weight:700;">Obecnie używany plan</span>
+            `}
+            <button type="button" class="btn btn-outline btn-mini" onclick="renameSavedPlan('${plan.id}')">
+              ✏️ Zmień nazwę
+            </button>
+            <button type="button" class="btn btn-outline btn-mini" onclick="duplicateSavedPlan('${plan.id}')">
+              📋 Kopiuj
+            </button>
+            ${!isActive ? `
+              <button type="button" class="btn btn-danger btn-mini" style="margin-left:auto;" onclick="deleteSavedPlan('${plan.id}')">
+                🗑️ Usuń
+              </button>
+            ` : ''}
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
+    function loadPlanIntoActive(planId) {
+      const target = (savedPlans || []).find(p => p.id === planId);
+      if (!target) return;
+
+      autoSaveCurrentPlan();
+
+      appPlan = JSON.parse(JSON.stringify(target.workouts));
+      appSettings.activePlanId = target.id;
+      appSettings.activePlanName = target.name;
+
+      saveToStorage(STORAGE_KEY_PLAN, appPlan);
+      saveToStorage(STORAGE_KEY_SETTINGS, appSettings);
+
+      closeSavedPlansModal();
+      renderPlanView();
+      renderStartScreen();
+      showNotification(`✓ Wczytano plan: ${target.name}!`, 'gold');
+    }
+
+    let pendingPlanAction = null;
+
+    function promptSaveCurrentPlanAs() {
+      pendingPlanAction = 'save_as';
+      document.getElementById('savePlanAsTitle').textContent = 'Zapisz obecny plan jako...';
+      document.getElementById('savePlanAsInput').value = (appSettings.activePlanName || 'Plan') + ' (Kopia)';
+      document.getElementById('savePlanAsModal').style.display = 'flex';
+      setTimeout(() => document.getElementById('savePlanAsInput').select(), 100);
+    }
+
+    function promptCreateNewPlan() {
+      pendingPlanAction = 'create_new';
+      document.getElementById('savePlanAsTitle').textContent = 'Stwórz nowy plan treningowy';
+      document.getElementById('savePlanAsInput').value = 'Mój Nowy Plan 3-Dniowy';
+      document.getElementById('savePlanAsModal').style.display = 'flex';
+      setTimeout(() => document.getElementById('savePlanAsInput').select(), 100);
+    }
+
+    function closeSavePlanAsModal() {
+      document.getElementById('savePlanAsModal').style.display = 'none';
+      pendingPlanAction = null;
+    }
+
+    function confirmSavePlanAs() {
+      const name = document.getElementById('savePlanAsInput').value.trim();
+      if (!name) {
+        showNotification('Podaj nazwę planu', 'error');
+        return;
+      }
+
+      if (pendingPlanAction === 'save_as') {
+        const newId = 'plan_' + Date.now();
+        const newEntry = {
+          id: newId,
+          name: name,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          workouts: JSON.parse(JSON.stringify(appPlan))
+        };
+        savedPlans.push(newEntry);
+        appSettings.activePlanId = newId;
+        appSettings.activePlanName = name;
+        saveToStorage(STORAGE_KEY_SAVED_PLANS, savedPlans);
+        saveToStorage(STORAGE_KEY_SETTINGS, appSettings);
+        showNotification(`✓ Zapisano plan jako: "${name}"`, 'gold');
+      } else if (pendingPlanAction === 'create_new') {
+        autoSaveCurrentPlan();
+
+        const newId = 'plan_' + Date.now();
+        const emptyPlan = {
+          "A": { id: "A", name: "TRENING A", exercises: [] },
+          "B": { id: "B", name: "TRENING B", exercises: [] },
+          "C": { id: "C", name: "TRENING C", exercises: [] }
+        };
+        const newEntry = {
+          id: newId,
+          name: name,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          workouts: emptyPlan
+        };
+        savedPlans.push(newEntry);
+        appPlan = emptyPlan;
+        appSettings.activePlanId = newId;
+        appSettings.activePlanName = name;
+
+        saveToStorage(STORAGE_KEY_SAVED_PLANS, savedPlans);
+        saveToStorage(STORAGE_KEY_PLAN, appPlan);
+        saveToStorage(STORAGE_KEY_SETTINGS, appSettings);
+        showNotification(`Utworzono plan: "${name}". Dodaj ćwiczenia!`, 'gold');
+      }
+
+      closeSavePlanAsModal();
+      renderPlanView();
+      renderStartScreen();
+    }
+
+    function renameSavedPlan(planId) {
+      const plan = (savedPlans || []).find(p => p.id === planId);
+      if (!plan) return;
+      const newName = prompt('Podaj nową nazwę planu:', plan.name);
+      if (newName && newName.trim()) {
+        plan.name = newName.trim();
+        plan.updatedAt = new Date().toISOString();
+        if (appSettings.activePlanId === planId) {
+          appSettings.activePlanName = plan.name;
+          saveToStorage(STORAGE_KEY_SETTINGS, appSettings);
+        }
+        saveToStorage(STORAGE_KEY_SAVED_PLANS, savedPlans);
+        renderSavedPlansModal();
+        updatePlanManagementHeader();
+        showNotification(`Zmieniono nazwę na: "${plan.name}"`);
+      }
+    }
+
+    function duplicateSavedPlan(planId) {
+      const plan = (savedPlans || []).find(p => p.id === planId);
+      if (!plan) return;
+      const copyName = plan.name + ' (Kopia)';
+      const newId = 'plan_' + Date.now();
+      const copy = {
+        id: newId,
+        name: copyName,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        workouts: JSON.parse(JSON.stringify(plan.workouts))
+      };
+      savedPlans.push(copy);
+      saveToStorage(STORAGE_KEY_SAVED_PLANS, savedPlans);
+      renderSavedPlansModal();
+      updatePlanManagementHeader();
+      showNotification(`Skopiowano plan jako: "${copyName}"`);
+    }
+
+    function deleteSavedPlan(planId) {
+      if (appSettings.activePlanId === planId) {
+        showNotification('Nie możesz usunąć aktualnie aktywnego planu!', 'error');
+        return;
+      }
+      const plan = (savedPlans || []).find(p => p.id === planId);
+      if (!plan) return;
+
+      if (confirm(`Czy na pewno chcesz usunąć plan "${plan.name}"?\nTwoja historia wykonanych treningów pozostanie nienaruszona!`)) {
+        savedPlans = savedPlans.filter(p => p.id !== planId);
+        saveToStorage(STORAGE_KEY_SAVED_PLANS, savedPlans);
+        renderSavedPlansModal();
+        updatePlanManagementHeader();
+        showNotification(`Usunięto plan "${plan.name}"`);
+      }
+    }
+
     function selectPlanTab(tabKey) {
       currentPlanTab = tabKey;
       document.querySelectorAll('.plan-tabs .plan-tab-btn').forEach(btn => {
@@ -3674,12 +4363,24 @@
     }
 
     function renderPlanView() {
+      updatePlanManagementHeader();
+
       const container = document.getElementById('planExercisesList');
       if (!container) return;
       container.innerHTML = '';
 
       const plan = appPlan[currentPlanTab];
-      if (!plan || !plan.exercises) return;
+      if (!plan || !plan.exercises || plan.exercises.length === 0) {
+        container.innerHTML = `
+          <div class="card" style="text-align:center; padding:24px 16px; color:var(--text-muted);">
+            <div style="font-size:2rem; margin-bottom:8px;">📝</div>
+            <div style="font-weight:700; color:#fff; margin-bottom:4px;">Brak ćwiczeń w tym dniu</div>
+            <p style="font-size:0.85rem; margin-bottom:12px;">Kliknij przycisk poniżej, aby dodać pierwsze ćwiczenie z bazy lub własne.</p>
+            <button type="button" class="btn btn-gold btn-mini" onclick="openAddExerciseModal()">+ Dodaj ćwiczenie</button>
+          </div>
+        `;
+        return;
+      }
 
       plan.exercises.forEach((ex, idx) => {
         const card = document.createElement('div');
@@ -3723,6 +4424,7 @@
       plan.exercises.splice(targetIdx, 0, item);
 
       saveToStorage(STORAGE_KEY_PLAN, appPlan);
+      autoSaveCurrentPlan();
       renderPlanView();
       showNotification('Zmieniono kolejność ćwiczeń');
     }
@@ -3733,6 +4435,7 @@
       if (confirm(`Czy na pewno chcesz usunąć ćwiczenie "${ex.name}" z ${plan.name}?\n(Twoja dotychczasowa historia wyników zostanie zachowana)`)) {
         plan.exercises.splice(index, 1);
         saveToStorage(STORAGE_KEY_PLAN, appPlan);
+        autoSaveCurrentPlan();
         renderPlanView();
         showNotification('Usunięto ćwiczenie z planu');
       }
@@ -3741,6 +4444,10 @@
     function openAddExerciseModal() {
       editingExerciseData = { isNew: true, index: -1 };
       document.getElementById('exerciseModalTitle').textContent = `Dodaj ćwiczenie do ${appPlan[currentPlanTab].name}`;
+      
+      const qSelect = document.getElementById('modalExQuickSelect');
+      if (qSelect) qSelect.value = '';
+
       document.getElementById('modalExName').value = '';
       document.getElementById('modalExSets').value = 3;
       document.getElementById('modalExRepsMin').value = 8;
@@ -3758,6 +4465,13 @@
       editingExerciseData = { isNew: false, index: index };
 
       document.getElementById('exerciseModalTitle').textContent = `Edytuj: ${ex.name}`;
+      
+      const qSelect = document.getElementById('modalExQuickSelect');
+      if (qSelect) {
+        const foundInDb = EXERCISE_DATABASE.find(e => e.name.toLowerCase() === ex.name.toLowerCase());
+        qSelect.value = foundInDb ? foundInDb.name : '';
+      }
+
       document.getElementById('modalExName').value = ex.name;
       document.getElementById('modalExSets').value = ex.sets;
       document.getElementById('modalExRepsMin').value = ex.repsMin;
@@ -3816,6 +4530,7 @@
       }
 
       saveToStorage(STORAGE_KEY_PLAN, appPlan);
+      autoSaveCurrentPlan();
       closeExerciseModal();
       renderPlanView();
     }
@@ -3823,7 +4538,10 @@
     function promptResetDefaultPlan() {
       if (confirm('Czy na pewno chcesz przywrócić domyślny plan treningowy A/B/C?\nTwoja historia wykonanych treningów pozostanie nienaruszona!')) {
         appPlan = JSON.parse(JSON.stringify(DEFAULT_PLAN));
+        appSettings.activePlanName = 'Domyślny Plan A/B/C';
         saveToStorage(STORAGE_KEY_PLAN, appPlan);
+        saveToStorage(STORAGE_KEY_SETTINGS, appSettings);
+        autoSaveCurrentPlan();
         renderPlanView();
         showNotification('Przywrócono domyślny plan treningowy', 'gold');
       }
@@ -4008,8 +4726,8 @@
         card.className = 'history-session-card';
 
         const d = new Date(session.date);
-        const dateFormatted = !isNaN(d) ? d.toLocaleString('pl-PL', {
-          weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+        const dateFormatted = !isNaN(d) ? d.toLocaleDateString('pl-PL', {
+          weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric'
         }) : session.date;
 
         let exercisesHtml = '';
@@ -4027,9 +4745,9 @@
 
         card.innerHTML = `
           <div class="session-header">
-            <div>
+            <div class="session-header-left">
               <span class="session-title">${session.workoutName}</span>
-              <span class="badge badge-gold" style="margin-left:8px;">TYDZIEŃ ${session.week}</span>
+              <span class="session-week-tag">Tydzień ${session.week}</span>
             </div>
             <span class="session-date">${dateFormatted}</span>
           </div>
@@ -4170,11 +4888,15 @@
     }
 
     function exportDataJSON() {
+      // Upewnij się, że aktualny stan planu jest zapisany w kolekcji
+      autoSaveCurrentPlan();
+
       const exportObject = {
-        version: 'trening2026_1.0',
+        version: 'trening2026_1.1',
         exportDate: new Date().toISOString(),
         settings: appSettings,
         plan: appPlan,
+        savedPlans: savedPlans,
         history: appHistory
       };
 
@@ -4190,7 +4912,7 @@
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      showNotification('Wyeksportowano kopię zapasową JSON!', 'gold');
+      showNotification('Wyeksportowano kopię zapasową JSON (z planami i historią)!', 'gold');
     }
 
     function triggerImportJSON() {
@@ -4212,6 +4934,10 @@
           if (confirm('Czy na pewno chcesz wczytać dane z tego pliku?\nObecne plany i historia zostaną zastąpione danymi z kopii.')) {
             appPlan = imported.plan;
             appHistory = imported.history;
+            if (imported.savedPlans && Array.isArray(imported.savedPlans)) {
+              savedPlans = imported.savedPlans;
+              saveToStorage(STORAGE_KEY_SAVED_PLANS, savedPlans);
+            }
             if (imported.settings) appSettings = imported.settings;
 
             saveToStorage(STORAGE_KEY_PLAN, appPlan);
@@ -4220,6 +4946,7 @@
 
             showNotification('Pomyślnie wczytano kopię zapasową!', 'gold');
             renderStartScreen();
+            renderPlanView();
           }
         } catch (ex) {
           alert('Błąd wczytywania pliku JSON: ' + ex.message);
@@ -4243,6 +4970,15 @@
        ========================================================================== */
     function initApp() {
       try {
+        initExerciseDatabase();
+        updatePlanManagementHeader();
+        
+        // Sprawdź czy bieżący tydzień nie ma już kompletu 3 treningów
+        const weekProg = checkAndUpdateWeekProgress();
+        if (weekProg && weekProg.advanced) {
+          showNotification(`🚀 Zaktualizowano na Tydzień ${weekProg.newWeek} (ukończono Tydzień ${weekProg.previousWeek})!`, 'gold');
+        }
+
         updateHeaderBadges();
         if (activeSession) {
           switchTab('workout');
