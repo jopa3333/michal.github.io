@@ -7,8 +7,8 @@ export default defineConfig(({ mode }) => ({
   publicDir: '../public',
   plugins: [react()],
   build: {
-    // GitHub Pages is configured to publish the repository root.
-    outDir: '..',
-    emptyOutDir: false
+    // Output goes to <repo>/dist, which the deploy-pages workflow uploads.
+    outDir: '../dist',
+    emptyOutDir: true
   }
 }));
