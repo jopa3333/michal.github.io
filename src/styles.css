@@ -1,0 +1,1688 @@
+
+    /* ==========================================================================
+       1. ZMIENNE I RESET (Stylistyka Farmada Formatki + Pełna obsługa iOS Safari)
+       ========================================================================== */
+    :root {
+      --bg-dark: #022c43;
+      --bg-card: #053f5e;
+      --bg-card-hover: #074e74;
+      --bg-input: #022538;
+      --border-color: #146b97;
+      --border-accent: #ffd700;
+      --text-main: #ffffff;
+      --text-muted: #9fc3d6;
+      --accent-gold: #ffd700;
+      --accent-gold-hover: #ffea75;
+      --success-green: #00e676;
+      --success-bg: rgba(0, 230, 118, 0.15);
+      --danger-red: #ff5252;
+      --danger-bg: rgba(255, 82, 82, 0.15);
+      --font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      --bottom-nav-height: clamp(52px, 8vh, 72px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --nav-item-gap: clamp(1px, 0.6vh, 4px);
+      --nav-icon-size: clamp(1rem, 2.4vh, 1.35rem);
+      --nav-label-size: clamp(0.62rem, 1.35vh, 0.75rem);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+    }
+
+    html {
+      background-color: var(--bg-dark);
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-family);
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    button {
+      touch-action: manipulation;
+      cursor: pointer;
+      -webkit-appearance: none;
+      appearance: none;
+      font-family: inherit;
+    }
+
+    /* Kluczowe dla iOS: dotknięcie ikony/tekstu wewnątrz przycisku trafia w button */
+    button * {
+      pointer-events: none;
+    }
+
+    /* ==========================================================================
+       2. GŁÓWNA STRUKTURA I NAWIGACJA
+       ========================================================================== */
+    .app-header {
+      background: linear-gradient(180deg, #011d2d 0%, var(--bg-dark) 100%);
+      border-bottom: 1px solid var(--border-color);
+      padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .app-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-icon {
+      font-size: 24px;
+      color: var(--accent-gold);
+    }
+
+    .logo-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: #fff;
+    }
+
+    .logo-badge {
+      font-size: 0.75rem;
+      background: rgba(255, 215, 0, 0.15);
+      border: 1px solid var(--accent-gold);
+      color: var(--accent-gold);
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-weight: 700;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .workout-active-pill {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      background: rgba(0, 230, 118, 0.2);
+      border: 1px solid var(--success-green);
+      color: var(--success-green);
+      padding: 5px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.8; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.03); }
+      100% { opacity: 0.8; transform: scale(1); }
+    }
+
+    .main-content {
+      flex: 1;
+      padding: 12px 14px;
+      padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 16px);
+      max-width: 720px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    @media (max-width: 600px) {
+      .main-content {
+        padding: 8px 10px;
+        padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 12px);
+      }
+    }
+
+    .tab-view {
+      display: none;
+      animation: fadeIn 0.2s ease-out;
+    }
+
+    .tab-view.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Pasek nawigacyjny na dole - dostosowany do iPhone (Safe Area Inset) */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: calc(var(--bottom-nav-height) + var(--safe-bottom));
+      padding-bottom: var(--safe-bottom);
+      box-sizing: border-box;
+      background: #022031;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-around;
+      align-items: flex-start;
+      padding-top: clamp(2px, 0.5vh, 5px);
+      z-index: 1000;
+      box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.4);
+    }
+
+    .nav-item {
+      flex: 1;
+      height: var(--bottom-nav-height);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+      gap: var(--nav-item-gap);
+      min-width: 0;
+      position: relative;
+    }
+
+    .nav-item .nav-icon {
+      font-size: var(--nav-icon-size);
+      line-height: 1.1;
+    }
+
+    .nav-item .nav-label {
+      font-size: var(--nav-label-size);
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      white-space: nowrap;
+      line-height: 1.1;
+    }
+
+    @media (max-height: 500px) {
+      :root { --bottom-nav-height: 48px; }
+      .nav-item .nav-label { display: none; }
+    }
+
+    @media (min-width: 700px) {
+      :root { --bottom-nav-height: 68px; }
+      .bottom-nav {
+        left: 50%;
+        right: auto;
+        width: min(100%, 720px);
+        transform: translateX(-50%);
+      }
+    }
+
+    .nav-item.active {
+      color: var(--accent-gold);
+    }
+
+    .nav-item.active::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 20%;
+      right: 20%;
+      height: 3px;
+      background: var(--accent-gold);
+      border-radius: 0 0 3px 3px;
+    }
+
+    .nav-badge-dot {
+      position: absolute;
+      top: 10px;
+      right: calc(50% - 16px);
+      width: 8px;
+      height: 8px;
+      background: var(--success-green);
+      border-radius: 50%;
+      display: none;
+    }
+
+    /* ==========================================================================
+       3. WSPÓLNE KOMPONENTY (Karty, Przyciski, Tytuły)
+       ========================================================================== */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    }
+
+    .btn {
+      font-family: inherit;
+      border: none;
+      cursor: pointer;
+      border-radius: 8px;
+      font-weight: 700;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-align: center;
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    .btn-gold {
+      background: linear-gradient(135deg, #ffd700 0%, #ffb700 100%);
+      color: #022c43;
+      box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+    }
+
+    .btn-gold:hover {
+      background: linear-gradient(135deg, #ffea75 0%, #ffd700 100%);
+    }
+
+    .btn-primary {
+      background: #146b97;
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: #1a7aa8;
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border-color);
+      color: #e0e0e0;
+    }
+
+    .btn-outline:hover {
+      border-color: var(--accent-gold);
+      color: var(--accent-gold);
+    }
+
+    .btn-success {
+      background: #00e676;
+      color: #022c43;
+    }
+
+    .btn-danger {
+      background: var(--danger-bg);
+      border: 1px solid var(--danger-red);
+      color: var(--danger-red);
+    }
+
+    .btn-danger:hover {
+      background: var(--danger-red);
+      color: #fff;
+    }
+
+    .btn-large {
+      width: 100%;
+      padding: 16px;
+      font-size: 1.15rem;
+      border-radius: 12px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-gold {
+      background: rgba(255, 215, 0, 0.15);
+      border: 1px solid var(--accent-gold);
+      color: var(--accent-gold);
+    }
+
+    .badge-green {
+      background: var(--success-bg);
+      border: 1px solid var(--success-green);
+      color: var(--success-green);
+    }
+
+    .badge-blue {
+      background: rgba(20, 107, 151, 0.3);
+      border: 1px solid var(--border-color);
+      color: #9fc3d6;
+    }
+
+    /* ==========================================================================
+       4. EKRAN START
+       ========================================================================== */
+    .start-hero {
+      text-align: center;
+      padding: 24px 16px;
+      background: linear-gradient(145deg, #043652 0%, var(--bg-card) 100%);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      margin-bottom: 20px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+    }
+
+    .start-subtitle {
+      font-size: 0.85rem;
+      color: var(--accent-gold);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+
+    .start-title {
+      font-size: 2.2rem;
+      font-weight: 900;
+      margin-bottom: 14px;
+      color: #fff;
+    }
+
+    .start-meta-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .week-stepper {
+      display: inline-flex;
+      align-items: center;
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 4px 10px;
+      gap: 10px;
+    }
+
+    .stepper-btn {
+      background: transparent;
+      border: none;
+      color: var(--accent-gold);
+      font-size: 1.1rem;
+      font-weight: 800;
+      width: 28px;
+      height: 28px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+    }
+
+    .stepper-btn:hover {
+      background: rgba(255, 215, 0, 0.2);
+    }
+
+    .stepper-val {
+      font-size: 0.9rem;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: 0.5px;
+    }
+
+    .preview-box {
+      background: rgba(2, 44, 67, 0.6);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin: 16px 0 20px 0;
+      text-align: left;
+      border: 1px solid rgba(20, 107, 151, 0.5);
+    }
+
+    .preview-title {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .preview-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .preview-item {
+      font-size: 0.88rem;
+      color: #e6e6e6;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .preview-item span.num {
+      color: var(--accent-gold);
+      font-weight: 700;
+      font-size: 0.8rem;
+      min-width: 18px;
+    }
+
+    .manual-picker-label {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-top: 20px;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .workout-selector-pills {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .pill-btn {
+      flex: 1;
+      padding: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .pill-btn:hover, .pill-btn.active {
+      border-color: var(--accent-gold);
+      background: rgba(255, 215, 0, 0.12);
+      color: var(--accent-gold);
+    }
+
+    /* ==========================================================================
+       5. EKRAN TRENING (Wybór A/B/C oraz Asystent)
+       ========================================================================== */
+    .workout-picker-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .workout-choice-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 18px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .workout-choice-card:hover {
+      border-color: var(--accent-gold);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+    }
+
+    .w-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .w-card-title {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .w-card-meta {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .w-card-exercises {
+      font-size: 0.85rem;
+      color: #cbdbe3;
+      line-height: 1.4;
+      margin-bottom: 14px;
+    }
+
+    /* ==========================================================================
+       6. NAJWAŻNIEJSZY EKRAN — ASYSTENT ĆWICZENIA (Podczas Treningu)
+       ========================================================================== */
+    .assistant-topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .assistant-ex-count {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-plan-toggle {
+      background: rgba(20, 107, 151, 0.4);
+      border: 1px solid var(--border-color);
+      color: var(--accent-gold);
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-plan-toggle:hover {
+      background: var(--border-color);
+    }
+
+    /* ==========================================================================
+       6. NAJWAŻNIEJSZY EKRAN — ASYSTENT ĆWICZENIA (Kompaktowy na 1 ekran iPhone)
+       ========================================================================== */
+    .assistant-topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .assistant-ex-count {
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+    }
+
+    .btn-plan-toggle {
+      background: rgba(20, 107, 151, 0.35);
+      border: 1px solid var(--border-color);
+      color: var(--accent-gold);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-weight: 800;
+      font-size: 0.78rem;
+      cursor: pointer;
+    }
+
+    .exercise-main-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 10px 12px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+      margin-bottom: 6px;
+    }
+
+    .exercise-header-compact {
+      margin-bottom: 6px;
+    }
+
+    .exercise-name-header {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 4px;
+      line-height: 1.2;
+    }
+
+    .exercise-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-bottom: 6px;
+    }
+
+    .tag {
+      background: rgba(2, 44, 67, 0.85);
+      border: 1px solid var(--border-color);
+      padding: 2px 7px;
+      border-radius: 5px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #d1e5f0;
+    }
+
+    .tag-tempo {
+      color: var(--accent-gold);
+      border-color: rgba(255, 215, 0, 0.35);
+    }
+
+    /* Zintegrowany zwarty pasek Ostatnio & Dzisiaj (oszczędza ~70px pionowo) */
+    .exercise-info-strip {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      background: rgba(2, 37, 56, 0.65);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 5px 8px;
+      margin-bottom: 8px;
+    }
+
+    .info-strip-col {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .info-strip-col.prev {
+      border-right: 1px solid rgba(20, 107, 151, 0.35);
+      padding-right: 6px;
+    }
+
+    .strip-lbl {
+      font-size: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 1px;
+    }
+
+    .info-strip-col.target .strip-lbl {
+      color: var(--accent-gold);
+    }
+
+    .strip-val {
+      font-size: 0.88rem;
+      font-weight: 800;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .strip-val-row {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .exercise-info-strip .progres-badge {
+      background: var(--accent-gold);
+      color: #022c43;
+      padding: 1px 6px;
+      border-radius: 10px;
+      font-size: 0.68rem;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    /* Ciężar — Ultra-kompaktowy */
+    .weight-adjuster-section {
+      margin-bottom: 8px;
+    }
+
+    .weight-display-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 5px;
+    }
+
+    .weight-display-btn {
+      background: var(--bg-input);
+      border: 2px solid var(--accent-gold);
+      color: #fff;
+      font-size: 1.65rem;
+      font-weight: 900;
+      padding: 3px 18px;
+      border-radius: 10px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: baseline;
+      gap: 4px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .weight-unit {
+      font-size: 0.95rem;
+      color: var(--accent-gold);
+      font-weight: 700;
+    }
+
+    .weight-quick-buttons {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 4px;
+    }
+
+    .btn-step {
+      background: rgba(20, 107, 151, 0.35);
+      border: 1px solid var(--border-color);
+      color: #fff;
+      padding: 5px 2px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .btn-step.step-plus {
+      border-color: rgba(0, 230, 118, 0.4);
+    }
+
+    .btn-step.step-minus {
+      border-color: rgba(255, 82, 82, 0.4);
+    }
+
+    /* Serie i Postęp */
+    .sets-progress-box {
+      background: rgba(2, 44, 67, 0.6);
+      border-radius: 8px;
+      padding: 6px 8px;
+      margin-bottom: 8px;
+      border: 1px solid rgba(20, 107, 151, 0.35);
+    }
+
+    .sets-header {
+      font-size: 0.68rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .btn-set-step {
+      padding: 2px 6px !important;
+      font-size: 0.68rem !important;
+      font-weight: 700 !important;
+      border-radius: 5px !important;
+    }
+
+    .sets-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .set-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 8px;
+      border-radius: 5px;
+      background: rgba(5, 63, 94, 0.4);
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .set-row.active {
+      background: rgba(255, 215, 0, 0.12);
+      border: 1px solid var(--accent-gold);
+      color: var(--accent-gold);
+    }
+
+    .set-row.completed {
+      background: rgba(0, 230, 118, 0.12);
+      border: 1px solid rgba(0, 230, 118, 0.3);
+      color: #fff;
+    }
+
+    .set-actions-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 0.75rem;
+      padding: 2px 4px;
+    }
+
+    .set-actions-btn:hover {
+      color: var(--danger-red);
+    }
+
+    /* Przyciski Powtórzeń — Kompaktowe i czytelne */
+    .reps-picker-container {
+      margin-bottom: 8px;
+    }
+
+    .reps-buttons-grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 5px;
+    }
+
+    .rep-btn {
+      flex: 1;
+      min-width: 44px;
+      height: 40px;
+      background: linear-gradient(145deg, #074e74 0%, #053f5e 100%);
+      border: 1.5px solid var(--border-color);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 1.25rem;
+      font-weight: 900;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.1s;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+    }
+
+    .rep-btn.rep-max {
+      flex: 1.5;
+      min-width: 65px;
+      font-size: 1.05rem;
+      background: linear-gradient(145deg, #ff9800 0%, #e65100 100%);
+      border-color: #ffb74d;
+    }
+
+    .rep-btn-custom {
+      background: rgba(2, 44, 67, 0.7);
+      border: 1px dashed var(--border-color);
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      font-weight: 700;
+      min-width: 44px;
+      height: 40px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .rep-btn-custom:hover {
+      border-color: var(--accent-gold);
+      color: var(--accent-gold);
+    }
+
+    /* 1-wierszowy Timer odpoczynku */
+    .rest-timer-box {
+      margin-bottom: 8px;
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .timer-btn-main {
+      flex: 2;
+      height: 36px;
+      background: rgba(2, 44, 67, 0.9);
+      border: 1.5px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0 10px;
+      color: #fff;
+      font-size: 0.92rem;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .timer-btn-main.timer-running {
+      border-color: var(--accent-gold);
+      background: rgba(255, 215, 0, 0.12);
+      color: var(--accent-gold);
+    }
+
+    .timer-btn-main.timer-done {
+      border-color: var(--success-green);
+      background: rgba(0, 230, 118, 0.2);
+      color: var(--success-green);
+      animation: pulse 1s infinite;
+    }
+
+    .timer-controls {
+      display: flex;
+      gap: 4px;
+      flex: 1.5;
+    }
+
+    .timer-ctrl-btn {
+      flex: 1;
+      height: 36px;
+      background: rgba(20, 107, 151, 0.3);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      font-weight: 800;
+      cursor: pointer;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .timer-ctrl-btn:hover {
+      color: #fff;
+      border-color: var(--accent-gold);
+    }
+
+    /* Nawigacja ćwiczeń */
+    .exercise-nav-footer {
+      display: flex;
+      gap: 6px;
+    }
+
+    .btn-prev-ex {
+      flex: 1;
+      height: 36px;
+      background: rgba(2, 44, 67, 0.8);
+      border: 1px solid var(--border-color);
+      color: #fff;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 0 8px;
+    }
+
+    .btn-next-ex {
+      flex: 2;
+      height: 36px;
+      background: var(--border-color);
+      border: 1px solid #1a7aa8;
+      color: #fff;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-weight: 800;
+      cursor: pointer;
+      padding: 0 8px;
+    }
+
+    .btn-next-ex.completed-prompt {
+      background: linear-gradient(135deg, #00e676 0%, #00b0ff 100%);
+      color: #022c43;
+      border: none;
+      box-shadow: 0 4px 15px rgba(0, 230, 118, 0.3);
+    }
+
+    .btn-finish-link {
+      width: 100%;
+      height: 30px;
+      background: transparent;
+      border: 1px solid rgba(255, 82, 82, 0.4);
+      color: #ff5252;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 4px;
+    }
+
+    .btn-finish-link:hover {
+      background: rgba(255, 82, 82, 0.15);
+    }
+
+    /* Status ukończonego ćwiczenia */
+    .exercise-completed-banner {
+      display: none;
+      background: rgba(0, 230, 118, 0.15);
+      border: 1px solid var(--success-green);
+      color: var(--success-green);
+      padding: 8px;
+      border-radius: 8px;
+      text-align: center;
+      font-weight: 800;
+      font-size: 0.85rem;
+      margin-bottom: 8px;
+      animation: fadeIn 0.3s;
+    }
+
+    /* ==========================================================================
+       7. PANEL / SZUFLADA SZYBKIEGO PODGLĄDU PLANU (Przycisk [ ☰ PLAN ])
+       ========================================================================== */
+    .plan-drawer-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(3px);
+      z-index: 2000;
+      display: none;
+      justify-content: flex-end;
+    }
+
+    .plan-drawer {
+      width: 85%;
+      max-width: 360px;
+      background: #032a3f;
+      height: 100%;
+      border-left: 1px solid var(--border-color);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: -6px 0 25px rgba(0, 0, 0, 0.5);
+      overflow-y: auto;
+    }
+
+    .plan-drawer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .drawer-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--accent-gold);
+    }
+
+    .drawer-close-btn {
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 1.3rem;
+      cursor: pointer;
+      padding: 4px;
+    }
+
+    .drawer-exercises-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+    }
+
+    .drawer-ex-item {
+      padding: 12px;
+      border-radius: 8px;
+      background: rgba(5, 63, 94, 0.5);
+      border: 1px solid transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      font-weight: 700;
+      transition: all 0.15s;
+    }
+
+    .drawer-ex-item.current {
+      border-color: var(--accent-gold);
+      background: rgba(255, 215, 0, 0.12);
+      color: var(--accent-gold);
+    }
+
+    .drawer-ex-item.done {
+      border-color: rgba(0, 230, 118, 0.3);
+      color: var(--text-muted);
+    }
+
+    .drawer-ex-item:hover {
+      background: rgba(20, 107, 151, 0.4);
+    }
+
+    /* ==========================================================================
+       8. ZAKŁADKA PLAN (Pełna edycja & Zarządzanie Planami)
+       ========================================================================== */
+    .plan-management-card {
+      background: linear-gradient(135deg, rgba(2, 44, 67, 0.95), rgba(1, 26, 40, 0.95));
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 14px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    }
+
+    .plan-mgmt-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      gap: 10px;
+    }
+
+    .plan-mgmt-badge {
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: var(--accent-gold);
+      background: rgba(255, 215, 0, 0.12);
+      border: 1px solid rgba(255, 215, 0, 0.35);
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-bottom: 3px;
+    }
+
+    .plan-mgmt-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #fff;
+      margin: 0;
+      line-height: 1.2;
+    }
+
+    .plan-mgmt-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      border-top: 1px solid rgba(20, 107, 151, 0.25);
+      padding-top: 8px;
+    }
+
+    /* Modal Moje Plany */
+    .saved-plans-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 55vh;
+      overflow-y: auto;
+      padding-right: 4px;
+      margin: 12px 0;
+    }
+
+    .saved-plan-card {
+      background: rgba(2, 44, 67, 0.8);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+
+    .saved-plan-card.active-plan {
+      border-color: var(--accent-gold);
+      background: rgba(255, 215, 0, 0.08);
+    }
+
+    .saved-plan-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .saved-plan-name {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .saved-plan-meta {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      line-height: 1.3;
+    }
+
+    .saved-plan-btns {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 2px;
+    }
+
+    .plan-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .plan-tab-btn {
+      flex: 1;
+      padding: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+
+    .plan-tab-btn.active {
+      background: rgba(255, 215, 0, 0.15);
+      border-color: var(--accent-gold);
+      color: var(--accent-gold);
+    }
+
+    .plan-edit-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .plan-item-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .plan-item-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .plan-item-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .plan-item-details {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .plan-item-actions {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      margin-top: 4px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(20, 107, 151, 0.3);
+    }
+
+    .btn-mini {
+      padding: 6px 10px;
+      font-size: 0.78rem;
+      border-radius: 6px;
+    }
+
+    /* ==========================================================================
+       9. ZAKŁADKA HISTORIA — NOWY SYSTEM SEGREGACJI I FILTRÓW
+       ========================================================================== */
+    .history-filters-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .hist-filter-label {
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Rząd treningu A/B/C — wrap żeby zawsze były wszystkie na ekranie */
+    .hist-pills-row {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+      padding-bottom: 2px;
+    }
+
+    /* Rząd tygodni — scrollowalny poziomo (może być ich dużo) */
+    .hist-pills-row.scrollable {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding-bottom: 4px;
+    }
+
+    .hist-pills-row.scrollable::-webkit-scrollbar {
+      display: none;
+    }
+
+    .hist-pill {
+      padding: 5px 10px;
+      background: rgba(2, 44, 67, 0.7);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+
+    /* Select rozwijany na tygodnie */
+    .hist-week-select {
+      flex: 1;
+      min-width: 0;
+      padding: 5px 10px;
+      background: rgba(2, 44, 67, 0.85);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      appearance: auto;
+    }
+    .hist-week-select:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+    }
+
+    .hist-pill:hover {
+      border-color: var(--accent-gold);
+      color: #fff;
+    }
+
+    .hist-pill.active {
+      background: rgba(255, 215, 0, 0.15);
+      border-color: var(--accent-gold);
+      color: var(--accent-gold);
+      font-weight: 800;
+    }
+
+    .history-status-strip {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 10px;
+      background: rgba(2, 37, 56, 0.8);
+      border-radius: 8px;
+      border: 1px dashed rgba(20, 107, 151, 0.4);
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .history-status-strip strong {
+      color: var(--accent-gold);
+    }
+
+    .btn-clear-filter {
+      background: transparent;
+      border: none;
+      color: var(--danger-red);
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .history-session-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 14px;
+      transition: border-color 0.15s;
+    }
+
+    .history-session-card:hover {
+      border-color: rgba(255, 215, 0, 0.5);
+    }
+
+    .session-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(20, 107, 151, 0.3);
+      flex-wrap: nowrap;
+    }
+
+    .session-header-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+      white-space: nowrap;
+    }
+
+    .session-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--accent-gold);
+      white-space: nowrap;
+    }
+
+    .session-week-tag {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: var(--accent-gold);
+      background: rgba(255, 215, 0, 0.12);
+      border: 1px solid rgba(255, 215, 0, 0.4);
+      padding: 2px 7px;
+      border-radius: 6px;
+      white-space: nowrap;
+      letter-spacing: 0.3px;
+      flex-shrink: 0;
+    }
+
+    .session-date {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .session-ex-row {
+      margin-bottom: 8px;
+      font-size: 0.88rem;
+    }
+
+    .session-ex-name {
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 2px;
+    }
+
+    .session-ex-sets {
+      color: #9fc3d6;
+      font-size: 0.82rem;
+      padding-left: 8px;
+    }
+
+    /* ==========================================================================
+       10. ZAKŁADKA USTAWIENIA
+       ========================================================================== */
+    .settings-section-title {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: var(--accent-gold);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+      margin-top: 16px;
+    }
+
+    .settings-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(20, 107, 151, 0.3);
+    }
+
+    /* ==========================================================================
+       11. MODALE (Zgodne z Farmada Formatki)
+       ========================================================================== */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(3px);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+      padding: 16px;
+    }
+
+    .modal-box {
+      background: #053f5e;
+      border: 1px solid var(--border-color);
+      padding: 22px;
+      border-radius: 14px;
+      width: 100%;
+      max-width: 440px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+      animation: modalPop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes modalPop {
+      from { transform: scale(0.92); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .modal-title {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--accent-gold);
+      margin-bottom: 16px;
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+
+    .modal-input, .modal-select {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background: #022538;
+      color: white;
+      font-family: inherit;
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+
+    .modal-input:focus, .modal-select:focus {
+      outline: none;
+      border-color: var(--accent-gold);
+    }
+
+    .modal-buttons {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    /* ==========================================================================
+       12. POWIADOMIENIA (TOAST)
+       ========================================================================== */
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      left: 20px;
+      max-width: 380px;
+      margin: 0 auto;
+      background-color: #00e676;
+      color: #022c43;
+      padding: 12px 18px;
+      border-radius: 10px;
+      z-index: 20000;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s ease;
+      font-weight: 800;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+      transform: translateY(-20px);
+    }
+
+    .notification.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .notification.error {
+      background-color: var(--danger-red);
+      color: #fff;
+    }
+
+    .notification.gold {
+      background-color: var(--accent-gold);
+      color: #022c43;
+    }
+
+    /* ==========================================================================
+       13. DŹWIĘK I FLOATING TIMER (Gdy użytkownik wyjdzie z asystenta)
+       ========================================================================== */
+    .floating-timer-bar {
+      display: none;
+      position: fixed;
+      bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 10px);
+      left: 16px;
+      right: 16px;
+      max-width: 688px;
+      margin: 0 auto;
+      background: #011d2d;
+      border: 1px solid var(--accent-gold);
+      border-radius: 12px;
+      padding: 10px 16px;
+      z-index: 999;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+      align-items: center;
+      justify-content: space-between;
+    }
+  
