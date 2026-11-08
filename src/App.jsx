@@ -1,49 +1,762 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { DEFAULT_PLAN, EXERCISE_NAMES } from './data.js';
+import { useEffect, useRef, useState } from 'react';
 import './styles.css';
-import './react.css';
+import { DEFAULT_PLAN } from './data.js';
+import { KEYS, loadFromStorage, saveToStorage } from './storage.js';
+import * as audio from './audio.js';
+import * as logic from './logic.js';
+import { HistoryTab } from './components/HistoryTab.jsx';
+import { PlanTab } from './components/PlanTab.jsx';
+import { SettingsTab } from './components/SettingsTab.jsx';
+import { StartTab } from './components/StartTab.jsx';
+import { WorkoutTab } from './components/WorkoutTab.jsx';
+import {
+  CustomRepsModal,
+  ExerciseModal,
+  PlanDrawer,
+  SavedPlansModal,
+  SavePlanAsModal,
+  SummaryModal,
+  WeightModal,
+} from './components/Modals.jsx';
 
-const KEYS = { plan: 'trening2026_plan_v1', plans: 'trening2026_saved_plans_v1', history: 'trening2026_history_v1', settings: 'trening2026_settings_v1', active: 'trening2026_active_session_v1' };
-const defaults = { currentWeek: 1, selectedStartWorkoutId: 'A', activePlanId: 'plan_default', activePlanName: 'Mój Plan Główny (A/B/C)', soundEnabled: true, vibrateEnabled: true };
-const copy = value => JSON.parse(JSON.stringify(value));
-const uid = () => globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
-const n = value => new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 2 }).format(Number(value || 0));
-const time = seconds => `${Math.floor(Math.max(0, seconds) / 60)}:${String(Math.max(0, seconds) % 60).padStart(2, '0')}`;
-function load(key, fallback) { try { const stored = localStorage.getItem(key); return stored ? JSON.parse(stored) : fallback; } catch { return fallback; } }
-function useStored(key, fallback) { const [value, setValue] = useState(() => load(key, fallback)); useEffect(() => { try { localStorage.setItem(key, JSON.stringify(value)); } catch {} }, [key, value]); return [value, setValue]; }
-function beep(enabled, frequency = 700) { if (!enabled) return; try { const context = new AudioContext(); const oscillator = context.createOscillator(); const gain = context.createGain(); oscillator.frequency.value = frequency; gain.gain.setValueAtTime(.06, context.currentTime); gain.gain.exponentialRampToValueAtTime(.001, context.currentTime + .15); oscillator.connect(gain).connect(context.destination); oscillator.start(); oscillator.stop(context.currentTime + .15); } catch {} }
-function last(history, name) { for (const session of [...history].reverse()) { const exercise = session.exercises?.find(item => item.name?.toLowerCase() === name.toLowerCase()); if (exercise?.sets?.length) return exercise; } return null; }
-function suggestedWeight(history, exercise) { const previous = last(history, exercise.name); if (!previous) return { previous: null, currentWeight: 0, progressed: false }; const weight = Number(previous.sets[0]?.weight || 0); const max = Number(exercise.repsMax); const progressed = exercise.progressionType === 'top_all_sets' && Number.isFinite(max) && previous.sets.length >= exercise.sets && previous.sets.every(set => Number(set.reps) >= max); return { previous, currentWeight: progressed ? Number((weight + exercise.progressionStep).toFixed(2)) : weight, progressed }; }
-function volume(exercises) { return exercises.reduce((total, exercise) => total + exercise.sets.reduce((sum, set) => sum + Number(set.weight) * Number(set.reps), 0), 0); }
+const TICK_MS = 400;
+const TOAST_MS = 2600;
+const NAV = [
+  ['start', '🏠', 'Start'],
+  ['workout', '🏋️', 'Trening'],
+  ['plan', '📋', 'Plan'],
+  ['history', '📊', 'Historia'],
+  ['settings', '⚙️', 'Ustawienia'],
+];
+const DEFAULT_SETTINGS = {
+  currentWeek: 1,
+  selectedStartWorkoutId: 'A',
+  activePlanId: 'plan_default',
+  activePlanName: logic.DEFAULT_PLAN_NAME,
+  soundEnabled: true,
+  vibrateEnabled: true,
+};
+const DEFAULT_HISTORY_FILTERS = { workout: 'all', week: 'all', exerciseMode: false, exerciseName: '' };
+const fmt = logic.formatWeightDisplay;
 
-export default function App() {
-  const [plan, setPlan] = useStored(KEYS.plan, copy(DEFAULT_PLAN)); const [history, setHistory] = useStored(KEYS.history, []); const [settings, setSettings] = useStored(KEYS.settings, defaults); const [active, setActive] = useStored(KEYS.active, null); const [savedPlans, setSavedPlans] = useStored(KEYS.plans, []);
-  const [tab, setTab] = useState(active ? 'workout' : 'start'); const [exerciseIndex, setExerciseIndex] = useState(Number(active?.currentExerciseIndex || 0)); const [planTab, setPlanTab] = useState('A'); const [editing, setEditing] = useState(null); const [message, setMessage] = useState(null); const [rest, setRest] = useState(null); const [summary, setSummary] = useState(null); const input = useRef();
-  const notify = (text, type = 'success') => setMessage({ text, type });
-  useEffect(() => { if (!savedPlans.length) setSavedPlans([{ id: 'plan_default', name: settings.activePlanName, workouts: copy(plan), updatedAt: new Date().toISOString() }]); }, [savedPlans.length, setSavedPlans, settings.activePlanName, plan]);
-  useEffect(() => { if (!message) return; const id = setTimeout(() => setMessage(null), 3200); return () => clearTimeout(id); }, [message]);
-  useEffect(() => { if (!rest?.end) return; const id = setInterval(() => setRest(current => { if (!current) return null; const left = Math.max(0, Math.ceil((current.end - Date.now()) / 1000)); if (left) return { ...current, left }; beep(settings.soundEnabled, 880); if (settings.vibrateEnabled && navigator.vibrate) navigator.vibrate([120, 80, 120]); notify('⏱ Koniec przerwy! Czas na kolejną serię.', 'gold'); return null; }), 250); return () => clearInterval(id); }, [rest?.end, settings.soundEnabled, settings.vibrateEnabled]);
-  const completed = useMemo(() => new Set(history.filter(item => Number(item.week) === Number(settings.currentWeek)).map(item => String(item.workoutId).toUpperCase())), [history, settings.currentWeek]);
-  const savePlan = next => { setPlan(next); setSavedPlans(current => current.map(item => item.id === settings.activePlanId ? { ...item, workouts: copy(next), updatedAt: new Date().toISOString() } : item)); };
-  const updateActive = action => setActive(current => current ? action(current) : current);
-  function start(workoutId) { const workout = plan[workoutId]; if (!workout?.exercises?.length) return notify('Ten trening nie ma ćwiczeń.', 'error'); const session = { id: uid(), workoutId, workoutName: workout.name, week: settings.currentWeek, startedAt: new Date().toISOString(), currentExerciseIndex: 0, exercises: workout.exercises.map(exercise => ({ ...copy(exercise), setsTarget: exercise.sets, completedSets: [], ...suggestedWeight(history, exercise) })) }; setActive(session); setExerciseIndex(0); setTab('workout'); notify(`Rozpoczęto ${workout.name}.`); }
-  function selectExercise(index) { setExerciseIndex(index); updateActive(current => ({ ...current, currentExerciseIndex: index })); }
-  function changeExercise(action) { updateActive(current => ({ ...current, exercises: current.exercises.map((item, index) => index === exerciseIndex ? { ...item, ...action(item) } : item) })); }
-  function record(reps) { const exercise = active?.exercises[exerciseIndex]; if (!exercise || exercise.completedSets.length >= exercise.setsTarget) return; const weight = Number(exercise.currentWeight || 0); changeExercise(item => ({ completedSets: [...item.completedSets, { weight, reps: Number(reps) }] })); beep(settings.soundEnabled, 600); if (settings.vibrateEnabled && navigator.vibrate) navigator.vibrate(35); const seconds = exercise.restSeconds || 90; setRest({ end: Date.now() + seconds * 1000, left: seconds }); notify(`Zapisano serię: ${n(weight)} kg × ${reps}`); }
-  function finish() { if (!active) return; const exercises = active.exercises.filter(item => item.completedSets.length).map(item => ({ name: item.name, sets: item.completedSets })); if (!exercises.length) return notify('Zapisz przynajmniej jedną serię.', 'error'); const total = volume(exercises); const record = { id: active.id, date: new Date().toISOString(), week: active.week, workoutId: active.workoutId, workoutName: active.workoutName, exercises, volume: total, totalVolume: total, totalSets: exercises.reduce((sum, item) => sum + item.sets.length, 0) }; const after = new Set([...history, record].filter(item => Number(item.week) === Number(record.week)).map(item => String(item.workoutId).toUpperCase())); const advanced = ['A', 'B', 'C'].every(id => after.has(id)); setHistory(current => [...current, record]); setSettings(current => ({ ...current, currentWeek: advanced ? current.currentWeek + 1 : current.currentWeek, selectedStartWorkoutId: advanced ? 'A' : (['A', 'B', 'C'].find(id => !after.has(id)) || 'A') })); setActive(null); setRest(null); beep(settings.soundEnabled, 760); setSummary({ ...record, advanced }); }
-  function exportData() { const blob = new Blob([JSON.stringify({ version: 'trening2026-react-1', exportDate: new Date().toISOString(), settings, plan, savedPlans, history }, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `trening2026_backup_${new Date().toISOString().slice(0, 10)}.json`; link.click(); URL.revokeObjectURL(url); }
-  function importData(file) { const reader = new FileReader(); reader.onload = () => { try { const data = JSON.parse(reader.result); if (!data.plan || !Array.isArray(data.history)) throw Error('brak poprawnego planu lub historii'); if (!window.confirm('Zastąpić obecne plany i historię?')) return; setPlan(data.plan); setHistory(data.history); setSavedPlans(data.savedPlans || []); setSettings({ ...defaults, ...data.settings }); setActive(null); notify('Wczytano kopię zapasową.', 'gold'); } catch (error) { notify(`Nie udało się wczytać pliku: ${error.message}`, 'error'); } }; reader.readAsText(file); }
-  return <><>{message && <div className={`notification show ${message.type === 'success' ? '' : message.type}`}><span>{message.type === 'error' ? '!' : '✓'}</span><span>{message.text}</span></div>}</><header className="app-header"><div className="app-logo"><span className="logo-icon">🏋️</span><span className="logo-title">SIŁOWNIA</span><span className="logo-badge">TYDZIEŃ {settings.currentWeek}</span></div>{active && <button className="workout-active-pill" onClick={() => setTab('workout')}>⚡ TRENING W TOKU</button>}</header><main className="main-content">{tab === 'start' && <Start plan={plan} settings={settings} completed={completed} onSettings={patch => setSettings(current => ({ ...current, ...patch }))} onStart={start} />}{tab === 'workout' && <Workout active={active} plan={plan} index={exerciseIndex} onSelect={selectExercise} onStart={start} onChange={changeExercise} onRecord={record} onFinish={finish} onCancel={() => { if (window.confirm('Anulować trening?')) { setActive(null); setRest(null); setTab('start'); } }} rest={rest} setRest={setRest} />}{tab === 'plan' && <Plans plan={plan} planTab={planTab} setPlanTab={setPlanTab} onSave={savePlan} savedPlans={savedPlans} setSavedPlans={setSavedPlans} settings={settings} setSettings={setSettings} onEdit={setEditing} onNotify={notify} />}{tab === 'history' && <History history={history} setHistory={setHistory} />}{tab === 'settings' && <Settings settings={settings} setSettings={setSettings} input={input} onExport={exportData} onImport={importData} onClear={() => { if (window.confirm('Trwale usunąć historię?')) { setHistory([]); notify('Historia została wyczyszczona.', 'error'); } }} />}</main>{rest && tab !== 'workout' && <button className="floating-timer-bar" onClick={() => setTab('workout')}>⏱ {time(rest.left)} <span>Odpoczynek w toku</span><strong>Wróć</strong></button>}<nav className="bottom-nav">{[['start', '🏠', 'Start'], ['workout', '🏋️', 'Trening'], ['plan', '📋', 'Plan'], ['history', '📊', 'Historia'], ['settings', '⚙️', 'Ustawienia']].map(([id, icon, label]) => <button key={id} className={`nav-item ${tab === id ? 'active' : ''}`} onClick={() => setTab(id)}><span className="nav-icon">{icon}</span><span className="nav-label">{label}</span></button>)}</nav>{editing && <Editor value={editing.exercise} onClose={() => setEditing(null)} onSave={data => { const next = copy(plan); const list = next[planTab].exercises; if (editing.index === undefined) list.push({ ...data, id: uid() }); else list[editing.index] = { ...data, id: list[editing.index].id }; savePlan(next); setEditing(null); notify('Zapisano ćwiczenie.'); }} />}{summary && <Summary summary={summary} onClose={() => { setSummary(null); setTab('history'); }} />}</>;
+function readInitialState() {
+  const plan = loadFromStorage(KEYS.plan, logic.clone(DEFAULT_PLAN));
+  const history = loadFromStorage(KEYS.history, []);
+  const storedSettings = loadFromStorage(KEYS.settings, logic.clone(DEFAULT_SETTINGS));
+  const session = loadFromStorage(KEYS.active, null);
+  let savedPlans = loadFromStorage(KEYS.savedPlans, null);
+  const now = new Date().toISOString();
+  if (!Array.isArray(savedPlans) || savedPlans.length === 0) {
+    savedPlans = [
+      {
+        id: 'plan_default',
+        name: storedSettings.activePlanName || logic.DEFAULT_PLAN_NAME,
+        createdAt: now,
+        updatedAt: now,
+        workouts: logic.clone(plan || DEFAULT_PLAN),
+      },
+    ];
+  }
+  let settings = storedSettings;
+  if (!settings.activePlanId) settings = { ...settings, activePlanId: savedPlans[0].id, activePlanName: savedPlans[0].name };
+  const progress = logic.applyWeekProgress(history, settings);
+  return { plan, history, settings: progress.settings, weekProg: progress.weekProg, session, savedPlans };
 }
 
-function Start({ plan, settings, completed, onSettings, onStart }) { const selected = settings.selectedStartWorkoutId || 'A'; const workout = plan[selected] || plan.A; return <section className="start-hero"><div className="start-subtitle">DZISIEJSZY TRENING</div><h1 className="start-title">{workout.name}</h1><div className="week-stepper"><button className="stepper-btn" onClick={() => onSettings({ currentWeek: Math.max(1, settings.currentWeek - 1) })}>−</button><span className="stepper-val">TYDZIEŃ {settings.currentWeek}</span><button className="stepper-btn" onClick={() => onSettings({ currentWeek: settings.currentWeek + 1 })}>+</button></div><button className="btn btn-gold btn-large" onClick={() => onStart(selected)}>🚀 ROZPOCZNIJ TRENING</button><div className="preview-box"><div className="preview-title"><span>PLAN NA DZISIAJ</span><span>{workout.exercises.length} ćwiczeń</span></div><ul className="preview-list">{workout.exercises.map((item, index) => <li className="preview-item" key={item.id}><span className="num">{index + 1}.</span><span>{item.name}</span><strong>{item.sets} × {item.repsMin}–{item.repsMax}</strong></li>)}</ul></div><div className="manual-picker-label">Wybierz trening</div><div className="workout-selector-pills">{['A', 'B', 'C'].map(id => <button className={`pill-btn ${selected === id ? 'active' : ''}`} key={id} onClick={() => onSettings({ selectedStartWorkoutId: id })}>TRENING {id}{completed.has(id) ? ' ✓' : ''}</button>)}</div></section>; }
+function Toast({ notice }) {
+  const icon = notice?.type === 'error' ? '✕' : notice?.type === 'gold' ? '★' : '✓';
+  return (
+    <div id="notification" className={`notification${notice?.visible ? ' show' : ''} ${notice ? notice.type : ''}`}>
+      <span id="notif-icon">{notice ? icon : '✓'}</span>
+      <span id="notif-msg">{notice ? notice.message : 'Powiadomienie'}</span>
+    </div>
+  );
+}
 
-function Workout({ active, plan, index, onSelect, onStart, onChange, onRecord, onFinish, onCancel, rest, setRest }) { if (!active) return <section className="card"><h2>Wybierz trening</h2>{['A', 'B', 'C'].map(id => <button key={id} className="btn btn-gold" onClick={() => onStart(id)}>{plan[id]?.name}</button>)}</section>; const exercise = active.exercises[index]; const weight = Number(exercise.currentWeight || 0); const reps = exercise.repsMax === 'MAX' ? [exercise.repsMin, exercise.repsMin + 1, exercise.repsMin + 2, exercise.repsMin + 3] : Array.from({ length: Math.min(6, Number(exercise.repsMax) - exercise.repsMin + 1) }, (_, i) => exercise.repsMin + i); const done = exercise.completedSets.length; const changeTimer = delta => setRest(current => { const left = Math.max(0, (current?.left || exercise.restSeconds) + delta); return { end: Date.now() + left * 1000, left }; }); return <section><div className="assistant-topbar"><span className="assistant-ex-count">ĆWICZENIE {index + 1} Z {active.exercises.length}</span><button className="btn-plan-toggle" onClick={onCancel}>Anuluj</button></div><div className="exercise-main-card"><div className="exercise-header-compact"><h2 className="exercise-name-header">{exercise.name}</h2><div className="exercise-tags"><span className="tag">{exercise.setsTarget} serie × {exercise.repsMin}–{exercise.repsMax}</span><span className="tag tag-tempo">Tempo: {exercise.tempo}</span><span className="tag">Odpoczynek: {exercise.restSeconds}s</span></div></div><div className="exercise-info-strip"><div className="info-strip-col prev"><span className="strip-lbl">OSTATNIO</span><span className="strip-val">{exercise.previous ? `${n(exercise.previous.sets[0].weight)} kg • ${exercise.previous.sets.map(set => set.reps).join(' / ')}` : 'BRAK WYNIKU'}</span></div><div className="info-strip-col target"><span className="strip-lbl">DZISIAJ</span><span className="strip-val">{n(weight)} kg {exercise.progressed && <em className="progres-badge">PROGRES</em>}</span></div></div><div className="weight-adjuster-section"><button className="weight-display-btn" onClick={() => { const value = window.prompt('Ciężar w kg', weight); const parsed = Number(String(value).replace(',', '.')); if (value !== null && Number.isFinite(parsed) && parsed >= 0) onChange(() => ({ currentWeight: parsed })); }}><span>{n(weight)}</span> <span className="weight-unit">kg</span></button><div className="weight-quick-buttons">{[-2.5, -1, -.5, .5, 1, 2.5].map(delta => <button className={`btn-step ${delta > 0 ? 'step-plus' : 'step-minus'}`} key={delta} onClick={() => onChange(item => ({ currentWeight: Math.max(0, Number((Number(item.currentWeight || 0) + delta).toFixed(2))) }))}>{delta > 0 ? '+' : ''}{String(delta).replace('.', ',')}</button>)}</div></div><div className="sets-progress-box"><div className="sets-header"><span>SERIE</span><span>{done} / {exercise.setsTarget}</span></div><div className="sets-list">{Array.from({ length: exercise.setsTarget }, (_, i) => exercise.completedSets[i] ? <div className="set-row completed" key={i}><span>Seria {i + 1}</span><strong>{n(exercise.completedSets[i].weight)} kg × {exercise.completedSets[i].reps}</strong><button className="set-actions-btn" onClick={() => onChange(item => ({ completedSets: item.completedSets.filter((_, current) => current !== i) }))}>Usuń</button></div> : <div className="set-row" key={i}><span>Seria {i + 1}</span><span>—</span></div>)}</div><div className="set-target-actions"><button className="btn btn-outline btn-mini" onClick={() => onChange(item => ({ setsTarget: item.setsTarget + 1 }))}>+ Dodaj serię</button><button className="btn btn-outline btn-mini" disabled={exercise.setsTarget <= 1} onClick={() => onChange(item => ({ setsTarget: Math.max(1, item.setsTarget - 1), completedSets: item.completedSets.slice(0, Math.max(1, item.setsTarget - 1)) }))}>− Usuń serię</button></div></div>{done < exercise.setsTarget ? <div className="reps-picker-container"><p>Wybierz powtórzenia</p><div className="reps-buttons-grid">{reps.map(rep => <button className="rep-btn" key={rep} onClick={() => onRecord(rep)}>{rep}</button>)}<button className="rep-btn" onClick={() => { const value = Number(window.prompt('Liczba powtórzeń')); if (Number.isFinite(value) && value > 0) onRecord(value); }}>Inne</button></div></div> : <div className="exercise-completed-banner">🎉 ĆWICZENIE UKOŃCZONE</div>}<div className="rest-timer-box"><button className="timer-btn-main" onClick={() => rest ? setRest(null) : setRest({ end: Date.now() + exercise.restSeconds * 1000, left: exercise.restSeconds })}>⏱ {rest ? time(rest.left) : `START ${time(exercise.restSeconds)}`}</button><div className="timer-controls"><button className="timer-ctrl-btn" onClick={() => changeTimer(-30)}>−30s</button><button className="timer-ctrl-btn" onClick={() => changeTimer(30)}>+30s</button></div></div><div className="exercise-nav-footer"><button className="btn-prev-ex" disabled={!index} onClick={() => onSelect(index - 1)}>← Poprzednie</button><button className="btn-next-ex" onClick={() => index < active.exercises.length - 1 ? onSelect(index + 1) : onFinish()}>{index < active.exercises.length - 1 ? 'Następne ćwiczenie →' : 'Zapisz trening'}</button></div></div><button className="btn-finish-link" onClick={onFinish}>Zakończ ten trening</button></section>; }
+export default function App() {
+  const [boot] = useState(readInitialState);
+  const [plan, setPlan] = useState(boot.plan);
+  const [history, setHistory] = useState(boot.history);
+  const [settings, setSettings] = useState(boot.settings);
+  const [savedPlans, setSavedPlans] = useState(boot.savedPlans);
+  const [session, setSession] = useState(boot.session);
+  const [tab, setTab] = useState(boot.session ? 'workout' : 'start');
+  const [exerciseIndex, setExerciseIndex] = useState(0);
+  const [planTab, setPlanTab] = useState('A');
+  const [notice, setNotice] = useState(null);
+  const [timer, setTimer] = useState({ isRunning: false, remaining: 0, total: 0, targetEndTime: null });
+  const [modal, setModal] = useState(null);
+  const [historyFilters, setHistoryFilters] = useState(DEFAULT_HISTORY_FILTERS);
 
-function Plans({ plan, planTab, setPlanTab, onSave, savedPlans, setSavedPlans, settings, setSettings, onEdit, onNotify }) { const items = plan[planTab].exercises; const replace = transform => { const next = copy(plan); transform(next); onSave(next); }; const saveAs = () => { const name = window.prompt('Nazwa kopii planu'); if (!name?.trim()) return; const entry = { id: uid(), name: name.trim(), workouts: copy(plan), updatedAt: new Date().toISOString() }; setSavedPlans(current => [...current, entry]); setSettings(current => ({ ...current, activePlanId: entry.id, activePlanName: entry.name })); onNotify(`Zapisano plan: ${entry.name}`, 'gold'); }; return <section><div className="plan-management-card"><span className="plan-mgmt-badge">AKTYWNY PLAN</span><h3 className="plan-mgmt-title">{settings.activePlanName}</h3><div className="plan-mgmt-actions"><button className="btn btn-gold btn-mini" onClick={() => onEdit({})}>+ Dodaj ćwiczenie</button><button className="btn btn-outline btn-mini" onClick={saveAs}>💾 Zapisz jako...</button><button className="btn btn-outline btn-mini" onClick={() => { const name = window.prompt('Nazwa nowego planu', 'Mój Nowy Plan 3-Dniowy'); if (!name?.trim()) return; const workouts = copy(DEFAULT_PLAN); Object.values(workouts).forEach(workout => { workout.exercises = []; }); const entry = { id: uid(), name: name.trim(), workouts, updatedAt: new Date().toISOString() }; setSavedPlans(current => [...current, entry]); onSave(workouts); setSettings(current => ({ ...current, activePlanId: entry.id, activePlanName: entry.name })); }}>Nowy plan</button><button className="btn btn-outline btn-mini" onClick={() => { if (window.confirm('Przywrócić domyślny plan A/B/C? Historia zostanie zachowana.')) { onSave(copy(DEFAULT_PLAN)); setSettings(current => ({ ...current, activePlanName: 'Domyślny Plan A/B/C' })); onNotify('Przywrócono domyślny plan.', 'gold'); } }}>Resetuj</button></div><details className="saved-plans"><summary>📂 Moje plany ({savedPlans.length})</summary>{savedPlans.map(item => <div className="saved-plan-row" key={item.id}><span>{item.name}</span><button className="btn btn-outline btn-mini" onClick={() => { onSave(copy(item.workouts)); setSettings(current => ({ ...current, activePlanId: item.id, activePlanName: item.name })); }}>Wczytaj</button><button className="btn btn-outline btn-mini" onClick={() => { const name = window.prompt('Nowa nazwa planu', item.name); if (name?.trim()) { setSavedPlans(current => current.map(value => value.id === item.id ? { ...value, name: name.trim() } : value)); if (item.id === settings.activePlanId) setSettings(current => ({ ...current, activePlanName: name.trim() })); } }}>Nazwa</button><button className="btn btn-outline btn-mini" onClick={() => setSavedPlans(current => [...current, { ...copy(item), id: uid(), name: `${item.name} (Kopia)`, updatedAt: new Date().toISOString() }])}>Kopiuj</button><button className="btn btn-danger btn-mini" disabled={item.id === settings.activePlanId} onClick={() => { if (window.confirm(`Usunąć plan „${item.name}”?`)) setSavedPlans(current => current.filter(value => value.id !== item.id)); }}>Usuń</button></div>)}</details></div><div className="plan-tabs">{['A', 'B', 'C'].map(id => <button className={`plan-tab-btn ${planTab === id ? 'active' : ''}`} key={id} onClick={() => setPlanTab(id)}>TRENING {id}</button>)}</div><div className="plan-edit-list">{items.map((item, index) => <article className="plan-exercise-card" key={item.id}><strong>{index + 1}. {item.name}</strong><p>{item.sets} ser. × {item.repsMin}–{item.repsMax} • tempo {item.tempo} • przerwa {item.restSeconds}s</p><div className="plan-card-actions"><button className="btn btn-outline btn-mini" onClick={() => onEdit({ index, exercise: item })}>Edytuj</button><button className="btn btn-outline btn-mini" disabled={!index} onClick={() => replace(next => { [next[planTab].exercises[index], next[planTab].exercises[index - 1]] = [next[planTab].exercises[index - 1], next[planTab].exercises[index]]; })}>↑</button><button className="btn btn-outline btn-mini" disabled={index === items.length - 1} onClick={() => replace(next => { [next[planTab].exercises[index], next[planTab].exercises[index + 1]] = [next[planTab].exercises[index + 1], next[planTab].exercises[index]]; })}>↓</button><button className="btn btn-danger btn-mini" onClick={() => { if (window.confirm(`Usunąć ćwiczenie „${item.name}”?`)) replace(next => next[planTab].exercises.splice(index, 1)); }}>Usuń</button></div></article>)}</div></section>; }
+  const timerRef = useRef(timer);
+  timerRef.current = timer;
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
 
-function History({ history, setHistory }) { const [workout, setWorkout] = useState('all'); const [week, setWeek] = useState('all'); const [exercise, setExercise] = useState(''); const weeks = [...new Set(history.map(item => item.week))].sort((a, b) => a - b); const names = [...new Set(history.flatMap(item => item.exercises?.map(exercise => exercise.name) || []))].sort(); const filtered = history.filter(item => (workout === 'all' || String(item.workoutId).toUpperCase() === workout) && (week === 'all' || String(item.week) === week) && (!exercise || item.exercises?.some(value => value.name === exercise))); return <section><h2>Historia treningów</h2><div className="history-filters-box"><div className="hist-pills-row">{['all', 'A', 'B', 'C'].map(id => <button key={id} className={`hist-pill ${workout === id ? 'active' : ''}`} onClick={() => setWorkout(id)}>{id === 'all' ? 'Wszystkie' : `Trening ${id}`}</button>)}</div><select className="hist-week-select" value={week} onChange={event => setWeek(event.target.value)}><option value="all">Wszystkie tygodnie</option>{weeks.map(value => <option value={value} key={value}>Tydzień {value}</option>)}</select>{names.length > 0 && <select className="hist-week-select" value={exercise} onChange={event => setExercise(event.target.value)}><option value="">Wszystkie ćwiczenia</option>{names.map(name => <option key={name}>{name}</option>)}</select>}</div><div className="history-status-strip">{filtered.length} zapisanych sesji</div><div className="history-list">{filtered.length ? [...filtered].reverse().map(session => <article className="history-card" key={session.id}><div className="history-card-top"><div><h3>{session.workoutName}</h3><span>{new Date(session.date).toLocaleDateString('pl-PL')} • Tydzień {session.week}</span></div><strong>{n(session.volume ?? session.totalVolume)} kg</strong></div>{session.exercises?.filter(item => !exercise || item.name === exercise).map(item => <p key={item.name}><b>{item.name}:</b> {item.sets.map(set => `${n(set.weight)} kg × ${set.reps}`).join(' | ')}</p>)}<button className="btn btn-danger btn-mini" onClick={() => { if (window.confirm('Usunąć sesję?')) setHistory(current => current.filter(item => item.id !== session.id)); }}>Usuń sesję</button></article>) : <div className="card empty-state">Brak zapisanych treningów dla wybranych filtrów.</div>}</div></section>; }
+  const notify = (message, type = 'success') => setNotice({ message, type, visible: true, id: Date.now() + Math.random() });
 
-function Settings({ settings, setSettings, input, onExport, onImport, onClear }) { return <section className="card"><h2>Ustawienia aplikacji</h2><h3 className="settings-section-title">Kopia zapasowa danych</h3><p>Plany i historia są zapisywane lokalnie w tej przeglądarce.</p><div className="settings-actions"><button className="btn btn-primary" onClick={onExport}>💾 Pobierz kopię JSON</button><button className="btn btn-outline" onClick={() => input.current.click()}>📥 Wczytaj kopię JSON</button><input hidden ref={input} type="file" accept=".json,application/json" onChange={event => event.target.files[0] && onImport(event.target.files[0])} /></div><h3 className="settings-section-title">Dźwięki i wibracje</h3><label className="settings-row"><span>Dźwięki timera i zapisu</span><input type="checkbox" checked={settings.soundEnabled} onChange={event => setSettings(current => ({ ...current, soundEnabled: event.target.checked }))} /></label><label className="settings-row"><span>Wibracje na telefonie</span><input type="checkbox" checked={settings.vibrateEnabled} onChange={event => setSettings(current => ({ ...current, vibrateEnabled: event.target.checked }))} /></label><h3 className="settings-section-title">Zarządzanie danymi</h3><button className="btn btn-danger" onClick={onClear}>🗑️ Wyczyść całą historię</button></section>; }
-function Editor({ value = {}, onSave, onClose }) { const [form, setForm] = useState({ name: value.name || '', sets: value.sets || 3, repsMin: value.repsMin || 8, repsMax: value.repsMax || 12, tempo: value.tempo || '2010', progressionStep: value.progressionStep ?? 2.5, restSeconds: value.restSeconds || 90, progressionType: value.progressionType || 'top_all_sets' }); const change = event => setForm(current => ({ ...current, [event.target.name]: event.target.value })); return <div className="modal-overlay"><form className="modal-box" onSubmit={event => { event.preventDefault(); if (form.name.trim()) onSave({ ...form, sets: Number(form.sets), repsMin: Number(form.repsMin), repsMax: form.repsMax === 'MAX' ? 'MAX' : Number(form.repsMax), progressionStep: Number(form.progressionStep), restSeconds: Number(form.restSeconds) }); }}><h2 className="modal-title">{value.name ? 'Edytuj ćwiczenie' : 'Dodaj ćwiczenie'}</h2><label className="form-label">Nazwa</label><input className="modal-input" name="name" list="exercise-list" value={form.name} onChange={change} required /><datalist id="exercise-list">{EXERCISE_NAMES.map(name => <option key={name} value={name} />)}</datalist><div className="form-grid"><label>Serie<input className="modal-input" type="number" name="sets" min="1" value={form.sets} onChange={change} /></label><label>Min. powt.<input className="modal-input" type="number" name="repsMin" min="1" value={form.repsMin} onChange={change} /></label><label>Max. powt.<input className="modal-input" name="repsMax" value={form.repsMax} onChange={change} /></label><label>Tempo<input className="modal-input" name="tempo" value={form.tempo} onChange={change} /></label><label>Krok kg<input className="modal-input" type="number" name="progressionStep" min="0" step=".25" value={form.progressionStep} onChange={change} /></label><label>Przerwa s<input className="modal-input" type="number" name="restSeconds" min="15" step="15" value={form.restSeconds} onChange={change} /></label></div><label className="form-label">Progresja</label><select className="modal-select" name="progressionType" value={form.progressionType} onChange={change}><option value="top_all_sets">Po górnej liczbie powtórzeń</option><option value="manual">Ręczna</option></select><div className="modal-buttons"><button className="btn btn-outline" type="button" onClick={onClose}>Anuluj</button><button className="btn btn-gold">Zapisz</button></div></form></div>; }
-function Summary({ summary, onClose }) { return <div className="modal-overlay"><div className="modal-box summary-box"><h2 className="modal-title">🎉 Trening ukończony</h2><p><b>{summary.workoutName}</b> · Tydzień {summary.week}</p><p>{summary.totalSets} serii · {n(summary.volume)} kg objętości</p>{summary.advanced && <p className="summary-progress">Rozpoczęto tydzień {summary.week + 1}.</p>}<div className="modal-buttons"><button className="btn btn-gold" onClick={onClose}>Zobacz historię</button></div></div></div>; }
+  // Persist every piece of state under the legacy localStorage keys.
+  useEffect(() => saveToStorage(KEYS.plan, plan), [plan]);
+  useEffect(() => saveToStorage(KEYS.history, history), [history]);
+  useEffect(() => saveToStorage(KEYS.settings, settings), [settings]);
+  useEffect(() => saveToStorage(KEYS.savedPlans, savedPlans), [savedPlans]);
+  useEffect(() => saveToStorage(KEYS.active, session), [session]);
+
+  // Toast hides itself after TOAST_MS.
+  useEffect(() => {
+    if (!notice) return undefined;
+    const id = setTimeout(() => setNotice(current => (current && current.id === notice.id ? { ...current, visible: false } : current)), TOAST_MS);
+    return () => clearTimeout(id);
+  }, [notice]);
+
+  // Week progression on load (legacy initApp).
+  useEffect(() => {
+    if (boot.weekProg.advanced) {
+      notify(`🚀 Zaktualizowano na Tydzień ${boot.weekProg.newWeek} (ukończono Tydzień ${boot.weekProg.previousWeek})!`, 'gold');
+    }
+    // Runs once on mount, like the legacy initApp().
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Uncaught errors show a toast, like the legacy window.onerror.
+  useEffect(() => {
+    const onError = event => setNotice({ message: `Błąd: ${event.message}`, type: 'error', visible: true, id: Date.now() + Math.random() });
+    window.addEventListener('error', onError);
+    return () => window.removeEventListener('error', onError);
+  }, []);
+
+  // Warn before leaving the page during an active workout.
+  useEffect(() => {
+    if (!session) return undefined;
+    const warn = event => {
+      event.preventDefault();
+      event.returnValue = 'Trwa aktywny trening. Czy na pewno chcesz opuścić stronę?';
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [session]);
+
+  // ---- Rest timer (timestamp based, like the legacy timerState) ----
+
+  function tickTimer() {
+    const current = timerRef.current;
+    if (!current.isRunning || !current.targetEndTime) return;
+    if (current.targetEndTime - Date.now() > 0) {
+      setTimer(prev => (prev.isRunning && prev.targetEndTime ? { ...prev, remaining: Math.ceil((prev.targetEndTime - Date.now()) / 1000) } : prev));
+      return;
+    }
+    setTimer(prev => ({ ...prev, remaining: 0, isRunning: false, targetEndTime: null }));
+    audio.soundTimerFinished(settingsRef.current);
+    setTimeout(() => audio.speakVoiceNotification(settingsRef.current, 'Koniec przerwy! Czas na serię.'), 450);
+    audio.sendSystemNotification('Koniec przerwy! ⏱', 'Czas na kolejną serię!');
+    notify('⏱ Koniec przerwy! Czas na kolejną serię.', 'gold');
+  }
+  const tickRef = useRef(tickTimer);
+  tickRef.current = tickTimer;
+
+  useEffect(() => {
+    if (!timer.isRunning) return undefined;
+    const id = setInterval(() => tickRef.current(), TICK_MS);
+    return () => clearInterval(id);
+  }, [timer.isRunning, timer.targetEndTime]);
+
+  useEffect(() => {
+    const wake = () => tickRef.current();
+    document.addEventListener('visibilitychange', wake);
+    window.addEventListener('focus', wake);
+    window.addEventListener('pageshow', wake);
+    return () => {
+      document.removeEventListener('visibilitychange', wake);
+      window.removeEventListener('focus', wake);
+      window.removeEventListener('pageshow', wake);
+    };
+  }, []);
+
+  function initExerciseTimer(rest) {
+    setTimer(prev => (prev.isRunning ? prev : { isRunning: false, remaining: rest, total: rest, targetEndTime: null }));
+  }
+
+  function resetTimer(rest) {
+    setTimer({ isRunning: false, remaining: rest, total: rest, targetEndTime: null });
+  }
+
+  function startTimer(rest) {
+    setTimer(prev => {
+      let remaining = prev.remaining;
+      let total = prev.total;
+      if (remaining <= 0) {
+        remaining = rest;
+        total = rest;
+      }
+      return { isRunning: true, remaining, total, targetEndTime: Date.now() + remaining * 1000 };
+    });
+    audio.unlockAudioAndSpeech();
+    audio.requestNotificationPermissionIfNeeded();
+  }
+
+  function pauseTimer() {
+    setTimer(prev =>
+      prev.targetEndTime
+        ? { ...prev, isRunning: false, remaining: Math.max(0, Math.ceil((prev.targetEndTime - Date.now()) / 1000)), targetEndTime: null }
+        : { ...prev, isRunning: false },
+    );
+  }
+
+  function adjustTimer(seconds) {
+    setTimer(prev => {
+      const remaining = Math.max(0, prev.remaining + seconds);
+      return { ...prev, remaining, targetEndTime: prev.isRunning ? Date.now() + remaining * 1000 : prev.targetEndTime };
+    });
+  }
+
+  // ---- Navigation and sessions ----
+
+  const exIndex = session ? Math.min(exerciseIndex, Math.max(session.exercises.length - 1, 0)) : 0;
+  const restAt = index => (session && session.exercises[index] && session.exercises[index].restSeconds) || 90;
+  const currentExercise = session ? session.exercises[exIndex] : null;
+
+  function goTab(id) {
+    setTab(id);
+    if (id === 'workout' && session) initExerciseTimer(restAt(exIndex));
+    window.scrollTo(0, 0);
+  }
+
+  function startWorkout(workoutId) {
+    const workout = plan[workoutId];
+    if (!workout) return;
+    if (session && session.workoutId === workoutId) {
+      goTab('workout');
+      return;
+    }
+    if (!workout.exercises.length) {
+      notify('Ten trening nie ma ćwiczeń.', 'error');
+      return;
+    }
+    const next = {
+      sessionId: `sess_${Date.now()}`,
+      workoutId,
+      workoutName: workout.name,
+      week: settings.currentWeek || 1,
+      startTime: new Date().toISOString(),
+      currentExerciseIndex: 0,
+      exercises: logic.createSessionExercises(workout, history),
+    };
+    setSession(next);
+    setExerciseIndex(0);
+    setTab('workout');
+    initExerciseTimer(next.exercises[0].restSeconds || 90);
+    window.scrollTo(0, 0);
+    notify(`Rozpoczęto ${workout.name} (Tydzień ${settings.currentWeek})!`);
+  }
+
+  function patchExercise(index, change) {
+    setSession(prev => {
+      if (!prev || !prev.exercises[index]) return prev;
+      return { ...prev, exercises: prev.exercises.map((ex, i) => (i === index ? { ...ex, ...change(ex) } : ex)) };
+    });
+  }
+
+  function navigate(direction) {
+    if (!session) return;
+    const next = exIndex + direction;
+    if (next < 0 || next >= session.exercises.length) return;
+    setExerciseIndex(next);
+    setSession(prev => (prev ? { ...prev, currentExerciseIndex: next } : prev));
+    initExerciseTimer(restAt(next));
+    window.scrollTo(0, 0);
+  }
+
+  function selectExerciseFromDrawer(index) {
+    setExerciseIndex(index);
+    setSession(prev => (prev ? { ...prev, currentExerciseIndex: index } : prev));
+    initExerciseTimer(restAt(index));
+    setModal(null);
+  }
+
+  // ---- Per-set actions (legacy section 10 and 11) ----
+
+  function recordSet(reps) {
+    if (!session || !currentExercise) return;
+    const ex = currentExercise;
+    const weight = ex.currentWeight || 0;
+    patchExercise(exIndex, e => ({ completedSets: [...e.completedSets, { weight, reps }] }));
+    audio.unlockAudioAndSpeech();
+    audio.soundSetLogged(settingsRef.current);
+    notify(`✓ Zapisano serię: ${fmt(weight)} kg × ${reps}`);
+    if (ex.completedSets.length + 1 >= ex.setsTarget) {
+      initExerciseTimer(restAt(exIndex));
+      notify(`🎉 Ukończono: ${ex.name}!`, 'gold');
+    } else {
+      resetTimer(restAt(exIndex));
+    }
+  }
+
+  function removeSet(setIndex) {
+    if (!session) return;
+    patchExercise(exIndex, e => ({ completedSets: e.completedSets.filter((_, i) => i !== setIndex) }));
+    initExerciseTimer(restAt(exIndex));
+    notify('Usunięto serię');
+  }
+
+  function addSet() {
+    if (!currentExercise) return;
+    patchExercise(exIndex, e => ({ setsTarget: e.setsTarget + 1 }));
+    initExerciseTimer(restAt(exIndex));
+    notify(`Dodano serię (cel: ${currentExercise.setsTarget + 1} serii)`);
+  }
+
+  function removeSetTarget() {
+    if (!currentExercise) return;
+    if (currentExercise.setsTarget <= 1) {
+      notify('Minimalna liczba serii to 1', 'error');
+      return;
+    }
+    patchExercise(exIndex, e => ({
+      setsTarget: e.setsTarget - 1,
+      completedSets: e.completedSets.length >= e.setsTarget ? e.completedSets.slice(0, -1) : e.completedSets,
+    }));
+    initExerciseTimer(restAt(exIndex));
+    notify(`Zmniejszono liczbę serii do ${currentExercise.setsTarget - 1}`);
+  }
+
+  function adjustWeight(delta) {
+    if (!session) return;
+    patchExercise(exIndex, e => ({ currentWeight: logic.clampWeight(Number(((e.currentWeight || 0) + delta).toFixed(2))) }));
+    audio.playTone(settingsRef.current, 440, 0.04, 'sine', 0.05);
+  }
+
+  function saveWeight(text) {
+    const value = logic.parseWeightInput(text);
+    if (isNaN(value) || value < 0) {
+      notify('Podaj prawidłowy ciężar', 'error');
+      return;
+    }
+    patchExercise(exIndex, () => ({ currentWeight: value }));
+    initExerciseTimer(restAt(exIndex));
+    setModal(null);
+    notify(`Ustawiono ciężar ${fmt(value)} kg`);
+  }
+
+  function saveCustomReps(text) {
+    const value = parseInt(text, 10);
+    if (!isNaN(value) && value > 0) {
+      setModal(null);
+      recordSet(value);
+    } else {
+      notify('Podaj prawidłową liczbę powtórzeń', 'error');
+    }
+  }
+
+  function adjustWeekSetting(delta) {
+    const week = Math.max(1, (settings.currentWeek || 1) + delta);
+    setSettings({ ...settings, currentWeek: week });
+    notify(`Ustawiono tydzień ${week}`, 'gold');
+  }
+
+  // ---- Finishing a workout (legacy section 14) ----
+
+  function promptFinish() {
+    if (!session) return;
+    const anySets = session.exercises.some(e => e.completedSets && e.completedSets.length > 0);
+    if (!anySets) {
+      if (window.confirm('Nie wykonano jeszcze żadnej serii. Czy na pewno chcesz anulować ten trening?')) {
+        setSession(null);
+        setTab('start');
+        notify('Anulowano trening');
+      }
+      return;
+    }
+    if (window.confirm('Czy na pewno chcesz zakończyć ten trening i zapisać wyniki do historii?')) finishWorkout();
+  }
+
+  function finishWorkout() {
+    if (!session) return;
+    const { record, totalSets, volume } = logic.buildSessionRecord(session, new Date().toISOString());
+    const nextHistory = [record, ...history];
+    const { settings: nextSettings, weekProg } = logic.settingsAfterFinish(nextHistory, settings, session.workoutId);
+    setHistory(nextHistory);
+    setSettings(nextSettings);
+    setSession(null);
+    setTimer(prev => ({ ...prev, isRunning: false, targetEndTime: null }));
+    audio.playTone(settingsRef.current, 523.25, 0.3, 'sine', 0.2);
+    setModal({ kind: 'summary', data: { name: session.workoutName, week: session.week, sets: totalSets, volume, weekProg } });
+  }
+
+  function closeSummary() {
+    setModal(null);
+    setTab('history');
+    window.scrollTo(0, 0);
+    notify('Trening zapisany pomyślnie!', 'gold');
+  }
+
+  // ---- Plans (legacy section 15) ----
+
+  function commitPlan(nextPlan, nextSettings = settings) {
+    setPlan(nextPlan);
+    setSavedPlans(logic.upsertCurrentPlan(savedPlans, nextSettings, nextPlan, new Date().toISOString()));
+  }
+
+  function saveExercise(form, index) {
+    const isNew = index < 0;
+    const existingId = isNew ? null : plan[planTab].exercises[index].id;
+    const result = logic.exerciseFromForm(form, existingId, Date.now());
+    if (result.error) {
+      notify(result.error, 'error');
+      return;
+    }
+    const next = logic.clone(plan);
+    if (isNew) next[planTab].exercises.push(result.exercise);
+    else next[planTab].exercises[index] = result.exercise;
+    commitPlan(next);
+    notify(isNew ? `Dodano "${result.exercise.name}" do ${plan[planTab].name}` : `Zapisano zmiany w "${result.exercise.name}"`);
+    setModal(null);
+  }
+
+  function moveExercise(index, direction) {
+    const list = plan[planTab].exercises;
+    const target = index + direction;
+    if (target < 0 || target >= list.length) return;
+    const next = logic.clone(plan);
+    const exercises = next[planTab].exercises;
+    const [item] = exercises.splice(index, 1);
+    exercises.splice(target, 0, item);
+    commitPlan(next);
+    notify('Zmieniono kolejność ćwiczeń');
+  }
+
+  function deleteExercise(index) {
+    const name = plan[planTab].exercises[index].name;
+    if (!window.confirm(`Czy na pewno chcesz usunąć ćwiczenie "${name}" z ${plan[planTab].name}?\n(Twoja dotychczasowa historia wyników zostanie zachowana)`)) return;
+    const next = logic.clone(plan);
+    next[planTab].exercises.splice(index, 1);
+    commitPlan(next);
+    notify('Usunięto ćwiczenie z planu');
+  }
+
+  function resetDefaultPlan() {
+    if (!window.confirm('Czy na pewno chcesz przywrócić domyślny plan treningowy A/B/C?\nTwoja historia wykonanych treningów pozostanie nienaruszona!')) return;
+    const next = logic.clone(DEFAULT_PLAN);
+    const nextSettings = { ...settings, activePlanName: 'Domyślny Plan A/B/C' };
+    setSettings(nextSettings);
+    commitPlan(next, nextSettings);
+    notify('Przywrócono domyślny plan treningowy', 'gold');
+  }
+
+  function loadPlan(id) {
+    const target = savedPlans.find(p => p.id === id);
+    if (!target) return;
+    setSavedPlans(logic.upsertCurrentPlan(savedPlans, settings, plan, new Date().toISOString()));
+    setPlan(logic.clone(target.workouts));
+    setSettings({ ...settings, activePlanId: target.id, activePlanName: target.name });
+    setModal(null);
+    notify(`✓ Wczytano plan: ${target.name}!`, 'gold');
+  }
+
+  function savePlanAs(mode, rawName) {
+    const name = rawName.trim();
+    if (!name) {
+      notify('Podaj nazwę planu', 'error');
+      return;
+    }
+    const now = new Date().toISOString();
+    const id = `plan_${Date.now()}`;
+    if (mode === 'save_as') {
+      setSavedPlans([...savedPlans, { id, name, createdAt: now, updatedAt: now, workouts: logic.clone(plan) }]);
+      setSettings({ ...settings, activePlanId: id, activePlanName: name });
+      notify(`✓ Zapisano plan jako: "${name}"`, 'gold');
+    } else {
+      const upserted = logic.upsertCurrentPlan(savedPlans, settings, plan, now);
+      const empty = logic.emptyPlan();
+      setSavedPlans([...upserted, { id, name, createdAt: now, updatedAt: now, workouts: empty }]);
+      setPlan(empty);
+      setSettings({ ...settings, activePlanId: id, activePlanName: name });
+      notify(`Utworzono plan: "${name}". Dodaj ćwiczenia!`, 'gold');
+    }
+    setModal(null);
+  }
+
+  function renamePlan(id) {
+    const existing = savedPlans.find(p => p.id === id);
+    if (!existing) return;
+    const newName = window.prompt('Podaj nową nazwę planu:', existing.name);
+    if (!newName || !newName.trim()) return;
+    const name = newName.trim();
+    setSavedPlans(savedPlans.map(p => (p.id === id ? { ...p, name, updatedAt: new Date().toISOString() } : p)));
+    if (settings.activePlanId === id) setSettings({ ...settings, activePlanName: name });
+    notify(`Zmieniono nazwę na: "${name}"`);
+  }
+
+  function duplicatePlan(id) {
+    const source = savedPlans.find(p => p.id === id);
+    if (!source) return;
+    const now = new Date().toISOString();
+    const name = `${source.name} (Kopia)`;
+    setSavedPlans([...savedPlans, { id: `plan_${Date.now()}`, name, createdAt: now, updatedAt: now, workouts: logic.clone(source.workouts) }]);
+    notify(`Skopiowano plan jako: "${name}"`);
+  }
+
+  function deletePlan(id) {
+    if (settings.activePlanId === id) {
+      notify('Nie możesz usunąć aktualnie aktywnego planu!', 'error');
+      return;
+    }
+    const target = savedPlans.find(p => p.id === id);
+    if (!target) return;
+    if (!window.confirm(`Czy na pewno chcesz usunąć plan "${target.name}"?\nTwoja historia wykonanych treningów pozostanie nienaruszona!`)) return;
+    setSavedPlans(savedPlans.filter(p => p.id !== id));
+    notify(`Usunięto plan "${target.name}"`);
+  }
+
+  // ---- History filters (legacy section 16) ----
+
+  function deleteSession(index) {
+    if (!window.confirm('Czy na pewno chcesz usunąć ten trening z historii?')) return;
+    setHistory(history.filter((_, i) => i !== index));
+    notify('Usunięto sesję z historii');
+  }
+
+  // ---- Settings, backup and restore (legacy section 17) ----
+
+  function exportData() {
+    const now = new Date().toISOString();
+    const upserted = logic.upsertCurrentPlan(savedPlans, settings, plan, now);
+    setSavedPlans(upserted);
+    const payload = { version: 'trening2026_1.1', exportDate: now, settings, plan, savedPlans: upserted, history };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `trening2026_backup_${now.slice(0, 10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    notify('Wyeksportowano kopię zapasową JSON (z planami i historią)!', 'gold');
+  }
+
+  function importFile(file) {
+    const reader = new FileReader();
+    reader.onload = event => {
+      try {
+        const imported = JSON.parse(event.target.result);
+        if (!imported.plan || !imported.history) throw new Error('Plik nie zawiera poprawnych danych planu lub historii');
+        if (!window.confirm('Czy na pewno chcesz wczytać dane z tego pliku?\nObecne plany i historia zostaną zastąpione danymi z kopii.')) return;
+        setPlan(imported.plan);
+        setHistory(imported.history);
+        if (Array.isArray(imported.savedPlans)) setSavedPlans(imported.savedPlans);
+        if (imported.settings) setSettings(imported.settings);
+        notify('Pomyślnie wczytano kopię zapasową!', 'gold');
+      } catch (error) {
+        window.alert(`Błąd wczytywania pliku JSON: ${error.message}`);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function clearHistory() {
+    if (!window.confirm('UWAGA! Czy na pewno chcesz trwale usunąć całą historię treningów?\nTej operacji nie można cofnąć!')) return;
+    setHistory([]);
+    notify('Historia treningów została wyczyszczona', 'error');
+  }
+
+  function toggleSetting(key, enabled, label) {
+    setSettings({ ...settingsRef.current, [key]: enabled });
+    notify(`${label}: ${enabled ? 'Włączone' : 'Wyłączone'}`);
+  }
+
+  // ---- Render ----
+
+  const currentWeight = currentExercise ? currentExercise.currentWeight : 0;
+
+  function renderModal() {
+    if (!modal) return null;
+    switch (modal.kind) {
+      case 'exercise': {
+        const existing = modal.index >= 0 ? plan[planTab].exercises[modal.index] : null;
+        return (
+          <ExerciseModal
+            planName={plan[planTab].name}
+            exercise={existing}
+            onClose={() => setModal(null)}
+            onSave={form => saveExercise(form, modal.index)}
+          />
+        );
+      }
+      case 'weight':
+        return <WeightModal value={currentWeight} onClose={() => setModal(null)} onSave={saveWeight} />;
+      case 'reps':
+        return <CustomRepsModal onClose={() => setModal(null)} onSave={saveCustomReps} />;
+      case 'summary':
+        return <SummaryModal data={modal.data} history={history} onClose={closeSummary} />;
+      case 'savedPlans':
+        return (
+          <SavedPlansModal
+            plans={savedPlans}
+            activeId={settings.activePlanId}
+            onLoad={loadPlan}
+            onRename={renamePlan}
+            onDuplicate={duplicatePlan}
+            onDelete={deletePlan}
+            onCreate={() => setModal({ kind: 'savePlanAs', mode: 'create_new' })}
+            onClose={() => setModal(null)}
+          />
+        );
+      case 'savePlanAs':
+        return (
+          <SavePlanAsModal
+            mode={modal.mode}
+            defaultName={modal.mode === 'create_new' ? 'Mój Nowy Plan 3-Dniowy' : `${settings.activePlanName || 'Plan'} (Kopia)`}
+            onConfirm={name => savePlanAs(modal.mode, name)}
+            onClose={() => setModal(null)}
+          />
+        );
+      case 'drawer':
+        return session ? (
+          <PlanDrawer
+            session={session}
+            index={exIndex}
+            onSelect={selectExerciseFromDrawer}
+            onClose={() => setModal(null)}
+            onFinish={() => {
+              setModal(null);
+              promptFinish();
+            }}
+          />
+        ) : null;
+      default:
+        return null;
+    }
+  }
+
+  return (
+    <>
+      <Toast notice={notice} />
+
+      {timer.isRunning && tab !== 'workout' && (
+        <div className="floating-timer-bar" style={{ display: 'flex' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ color: 'var(--accent-gold)', fontSize: '1.1rem' }}>⏱</span>
+            <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>{logic.formatTime(timer.remaining)}</span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>(Odpoczynek w toku)</span>
+          </div>
+          <button type="button" className="btn btn-primary btn-mini" onClick={() => goTab('workout')}>
+            Wróć do ćwiczenia
+          </button>
+        </div>
+      )}
+
+      <header className="app-header">
+        <div className="app-logo">
+          <span className="logo-icon">🏋️</span>
+          <span className="logo-title">SIŁOWNIA</span>
+          <span className="logo-badge" id="headerWeekBadge">TYDZIEŃ {settings.currentWeek}</span>
+        </div>
+        <div className="header-right">
+          {session && (
+            <div id="activeWorkoutHeaderPill" className="workout-active-pill" style={{ display: 'flex' }} onClick={() => goTab('workout')}>
+              <span>⚡ TRENING W TOKU</span>
+            </div>
+          )}
+        </div>
+      </header>
+
+      <main className="main-content">
+        {tab === 'start' && (
+          <StartTab
+            plan={plan}
+            settings={settings}
+            session={session}
+            onStart={startWorkout}
+            onContinue={() => goTab('workout')}
+            onSelect={id => setSettings({ ...settings, selectedStartWorkoutId: id })}
+            onWeek={adjustWeekSetting}
+          />
+        )}
+        {tab === 'workout' && (
+          <WorkoutTab
+            plan={plan}
+            settings={settings}
+            session={session}
+            index={exIndex}
+            timer={timer}
+            onStart={startWorkout}
+            onWeek={adjustWeekSetting}
+            onOpenDrawer={() => setModal({ kind: 'drawer' })}
+            onOpenWeight={() => setModal({ kind: 'weight' })}
+            onAdjustWeight={adjustWeight}
+            onRecord={recordSet}
+            onOpenReps={() => setModal({ kind: 'reps' })}
+            onRemoveSet={removeSet}
+            onAddSet={addSet}
+            onRemoveSetTarget={removeSetTarget}
+            onNavigate={navigate}
+            onFinish={promptFinish}
+            onToggleTimer={() => (timerRef.current.isRunning ? pauseTimer() : startTimer(restAt(exIndex)))}
+            onAdjustTimer={adjustTimer}
+            onResetTimer={() => resetTimer(restAt(exIndex))}
+          />
+        )}
+        {tab === 'plan' && (
+          <PlanTab
+            plan={plan}
+            planTab={planTab}
+            onPlanTab={setPlanTab}
+            settings={settings}
+            savedCount={savedPlans.length}
+            onOpenSaved={() => setModal({ kind: 'savedPlans' })}
+            onSaveAs={() => setModal({ kind: 'savePlanAs', mode: 'save_as' })}
+            onCreate={() => setModal({ kind: 'savePlanAs', mode: 'create_new' })}
+            onAdd={() => setModal({ kind: 'exercise', index: -1 })}
+            onEdit={index => setModal({ kind: 'exercise', index })}
+            onMove={moveExercise}
+            onDelete={deleteExercise}
+            onResetDefault={resetDefaultPlan}
+          />
+        )}
+        {tab === 'history' && (
+          <HistoryTab
+            history={history}
+            plan={plan}
+            workout={historyFilters.workout}
+            week={historyFilters.week}
+            exerciseMode={historyFilters.exerciseMode}
+            exerciseName={historyFilters.exerciseName}
+            onWorkout={id => setHistoryFilters(prev => ({ ...prev, workout: id, week: 'all' }))}
+            onWeek={week => setHistoryFilters(prev => ({ ...prev, week }))}
+            onWeekSelect={value => setHistoryFilters(prev => ({ ...prev, week: value === 'all' ? 'all' : parseInt(value, 10) }))}
+            onToggleExerciseMode={() => setHistoryFilters(prev => ({ ...prev, exerciseMode: !prev.exerciseMode }))}
+            onReset={() => setHistoryFilters(DEFAULT_HISTORY_FILTERS)}
+            onExerciseName={name => setHistoryFilters(prev => ({ ...prev, exerciseName: name }))}
+            onDelete={deleteSession}
+          />
+        )}
+        {tab === 'settings' && (
+          <SettingsTab
+            settings={settings}
+            onSound={enabled => toggleSetting('soundEnabled', enabled, 'Dźwięki')}
+            onVibrate={enabled => toggleSetting('vibrateEnabled', enabled, 'Wibracje')}
+            onTest={() => {
+              audio.testAudioAndSpeech(settingsRef.current);
+              notify('🔊 Odtworzono dźwięk i lektora', 'gold');
+            }}
+            onExport={exportData}
+            onImport={importFile}
+            onClear={clearHistory}
+          />
+        )}
+      </main>
+
+      <nav className="bottom-nav">
+        {NAV.map(([id, icon, label]) => (
+          <button type="button" key={id} id={`nav-${id}`} className={`nav-item${tab === id ? ' active' : ''}`} onClick={() => goTab(id)}>
+            <span className="nav-icon">{icon}</span>
+            <span className="nav-label">{label}</span>
+            {id === 'workout' && session && <span className="nav-badge-dot" id="navWorkoutDot" style={{ display: 'block' }} />}
+          </button>
+        ))}
+      </nav>
+
+      {renderModal()}
+    </>
+  );
+}

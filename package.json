@@ -7,13 +7,19 @@
     "dev": "vite",
     "build": "vite build --mode github",
     "preview": "vite preview",
-    "build:openbot": "vite build"
+    "build:openbot": "vite build",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:all": "vitest run && playwright test"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
-    "vite": "latest",
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "vite": "latest"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@playwright/test": "^1.65.0",
+    "vitest": "^5.1.0"
+  }
 }

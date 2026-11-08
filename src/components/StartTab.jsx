@@ -1,0 +1,59 @@
+import { repsDisplay } from '../logic.js';
+
+export function StartTab({ plan, settings, session, onStart, onContinue, onSelect, onWeek }) {
+  const workoutId = settings.selectedStartWorkoutId || 'A';
+  const workout = plan[workoutId] || plan.A;
+
+  return (
+    <section className="tab-view active" id="view-start">
+      <div className="start-hero">
+        <div className="start-subtitle">DZISIEJSZY TRENING</div>
+        <h1 className="start-title">{workout.name}</h1>
+
+        <div className="start-meta-row">
+          <div className="week-stepper">
+            <button type="button" className="stepper-btn" onClick={() => onWeek(-1)} title="Poprzedni tydzień">−</button>
+            <span className="stepper-val">TYDZIEŃ {settings.currentWeek}</span>
+            <button type="button" className="stepper-btn" onClick={() => onWeek(1)} title="Następny tydzień">+</button>
+          </div>
+        </div>
+
+        {session ? (
+          <button type="button" className="btn btn-large btn-success" onClick={onContinue}>
+            ⚡ KONTYNUUJ TRWAJĄCY TRENING
+          </button>
+        ) : (
+          <button type="button" className="btn btn-large btn-gold" onClick={() => onStart(workoutId)}>
+            🚀 ROZPOCZNIJ TRENING
+          </button>
+        )}
+
+        <div className="preview-box">
+          <div className="preview-title">
+            <span>PLAN NA DZISIAJ</span>
+            <span>{workout.exercises.length} ćwiczeń</span>
+          </div>
+          <ul className="preview-list">
+            {workout.exercises.map((ex, index) => (
+              <li className="preview-item" key={ex.id}>
+                <span className="num">{index + 1}.</span> <strong>{ex.name}</strong>{' '}
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                  ({ex.sets} × {repsDisplay(ex)})
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="manual-picker-label">Chcesz wybrać inny trening na dziś?</div>
+        <div className="workout-selector-pills">
+          {['A', 'B', 'C'].map(id => (
+            <button type="button" key={id} className={`pill-btn${workoutId === id ? ' active' : ''}`} onClick={() => onSelect(id)}>
+              TRENING {id}
+            </button>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}

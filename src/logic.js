@@ -1,0 +1,324 @@
+// Pure logic ported from the legacy index.html script. No DOM, no React, no storage access here,
+// so it can be unit-tested directly.
+
+export const WORKOUT_IDS = ['A', 'B', 'C'];
+export const DEFAULT_PLAN_NAME = 'Mój Plan Główny (A/B/C)';
+
+export const clone = value => JSON.parse(JSON.stringify(value));
+
+export function formatWeightDisplay(num) {
+  if (num === null || num === undefined || isNaN(num)) return '0';
+  return String(num).replace('.', ',');
+}
+
+export function parseWeightInput(str) {
+  if (!str) return 0;
+  const clean = String(str).replace(',', '.').trim();
+  const val = parseFloat(clean);
+  return isNaN(val) ? 0 : val;
+}
+
+export function formatTime(seconds) {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s < 10 ? '0' : ''}${s}`;
+}
+
+export function repsDisplay(ex) {
+  return ex.repsMax === 'MAX' ? `${ex.repsMin}+ MAX` : `${ex.repsMin}–${ex.repsMax}`;
+}
+
+// Rep buttons shown on the workout screen.
+export function repButtonValues(ex) {
+  const min = typeof ex.repsMin === 'number' ? ex.repsMin : parseInt(ex.repsMin, 10);
+  const max = typeof ex.repsMax === 'number' ? ex.repsMax : parseInt(ex.repsMax, 10);
+  const isMaxTag = ex.repsMax === 'MAX' || isNaN(max);
+  if (isMaxTag) return ['MAX'];
+  if (!isNaN(min) && !isNaN(max)) {
+    const values = [];
+    if (min <= max && max - min <= 7) {
+      for (let r = min; r <= max; r++) values.push(r);
+    } else {
+      for (let r = min; r <= max; r += 2) values.push(r);
+    }
+    return values;
+  }
+  return [6, 8, 10, 12];
+}
+
+export function getLastExerciseResult(history, exerciseName) {
+  if (!history || history.length === 0) return null;
+  const wanted = exerciseName.trim().toLowerCase();
+  for (const session of history) {
+    if (!session.exercises) continue;
+    const match = session.exercises.find(e => e.name && e.name.trim().toLowerCase() === wanted);
+    if (match && match.sets && match.sets.length > 0) {
+      return {
+        sessionDate: session.date,
+        sessionWeek: session.week,
+        sets: match.sets,
+        targetSets: match.targetSets || match.sets.length,
+      };
+    }
+  }
+  return null;
+}
+
+export function calculateProgression(history, def) {
+  const last = getLastExerciseResult(history, def.name);
+  if (!last) {
+    return {
+      hasHistory: false,
+      suggestedWeight: 0,
+      isProgression: false,
+      progressionBadgeText: '',
+      lastSummaryText: 'BRAK POPRZEDNIEGO WYNIKU',
+      lastDateText: '',
+    };
+  }
+
+  const sets = last.sets;
+  const lastWeight = sets[0].weight || 0;
+  const allSameWeight = sets.every(s => s.weight === lastWeight);
+  const lastSummaryText = allSameWeight
+    ? `${formatWeightDisplay(lastWeight)} kg • ${sets.map(s => s.reps).join(' / ')}`
+    : sets.map(s => `${formatWeightDisplay(s.weight)}kg × ${s.reps}`).join(' / ');
+
+  const dateObj = new Date(last.sessionDate);
+  const lastDateText = !isNaN(dateObj)
+    ? `${dateObj.toLocaleDateString('pl-PL')} (Tydz. ${last.sessionWeek})`
+    : `Tydzień ${last.sessionWeek}`;
+
+  const asNumber = value => (typeof value === 'number' ? value : parseInt(value, 10));
+  const maxReps = asNumber(def.repsMax);
+  let shouldProgress = false;
+
+  if (def.progressionType === 'top_all_sets') {
+    if (!isNaN(maxReps) && maxReps > 0) {
+      const completedEnoughSets = sets.length >= def.sets;
+      const allAtMax = sets.every(s => {
+        const r = asNumber(s.reps);
+        return !isNaN(r) && r >= maxReps;
+      });
+      if (completedEnoughSets && allAtMax) shouldProgress = true;
+    }
+  } else if (def.progressionType === 'top_first_set') {
+    if (!isNaN(maxReps) && maxReps > 0 && sets[0]) {
+      const r0 = asNumber(sets[0].reps);
+      if (!isNaN(r0) && r0 >= maxReps) shouldProgress = true;
+    }
+  }
+
+  const step = def.progressionStep || 0;
+  let suggestedWeight = lastWeight;
+  if (shouldProgress && step > 0) suggestedWeight = Number((lastWeight + step).toFixed(2));
+
+  return {
+    hasHistory: true,
+    lastWeight,
+    suggestedWeight,
+    isProgression: shouldProgress,
+    progressionBadgeText: shouldProgress ? `PROGRES +${formatWeightDisplay(step)} kg` : '',
+    lastSummaryText,
+    lastDateText,
+  };
+}
+
+// Exercises for a new workout session, with suggested weights from history.
+export function createSessionExercises(workout, history) {
+  return workout.exercises.map(def => {
+    const prog = calculateProgression(history, def);
+    return {
+      id: def.id,
+      name: def.name,
+      setsTarget: def.sets,
+      repsMin: def.repsMin,
+      repsMax: def.repsMax,
+      tempo: def.tempo,
+      restSeconds: def.restSeconds,
+      progressionStep: def.progressionStep,
+      progressionType: def.progressionType,
+      currentWeight: prog.hasHistory ? prog.suggestedWeight : 0,
+      suggestedWeight: prog.suggestedWeight ? prog.suggestedWeight : 0,
+      isProgressionHit: prog.isProgression,
+      lastSummary: prog.lastSummaryText,
+      lastDate: prog.lastDateText,
+      completedSets: [],
+    };
+  });
+}
+
+export function remainingWorkoutsThisWeek(history, week) {
+  const w = Number(week || 1);
+  const done = new Set((history || []).filter(s => Number(s.week) === w).map(s => (s.workoutId || '').toUpperCase()));
+  return WORKOUT_IDS.filter(id => !done.has(id));
+}
+
+// Advances the week when every workout of the current week is done.
+export function applyWeekProgress(history, settings) {
+  const startWeek = Number(settings.currentWeek) || 1;
+  let cur = startWeek;
+  let changed = false;
+  for (;;) {
+    const sessions = history.filter(s => Number(s.week) === cur);
+    const done = new Set(sessions.map(s => (s.workoutId || '').toUpperCase()));
+    const allThreeDone = (done.has('A') && done.has('B') && done.has('C')) || sessions.length >= 3;
+    if (!allThreeDone) break;
+    cur += 1;
+    changed = true;
+  }
+  if (!changed) return { advanced: false, settings, weekProg: { advanced: false, currentWeek: startWeek } };
+  const remaining = remainingWorkoutsThisWeek(history, cur);
+  return {
+    advanced: true,
+    settings: { ...settings, currentWeek: cur, selectedStartWorkoutId: remaining.length > 0 ? remaining[0] : 'A' },
+    weekProg: { advanced: true, newWeek: cur, previousWeek: startWeek },
+  };
+}
+
+export function nextWorkoutAfter(workoutId) {
+  if (workoutId === 'A') return 'B';
+  if (workoutId === 'B') return 'C';
+  if (workoutId === 'C') return 'A';
+  return 'A';
+}
+
+// `history` must already contain the finished session.
+export function settingsAfterFinish(history, settings, workoutId) {
+  const progress = applyWeekProgress(history, settings);
+  if (progress.advanced) return { settings: progress.settings, weekProg: progress.weekProg };
+  const remaining = remainingWorkoutsThisWeek(history, settings.currentWeek);
+  const selected = remaining.length > 0 ? remaining[0] : nextWorkoutAfter(workoutId);
+  return { settings: { ...settings, selectedStartWorkoutId: selected }, weekProg: progress.weekProg };
+}
+
+export function buildSessionRecord(session, date) {
+  let totalSets = 0;
+  let totalVolume = 0;
+  const exercises = session.exercises.map(ex => {
+    const sets = (ex.completedSets || []).map(s => {
+      totalSets++;
+      const repsNum = typeof s.reps === 'number' ? s.reps : parseInt(s.reps, 10);
+      if (!isNaN(repsNum)) totalVolume += s.weight * repsNum;
+      return { weight: s.weight, reps: s.reps };
+    });
+    return { id: ex.id, name: ex.name, targetSets: ex.setsTarget, tempo: ex.tempo, sets };
+  });
+  const volume = Math.round(totalVolume);
+  return {
+    totalSets,
+    volume,
+    record: {
+      sessionId: session.sessionId,
+      workoutId: session.workoutId,
+      workoutName: session.workoutName,
+      week: session.week,
+      date,
+      totalSets,
+      totalVolume: volume,
+      exercises,
+    },
+  };
+}
+
+export function matchesWorkout(session, workout) {
+  return workout === 'all' || Boolean(session.workoutName && session.workoutName.toUpperCase().includes(workout));
+}
+
+export function filterHistory(history, workout, week) {
+  return history.filter(s => matchesWorkout(s, workout) && (week === 'all' || String(s.week) === String(week)));
+}
+
+export function weekOptions(history, workout) {
+  const base = history.filter(s => matchesWorkout(s, workout));
+  return [...new Set(base.map(s => s.week).filter(w => w != null))].sort((a, b) => a - b);
+}
+
+export function exerciseNames(history, plan) {
+  const names = new Set();
+  history.forEach(s => (s.exercises || []).forEach(e => names.add(e.name)));
+  Object.values(plan).forEach(workout => workout.exercises.forEach(e => names.add(e.name)));
+  return [...names].sort();
+}
+
+export function exerciseEntries(sessions, exerciseName) {
+  const wanted = exerciseName.trim().toLowerCase();
+  const entries = [];
+  sessions.forEach(sess => {
+    if (!sess.exercises) return;
+    const found = sess.exercises.find(e => e.name && e.name.trim().toLowerCase() === wanted);
+    if (found && found.sets && found.sets.length > 0) {
+      entries.push({ date: sess.date, week: sess.week, workoutName: sess.workoutName, sets: found.sets });
+    }
+  });
+  return entries;
+}
+
+export function emptyPlan() {
+  return {
+    A: { id: 'A', name: 'TRENING A', exercises: [] },
+    B: { id: 'B', name: 'TRENING B', exercises: [] },
+    C: { id: 'C', name: 'TRENING C', exercises: [] },
+  };
+}
+
+export function planCounts(workouts) {
+  return WORKOUT_IDS.map(id => (workouts && workouts[id] && workouts[id].exercises ? workouts[id].exercises.length : 0));
+}
+
+export function progressionRuleText(type) {
+  if (type === 'top_all_sets') return 'Górny zakres we wszystkich seriach';
+  if (type === 'top_first_set') return 'Górny zakres w 1. serii';
+  return 'Ręczna';
+}
+
+// Writes the current plan into the saved-plan entry it came from (the legacy "autoSaveCurrentPlan").
+export function upsertCurrentPlan(savedPlans, settings, plan, now) {
+  const currentId = settings.activePlanId || 'plan_default';
+  if (savedPlans.some(p => p.id === currentId)) {
+    return savedPlans.map(p => (p.id === currentId ? { ...p, workouts: clone(plan), updatedAt: now } : p));
+  }
+  return [
+    ...savedPlans,
+    {
+      id: currentId,
+      name: settings.activePlanName || DEFAULT_PLAN_NAME,
+      createdAt: now,
+      updatedAt: now,
+      workouts: clone(plan),
+    },
+  ];
+}
+
+// Validates the exercise form exactly like the legacy saveExerciseModal().
+export function exerciseFromForm(form, existingId, nowMs) {
+  const name = form.name.trim();
+  const sets = parseInt(form.sets, 10);
+  const repsMin = parseInt(form.repsMin, 10);
+  const repsMaxInput = form.repsMax.trim();
+  const repsMax = repsMaxInput.toUpperCase() === 'MAX' ? 'MAX' : parseInt(repsMaxInput, 10);
+  const tempo = form.tempo.trim();
+  const step = parseWeightInput(form.step);
+  const rest = parseInt(form.rest, 10);
+
+  if (!name) return { error: 'Podaj nazwę ćwiczenia' };
+  if (isNaN(sets) || sets < 1) return { error: 'Podaj prawidłową liczbę serii' };
+
+  return {
+    exercise: {
+      id: existingId || `ex_${nowMs}`,
+      name,
+      sets,
+      repsMin: isNaN(repsMin) ? 8 : repsMin,
+      repsMax,
+      tempo: tempo || '2010',
+      progressionStep: isNaN(step) ? 2.5 : step,
+      restSeconds: isNaN(rest) ? 90 : rest,
+      progressionType: form.progressionType,
+    },
+  };
+}
+
+export function clampWeight(value) {
+  return value < 0 ? 0 : value;
+}
