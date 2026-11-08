@@ -37,8 +37,11 @@
       --danger-red: #ff5252;
       --danger-bg: rgba(255, 82, 82, 0.15);
       --font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      --bottom-nav-height: 64px;
+      --bottom-nav-height: clamp(52px, 8vh, 72px);
       --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --nav-item-gap: clamp(1px, 0.6vh, 4px);
+      --nav-icon-size: clamp(1rem, 2.4vh, 1.35rem);
+      --nav-label-size: clamp(0.62rem, 1.35vh, 0.75rem);
     }
 
     * {
@@ -190,7 +193,7 @@
       display: flex;
       justify-content: space-around;
       align-items: flex-start;
-      padding-top: 4px;
+      padding-top: clamp(2px, 0.5vh, 5px);
       z-index: 1000;
       box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.4);
     }
@@ -207,18 +210,37 @@
       color: var(--text-muted);
       cursor: pointer;
       transition: all 0.2s;
-      gap: 3px;
+      gap: var(--nav-item-gap);
+      min-width: 0;
       position: relative;
     }
 
     .nav-item .nav-icon {
-      font-size: 1.25rem;
+      font-size: var(--nav-icon-size);
+      line-height: 1.1;
     }
 
     .nav-item .nav-label {
-      font-size: 0.72rem;
+      font-size: var(--nav-label-size);
       font-weight: 600;
-      letter-spacing: 0.3px;
+      letter-spacing: 0.2px;
+      white-space: nowrap;
+      line-height: 1.1;
+    }
+
+    @media (max-height: 500px) {
+      :root { --bottom-nav-height: 48px; }
+      .nav-item .nav-label { display: none; }
+    }
+
+    @media (min-width: 700px) {
+      :root { --bottom-nav-height: 68px; }
+      .bottom-nav {
+        left: 50%;
+        right: auto;
+        width: min(100%, 720px);
+        transform: translateX(-50%);
+      }
     }
 
     .nav-item.active {
