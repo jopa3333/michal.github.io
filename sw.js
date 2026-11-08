@@ -4,7 +4,7 @@
    oraz 100% działanie offline bez kolizji z odtwarzaczami muzyki (Spotify)
    ============================================================ */
 
-const CACHE_NAME = 'trening2026-v16';
+const CACHE_NAME = 'trening2026-v17';
 const ASSETS = [
   './',
   './index.html',
