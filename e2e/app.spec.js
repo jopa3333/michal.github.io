@@ -130,15 +130,23 @@ test('the rest timer announces the end of the break', async ({ page }) => {
   await expect(page.locator('#notif-msg')).toHaveText('⏱ Koniec przerwy! Czas na kolejną serię.');
 });
 
-test('a completed timer only announces once after the app wakes up', async ({ page }) => {
+test('a completed timer uses one persistent banner after the app wakes up', async ({ page }) => {
   await page.addInitScript(() => {
     window.__timerBannerCount = 0;
     window.__timerVoiceCount = 0;
+    const registration = {
+      update() { return Promise.resolve(); },
+      showNotification() { window.__timerBannerCount += 1; return Promise.resolve(); },
+    };
     class TestNotification {
       static permission = 'granted';
-      constructor() { window.__timerBannerCount += 1; }
+      constructor() { window.__fallbackBannerCount = (window.__fallbackBannerCount || 0) + 1; }
     }
     Object.defineProperty(window, 'Notification', { configurable: true, value: TestNotification });
+    Object.defineProperty(navigator, 'serviceWorker', {
+      configurable: true,
+      value: { controller: null, ready: Promise.resolve(registration), register() { return Promise.resolve(registration); } },
+    });
     Object.defineProperty(window, 'speechSynthesis', {
       configurable: true,
       value: {
@@ -166,6 +174,7 @@ test('a completed timer only announces once after the app wakes up', async ({ pa
   await expect(page.locator('#notif-msg')).toHaveText('⏱ Koniec przerwy! Czas na kolejną serię.');
   await expect.poll(() => page.evaluate(() => window.__timerBannerCount)).toBe(1);
   await expect.poll(() => page.evaluate(() => window.__timerVoiceCount)).toBe(1);
+  await expect.poll(() => page.evaluate(() => window.__fallbackBannerCount || 0)).toBe(0);
 });
 
 test('a muted timer still shows one system banner without voice', async ({ page }) => {

@@ -156,16 +156,31 @@ export function requestNotificationPermissionIfNeeded() {
 export function sendSystemNotification(title, body) {
   try {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
-    // System banners deliberately ignore the in-app audio mute setting.
-    // The stable tag replaces an older timer banner instead of stacking another one.
+    // System banners deliberately ignore the in-app audio mute setting. On phones,
+    // showNotification() is the persistent notification API; it also works before
+    // a newly registered worker has taken control of this page.
     const options = { body, icon: 'icon-192.png' };
-    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.ready
-        .then(reg => reg.showNotification(title, { ...options, badge: 'icon-192.png', vibrate: [200, 100, 200], tag: 'workout-timer', renotify: false }))
-        .catch(() => new Notification(title, options));
-    } else {
-      new Notification(title, options);
+    const persistentOptions = { ...options, badge: 'icon-192.png', vibrate: [200, 100, 200], tag: 'workout-timer', renotify: false };
+    const showFallback = () => {
+      try { new Notification(title, options); } catch { /* mobile fallback unavailable */ }
+    };
+    const serviceWorker = navigator.serviceWorker;
+    if (serviceWorker) {
+      const registration = typeof serviceWorker.getRegistration === 'function'
+        ? serviceWorker.getRegistration()
+        : serviceWorker.ready;
+      registration
+        .then(reg => {
+          if (!reg || typeof reg.showNotification !== 'function') {
+            showFallback();
+            return undefined;
+          }
+          return reg.showNotification(title, persistentOptions);
+        })
+        .catch(showFallback);
+      return;
     }
+    showFallback();
   } catch {
     // ignore
   }
