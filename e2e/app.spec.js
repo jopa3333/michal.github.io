@@ -5,6 +5,7 @@ import { expect, test } from '@playwright/test';
 const KEYS = {
   history: 'trening2026_history_v1',
   active: 'trening2026_active_session_v1',
+  settings: 'trening2026_settings_v1',
 };
 
 const legacyHistory = [
@@ -127,6 +128,92 @@ test('the rest timer announces the end of the break', async ({ page }) => {
 
   await expect(page.locator('.timer-btn-main')).toContainText('KONIEC PRZERWY!');
   await expect(page.locator('#notif-msg')).toHaveText('⏱ Koniec przerwy! Czas na kolejną serię.');
+});
+
+test('a completed timer only announces once after the app wakes up', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.__timerBannerCount = 0;
+    window.__timerVoiceCount = 0;
+    class TestNotification {
+      static permission = 'granted';
+      constructor() { window.__timerBannerCount += 1; }
+    }
+    Object.defineProperty(window, 'Notification', { configurable: true, value: TestNotification });
+    Object.defineProperty(window, 'speechSynthesis', {
+      configurable: true,
+      value: {
+        paused: false,
+        cancel() {},
+        getVoices() { return []; },
+        resume() {},
+        speak() { window.__timerVoiceCount += 1; },
+      },
+    });
+    window.SpeechSynthesisUtterance = class TestUtterance { constructor(text) { this.text = text; } };
+  });
+  await page.clock.install();
+  await page.goto('/');
+  await startWorkoutFromStart(page);
+  await page.locator('.timer-btn-main').click();
+  await page.clock.fastForward(181_000);
+  await page.evaluate(() => {
+    document.dispatchEvent(new Event('visibilitychange'));
+    window.dispatchEvent(new Event('focus'));
+    window.dispatchEvent(new Event('pageshow'));
+  });
+  await page.clock.fastForward(1_000);
+
+  await expect(page.locator('#notif-msg')).toHaveText('⏱ Koniec przerwy! Czas na kolejną serię.');
+  await expect.poll(() => page.evaluate(() => window.__timerBannerCount)).toBe(1);
+  await expect.poll(() => page.evaluate(() => window.__timerVoiceCount)).toBe(1);
+});
+
+test('a muted timer still shows one system banner without voice', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.__timerBannerCount = 0;
+    window.__timerVoiceCount = 0;
+    class TestNotification {
+      static permission = 'granted';
+      constructor() { window.__timerBannerCount += 1; }
+    }
+    Object.defineProperty(window, 'Notification', { configurable: true, value: TestNotification });
+    Object.defineProperty(window, 'speechSynthesis', {
+      configurable: true,
+      value: { paused: false, cancel() {}, getVoices() { return []; }, resume() {}, speak() { window.__timerVoiceCount += 1; } },
+    });
+    window.SpeechSynthesisUtterance = class TestUtterance { constructor(text) { this.text = text; } };
+  });
+  await page.clock.install();
+  await seed(page, { [KEYS.settings]: { soundEnabled: false, vibrateEnabled: false } });
+  await startWorkoutFromStart(page);
+  await page.locator('.timer-btn-main').click();
+  // Starting a timer performs a silent, one-off speech unlock on some browsers.
+  // Count only notifications made when the break ends.
+  await page.evaluate(() => { window.__timerVoiceCount = 0; });
+  await page.clock.fastForward(181_000);
+  await page.clock.fastForward(1_000);
+
+  await expect(page.locator('#notif-msg')).toHaveText('⏱ Koniec przerwy! Czas na kolejną serię.');
+  await expect.poll(() => page.evaluate(() => window.__timerBannerCount)).toBe(1);
+  await expect.poll(() => page.evaluate(() => window.__timerVoiceCount)).toBe(0);
+});
+
+test('plan and history controls stay in one row on a narrow phone', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.goto('/');
+  await page.locator('#nav-plan').click();
+
+  const planHeaderRows = await page.locator('.plan-mgmt-badge, .plan-mgmt-header > .btn').evaluateAll(elements => elements.map(element => element.getBoundingClientRect().top));
+  expect(new Set(planHeaderRows).size).toBe(1);
+  expect(await page.locator('.plan-mgmt-badge').evaluate(element => element.scrollHeight <= element.clientHeight)).toBe(true);
+  const planActionRows = await page.locator('.plan-mgmt-actions .btn').evaluateAll(buttons => buttons.map(button => button.getBoundingClientRect().top));
+  expect(new Set(planActionRows).size).toBe(1);
+  expect(await page.locator('.plan-mgmt-title').evaluate(element => element.scrollHeight <= element.clientHeight)).toBe(true);
+
+  await page.locator('#nav-history').click();
+  const historyFilterRows = await page.locator('.hist-pills-row .hist-pill').evaluateAll(buttons => buttons.map(button => button.getBoundingClientRect().top));
+  expect(new Set(historyFilterRows).size).toBe(1);
+  expect(await page.locator('.hist-pills-row .hist-pill').evaluateAll(buttons => buttons.every(button => button.scrollWidth <= button.clientWidth))).toBe(true);
 });
 
 test('a session saved by the legacy app resumes where it was', async ({ page }) => {

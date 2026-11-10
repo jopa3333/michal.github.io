@@ -156,10 +156,12 @@ export function requestNotificationPermissionIfNeeded() {
 export function sendSystemNotification(title, body) {
   try {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    // System banners deliberately ignore the in-app audio mute setting.
+    // The stable tag replaces an older timer banner instead of stacking another one.
     const options = { body, icon: 'icon-192.png' };
     if (navigator.serviceWorker && navigator.serviceWorker.controller) {
       navigator.serviceWorker.ready
-        .then(reg => reg.showNotification(title, { ...options, badge: 'icon-192.png', vibrate: [200, 100, 200], tag: 'workout-timer', renotify: true }))
+        .then(reg => reg.showNotification(title, { ...options, badge: 'icon-192.png', vibrate: [200, 100, 200], tag: 'workout-timer', renotify: false }))
         .catch(() => new Notification(title, options));
     } else {
       new Notification(title, options);

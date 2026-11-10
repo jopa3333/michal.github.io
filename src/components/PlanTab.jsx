@@ -6,18 +6,16 @@ export function PlanTab({ plan, planTab, onPlanTab, settings, savedCount, onOpen
     <section className="tab-view active" id="view-plan">
       <div className="plan-management-card">
         <div className="plan-mgmt-header">
-          <div>
-            <span className="plan-mgmt-badge">AKTYWNY PLAN TRENINGOWY</span>
-            <h3 className="plan-mgmt-title">{settings.activePlanName}</h3>
-          </div>
+          <span className="plan-mgmt-badge">AKTYWNY PLAN TRENINGOWY</span>
           <button type="button" className="btn btn-outline btn-mini" onClick={onOpenSaved} style={{ whiteSpace: 'nowrap' }}>
             📂 Moje Plany (<span>{savedCount}</span>)
           </button>
+          <h3 className="plan-mgmt-title" title={settings.activePlanName}>{settings.activePlanName}</h3>
         </div>
         <div className="plan-mgmt-actions">
-          <button type="button" className="btn btn-outline btn-mini" onClick={onSaveAs}>💾 Zapisz jako...</button>
-          <button type="button" className="btn btn-gold btn-mini" onClick={onCreate}>➕ Nowy plan</button>
-          <button type="button" className="btn btn-primary btn-mini" style={{ marginLeft: 'auto' }} onClick={onAdd}>
+          <button type="button" className="btn btn-outline btn-mini plan-mgmt-action" onClick={onSaveAs}>💾 Zapisz jako</button>
+          <button type="button" className="btn btn-gold btn-mini plan-mgmt-action" onClick={onCreate}>➕ Nowy plan</button>
+          <button type="button" className="btn btn-primary btn-mini plan-mgmt-action" onClick={onAdd}>
             + Dodaj ćwiczenie
           </button>
         </div>

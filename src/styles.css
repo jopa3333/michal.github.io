@@ -1153,19 +1153,24 @@
     }
 
     .plan-mgmt-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        "badge saved"
+        "title title";
+      align-items: start;
       margin-bottom: 10px;
       gap: 10px;
     }
 
     .plan-mgmt-badge {
+      grid-area: badge;
       display: inline-block;
-      font-size: 0.65rem;
+      font-size: 0.56rem;
       font-weight: 800;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.35px;
       text-transform: uppercase;
+      white-space: nowrap;
       color: var(--accent-gold);
       background: rgba(255, 215, 0, 0.12);
       border: 1px solid rgba(255, 215, 0, 0.35);
@@ -1175,20 +1180,39 @@
     }
 
     .plan-mgmt-title {
+      grid-area: title;
       font-size: 1.05rem;
       font-weight: 800;
       color: #fff;
       margin: 0;
       line-height: 1.2;
+      min-width: 0;
+      overflow-x: auto;
+      scrollbar-width: none;
+      white-space: nowrap;
     }
 
+    .plan-mgmt-title::-webkit-scrollbar { display: none; }
+
+    .plan-mgmt-header > .btn { grid-area: saved; }
+
     .plan-mgmt-actions {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 6px;
-      align-items: center;
+      align-items: stretch;
       border-top: 1px solid rgba(20, 107, 151, 0.25);
       padding-top: 8px;
+    }
+
+    .plan-mgmt-action {
+      min-width: 0;
+      min-height: 30px;
+      padding: 5px 2px;
+      gap: 2px;
+      font-size: 0.64rem;
+      line-height: 1.1;
+      white-space: nowrap;
     }
 
     /* Modal Moje Plany */
@@ -1322,6 +1346,15 @@
       border-radius: 6px;
     }
 
+    /* Compact only the three plan-management actions so their full labels fit on phones. */
+    .plan-mgmt-action.btn-mini {
+      padding: 5px 2px;
+      gap: 2px;
+      font-size: 0.62rem;
+      line-height: 1.1;
+      letter-spacing: -0.15px;
+    }
+
     /* ==========================================================================
        9. ZAKŁADKA HISTORIA — NOWY SYSTEM SEGREGACJI I FILTRÓW
        ========================================================================== */
@@ -1348,11 +1381,11 @@
       align-items: center;
     }
 
-    /* Rząd treningu A/B/C — wrap żeby zawsze były wszystkie na ekranie */
+    /* Four equal cells keep all training filters on one row on narrow phones. */
     .hist-pills-row {
-      display: flex;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 5px;
-      flex-wrap: wrap;
       padding-bottom: 2px;
     }
 
@@ -1369,17 +1402,19 @@
     }
 
     .hist-pill {
-      padding: 5px 10px;
+      min-width: 0;
+      padding: 5px 2px;
       background: rgba(2, 44, 67, 0.7);
       border: 1px solid var(--border-color);
       border-radius: 8px;
       color: var(--text-muted);
-      font-size: 0.78rem;
+      font-size: 0.72rem;
       font-weight: 700;
       cursor: pointer;
       white-space: nowrap;
       transition: all 0.15s;
-      flex-shrink: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     /* Select rozwijany na tygodnie */
@@ -1685,4 +1720,3 @@
       align-items: center;
       justify-content: space-between;
     }
-  

@@ -90,6 +90,9 @@ export default function App() {
 
   const timerRef = useRef(timer);
   timerRef.current = timer;
+  // Browsers can fire visibilitychange, focus and pageshow together when waking.
+  // One deadline must finish and notify only once.
+  const finishedTimerTargetRef = useRef(null);
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
 
@@ -145,6 +148,8 @@ export default function App() {
       setTimer(prev => (prev.isRunning && prev.targetEndTime ? { ...prev, remaining: Math.ceil((prev.targetEndTime - Date.now()) / 1000) } : prev));
       return;
     }
+    if (finishedTimerTargetRef.current === current.targetEndTime) return;
+    finishedTimerTargetRef.current = current.targetEndTime;
     setTimer(prev => ({ ...prev, remaining: 0, isRunning: false, targetEndTime: null }));
     audio.soundTimerFinished(settingsRef.current);
     setTimeout(() => audio.speakVoiceNotification(settingsRef.current, 'Koniec przerwy! Czas na serię.'), 450);
@@ -177,10 +182,12 @@ export default function App() {
   }
 
   function resetTimer(rest) {
+    finishedTimerTargetRef.current = null;
     setTimer({ isRunning: false, remaining: rest, total: rest, targetEndTime: null });
   }
 
   function startTimer(rest) {
+    finishedTimerTargetRef.current = null;
     setTimer(prev => {
       let remaining = prev.remaining;
       let total = prev.total;
@@ -195,6 +202,7 @@ export default function App() {
   }
 
   function pauseTimer() {
+    finishedTimerTargetRef.current = null;
     setTimer(prev =>
       prev.targetEndTime
         ? { ...prev, isRunning: false, remaining: Math.max(0, Math.ceil((prev.targetEndTime - Date.now()) / 1000)), targetEndTime: null }
