@@ -257,14 +257,12 @@ export function SavedPlansModal({ plans, activeId, onLoad, onRename, onDuplicate
               return (
                 <div key={plan.id} className={`saved-plan-card${isActive ? ' active-plan' : ''}`}>
                   <div className="saved-plan-top">
-                    <div>
-                      <div className="saved-plan-name">{plan.name}</div>
-                      <div className="saved-plan-meta">
-                        Trening A: {counts[0]} ćw. | B: {counts[1]} ćw. | C: {counts[2]} ćw.
-                        {date ? ` • ${date}` : ''}
-                      </div>
-                    </div>
-                    {isActive && <span className="badge badge-gold" style={{ fontSize: '0.7rem', fontWeight: 800 }}>✓ AKTYWNY</span>}
+                    <div className="saved-plan-name">{plan.name}</div>
+                    {isActive && <span className="badge badge-gold saved-plan-active-badge">✓ AKTYWNY</span>}
+                  </div>
+                  <div className="saved-plan-meta">
+                    Trening A: {counts[0]} ćw. | B: {counts[1]} ćw. | C: {counts[2]} ćw.
+                    {date ? ` • ${date}` : ''}
                   </div>
                   <div className="saved-plan-btns">
                     {isActive ? (
@@ -272,10 +270,12 @@ export function SavedPlansModal({ plans, activeId, onLoad, onRename, onDuplicate
                     ) : (
                       <button type="button" className="btn btn-gold btn-mini" onClick={() => onLoad(plan.id)}>⚡ Wczytaj ten plan</button>
                     )}
-                    <button type="button" className="btn btn-outline btn-mini" onClick={() => onRename(plan.id)}>✏️ Zmień nazwę</button>
-                    <button type="button" className="btn btn-outline btn-mini" onClick={() => onDuplicate(plan.id)}>📋 Kopiuj</button>
+                    <div className="saved-plan-secondary-actions">
+                      <button type="button" className="btn btn-outline btn-mini" onClick={() => onRename(plan.id)}>✏️ Zmień nazwę</button>
+                      <button type="button" className="btn btn-outline btn-mini" onClick={() => onDuplicate(plan.id)}>📋 Kopiuj</button>
+                    </div>
                     {!isActive && (
-                      <button type="button" className="btn btn-danger btn-mini" style={{ marginLeft: 'auto' }} onClick={() => onDelete(plan.id)}>🗑️ Usuń</button>
+                      <button type="button" className="btn btn-danger btn-mini saved-plan-delete" onClick={() => onDelete(plan.id)}>🗑️ Usuń</button>
                     )}
                   </div>
                 </div>

@@ -219,6 +219,19 @@ test('plan and history controls stay in one row on a narrow phone', async ({ pag
   expect(new Set(planActionRows).size).toBe(1);
   expect(await page.locator('.plan-mgmt-title').evaluate(element => element.scrollHeight <= element.clientHeight)).toBe(true);
 
+  await page.locator('.plan-mgmt-header .btn').click();
+  const activePlan = page.locator('.saved-plan-card.active-plan');
+  const activePlanTopRows = await activePlan.locator('.saved-plan-name, .saved-plan-active-badge').evaluateAll(elements => elements.map(element => {
+    const { top, bottom } = element.getBoundingClientRect();
+    return { top, bottom };
+  }));
+  expect(activePlanTopRows[0].top < activePlanTopRows[1].bottom && activePlanTopRows[1].top < activePlanTopRows[0].bottom).toBe(true);
+  expect(await activePlan.locator('.saved-plan-meta').evaluate(element => element.scrollHeight <= element.clientHeight)).toBe(true);
+  const secondaryActionRows = await activePlan.locator('.saved-plan-secondary-actions .btn').evaluateAll(buttons => buttons.map(button => button.getBoundingClientRect().top));
+  expect(new Set(secondaryActionRows).size).toBe(1);
+  expect(secondaryActionRows[0]).toBeGreaterThan(await activePlan.locator('.saved-plan-btns > span').evaluate(element => element.getBoundingClientRect().top));
+  await page.getByRole('button', { name: '✕' }).click();
+
   await page.locator('#nav-history').click();
   const historyFilterRows = await page.locator('.hist-pills-row .hist-pill').evaluateAll(buttons => buttons.map(button => button.getBoundingClientRect().top));
   expect(new Set(historyFilterRows).size).toBe(1);

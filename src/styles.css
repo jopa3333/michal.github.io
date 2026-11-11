@@ -1245,29 +1245,56 @@
     .saved-plan-top {
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
+      align-items: center;
       gap: 8px;
+      min-width: 0;
     }
 
     .saved-plan-name {
+      min-width: 0;
       font-size: 0.95rem;
       font-weight: 800;
       color: #fff;
+      white-space: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .saved-plan-name::-webkit-scrollbar { display: none; }
+
+    .saved-plan-active-badge {
+      flex: 0 0 auto;
+      white-space: nowrap;
     }
 
     .saved-plan-meta {
       font-size: 0.72rem;
       color: var(--text-muted);
       line-height: 1.3;
+      white-space: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
     }
+
+    .saved-plan-meta::-webkit-scrollbar { display: none; }
 
     .saved-plan-btns {
       display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-      align-items: center;
+      flex-direction: column;
+      gap: 8px;
+      align-items: flex-start;
       margin-top: 2px;
     }
+
+    .saved-plan-secondary-actions {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .saved-plan-secondary-actions .btn { white-space: nowrap; }
+
+    .saved-plan-delete { align-self: flex-end; }
 
     .plan-tabs {
       display: flex;
