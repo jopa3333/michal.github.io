@@ -1,7 +1,9 @@
-import { formatWeightDisplay, progressionRuleText, repsDisplay } from '../logic.js';
+import { formatWeightDisplay, progressionRuleText, repsDisplay, workoutIds } from '../logic.js';
 
 export function PlanTab({ plan, planTab, onPlanTab, settings, savedCount, onOpenSaved, onSaveAs, onCreate, onAdd, onEdit, onMove, onDelete, onResetDefault }) {
-  const exercises = plan[planTab].exercises;
+  const ids = workoutIds(plan);
+  const activeId = ids.includes(planTab) ? planTab : ids[0];
+  const exercises = plan[activeId].exercises;
   return (
     <section className="tab-view active" id="view-plan">
       <div className="plan-management-card">
@@ -21,10 +23,10 @@ export function PlanTab({ plan, planTab, onPlanTab, settings, savedCount, onOpen
         </div>
       </div>
 
-      <div className="plan-tabs">
-        {['A', 'B', 'C'].map(id => (
-          <button type="button" key={id} className={`plan-tab-btn${planTab === id ? ' active' : ''}`} onClick={() => onPlanTab(id)}>
-            TRENING {id}
+      <div className={`plan-tabs${ids.length > 3 ? ' plan-tabs-many' : ''}`}>
+        {ids.map(id => (
+          <button type="button" key={id} className={`plan-tab-btn${activeId === id ? ' active' : ''}`} onClick={() => onPlanTab(id)}>
+            {plan[id].name}
           </button>
         ))}
       </div>

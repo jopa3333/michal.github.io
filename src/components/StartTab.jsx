@@ -1,8 +1,9 @@
-import { repsDisplay } from '../logic.js';
+import { repsDisplay, workoutIds } from '../logic.js';
 
 export function StartTab({ plan, settings, session, onStart, onContinue, onSelect, onWeek }) {
-  const workoutId = settings.selectedStartWorkoutId || 'A';
-  const workout = plan[workoutId] || plan.A;
+  const ids = workoutIds(plan);
+  const workoutId = ids.includes(settings.selectedStartWorkoutId) ? settings.selectedStartWorkoutId : ids[0];
+  const workout = plan[workoutId];
 
   return (
     <section className="tab-view active" id="view-start">
@@ -45,8 +46,8 @@ export function StartTab({ plan, settings, session, onStart, onContinue, onSelec
         </div>
 
         <div className="manual-picker-label">Chcesz wybrać inny trening na dziś?</div>
-        <div className="workout-selector-pills">
-          {['A', 'B', 'C'].map(id => (
+        <div className={`workout-selector-pills${ids.length > 4 ? ' many' : ''}`}>
+          {ids.map(id => (
             <button type="button" key={id} className={`pill-btn${workoutId === id ? ' active' : ''}`} onClick={() => onSelect(id)}>
               TRENING {id}
             </button>

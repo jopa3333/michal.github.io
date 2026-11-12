@@ -437,6 +437,105 @@ test('finishing three workouts in one week moves the app to the next week', asyn
   await expect(page.locator('.start-title')).toHaveText('TRENING A');
 });
 
+test('supports creating a five-day plan and applying a five-day gym template', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await page.locator('#nav-plan').click();
+  await page.locator('.plan-mgmt-header .btn').click();
+  await page.locator('.modal-box').getByRole('button', { name: '➕ Nowy plan' }).click();
+  await page.locator('#savePlanAsInput').fill('Plan 5 dni');
+  await page.locator('.modal-select').selectOption('5');
+  await page.getByRole('button', { name: 'Utwórz' }).click();
+
+  await expect(page.locator('.plan-tab-btn')).toHaveCount(5);
+  await page.locator('#nav-start').click();
+  await expect(page.locator('.pill-btn')).toHaveCount(5);
+
+  await page.locator('#nav-plan').click();
+  await page.locator('.plan-mgmt-header .btn').click();
+  await page.getByRole('button', { name: '📚 Gotowe plany' }).click();
+  await expect(page.locator('.template-card')).toHaveCount(6);
+  const template = page.locator('.template-card', { hasText: 'PPL + Góra / Dół — 5 dni' });
+  await template.getByRole('button', { name: 'Użyj tego planu' }).click();
+
+  await expect(page.locator('.plan-tab-btn')).toHaveCount(5);
+  await expect(page.locator('.plan-tab-btn').first()).toHaveText('PUSH');
+  await page.locator('#nav-history').click();
+  await expect(page.locator('.hist-pills-row .hist-pill')).toHaveCount(6);
+});
+
+test('long split workout names fit inside their tabs on a narrow phone', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.goto('/');
+  await page.locator('#nav-plan').click();
+  await page.locator('.plan-mgmt-header .btn').click();
+  await page.getByRole('button', { name: '📚 Gotowe plany' }).click();
+  await page.locator('.template-card', { hasText: 'Split partii mięśniowych — 5 dni' }).getByRole('button', { name: 'Użyj tego planu' }).click();
+  const tabs = page.locator('.plan-tab-btn');
+  await expect(tabs).toHaveCount(5);
+  for (let i = 0; i < 5; i++) {
+    const tab = tabs.nth(i);
+    const geometry = await tab.evaluate(element => {
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      const text = range.getBoundingClientRect();
+      const button = element.getBoundingClientRect();
+      const viewport = element.parentElement.getBoundingClientRect();
+      return { textFits: text.left >= button.left && text.right <= button.right, visible: button.left >= viewport.left - 1 && button.right <= viewport.right + 1 };
+    });
+    expect(geometry).toEqual({ textFits: true, visible: true });
+  }
+  await expect(tabs.last()).toHaveText('GÓRA UZUPEŁNIAJĄCA');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
+test('four and five day plans finish only after all days in any order', async ({ page }) => {
+  await page.goto('/');
+  for (const [title, order] of [
+    ['Góra / Dół — 4 dni', ['D', 'B', 'A', 'C']],
+    ['PPL + Góra / Dół — 5 dni', ['E', 'C', 'A', 'D', 'B']],
+  ]) {
+    await page.locator('#nav-plan').click();
+    await page.locator('.plan-mgmt-header .btn').click();
+    await page.getByRole('button', { name: '📚 Gotowe plany' }).click();
+    await page.locator('.template-card', { hasText: title }).getByRole('button', { name: 'Użyj tego planu' }).click();
+    const initialWeek = await page.locator('.logo-badge').textContent();
+    for (let i = 0; i < order.length; i++) {
+      await page.locator('#nav-start').click();
+      await page.locator('.pill-btn', { hasText: `TRENING ${order[i]}` }).click();
+      await page.locator('.start-hero .btn-gold').click();
+      await page.locator('.rep-btn').first().click();
+      await page.locator('.btn-finish-link').click();
+      await expect(page.locator('.modal-title', { hasText: 'Trening Ukończony!' })).toBeVisible();
+      if (i < order.length - 1) await expect(page.locator('.logo-badge')).toHaveText(initialWeek);
+      else await expect(page.locator('#summarySubtitle')).toContainText('Aplikacja automatycznie przeszła');
+      await page.getByRole('button', { name: 'Super, przejdź do historii' }).click();
+    }
+  }
+});
+
+test('importing a three-day backup after selecting day E keeps the editor usable', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.goto('/');
+  await page.locator('#nav-settings').click();
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: /Pobierz kopię/ }).click()]);
+  const backup = await download.path();
+  await page.locator('#nav-plan').click();
+  await page.locator('.plan-mgmt-header .btn').click();
+  await page.getByRole('button', { name: '📚 Gotowe plany' }).click();
+  await page.locator('.template-card', { hasText: 'PPL + Góra / Dół — 5 dni' }).getByRole('button', { name: 'Użyj tego planu' }).click();
+  await page.locator('.plan-tab-btn').last().click();
+  await page.locator('#nav-settings').click();
+  await page.locator('#importJsonFileInput').setInputFiles(backup);
+  await expect(page.locator('#notification')).toContainText('Pomyślnie wczytano');
+  await page.locator('#nav-plan').click();
+  await expect(page.locator('.plan-tab-btn')).toHaveCount(3);
+  await page.locator('.plan-mgmt-actions').getByRole('button', { name: /Dodaj ćwiczenie/ }).click();
+  await expect(page.locator('.modal-title', { hasText: 'Dodaj' })).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test('a backup can be exported and restored, and a broken file is rejected', async ({ page }) => {
   await seed(page, { [KEYS.history]: legacyHistory });
   await page.locator('#nav-settings').click();

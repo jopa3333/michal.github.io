@@ -504,6 +504,16 @@
       justify-content: center;
     }
 
+    .workout-selector-pills.many {
+      justify-content: flex-start;
+      overflow-x: auto;
+      padding-bottom: 2px;
+      scrollbar-width: none;
+    }
+
+    .workout-selector-pills.many::-webkit-scrollbar { display: none; }
+    .workout-selector-pills.many .pill-btn { flex: 0 0 96px; }
+
     .pill-btn {
       flex: 1;
       padding: 12px;
@@ -1319,14 +1329,51 @@
 
     .saved-plan-delete { align-self: auto; }
 
+    .template-library-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 58vh;
+      overflow-y: auto;
+      padding-right: 3px;
+    }
+
+    .template-card {
+      background: rgba(2, 44, 67, 0.8);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 12px;
+    }
+
+    .template-card-title { color: #fff; font-size: 0.95rem; font-weight: 800; }
+    .template-card-meta { color: var(--accent-gold); font-size: 0.72rem; font-weight: 700; margin-top: 3px; }
+    .template-card p { color: var(--text-muted); font-size: 0.78rem; line-height: 1.35; margin: 6px 0 10px; }
+
     .plan-tabs {
       display: flex;
       gap: 8px;
       margin-bottom: 16px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+      scrollbar-width: none;
+    }
+
+    .plan-tabs::-webkit-scrollbar { display: none; }
+
+    .plan-tabs-many {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      overflow: visible;
+    }
+
+    .plan-tabs-many .plan-tab-btn {
+      min-width: 0;
+      white-space: normal;
+      overflow-wrap: anywhere;
     }
 
     .plan-tab-btn {
-      flex: 1;
+      flex: 1 0 112px;
       padding: 12px;
       background: var(--bg-card);
       border: 1px solid var(--border-color);
@@ -1335,6 +1382,7 @@
       font-weight: 700;
       cursor: pointer;
       font-size: 0.95rem;
+      white-space: nowrap;
     }
 
     .plan-tab-btn.active {
@@ -1441,11 +1489,14 @@
 
     /* Rząd tygodni — scrollowalny poziomo (może być ich dużo) */
     .hist-pills-row.scrollable {
+      display: flex;
       flex-wrap: nowrap;
       overflow-x: auto;
       scrollbar-width: none;
       padding-bottom: 4px;
     }
+
+    .hist-pills-row.scrollable .hist-pill { flex: 0 0 auto; min-width: 84px; }
 
     .hist-pills-row.scrollable::-webkit-scrollbar {
       display: none;

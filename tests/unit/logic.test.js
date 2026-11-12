@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_PLAN, EXERCISE_CATEGORIES, EXERCISE_DATABASE } from '../../src/data.js';
+import { DEFAULT_PLAN, EXERCISE_CATEGORIES, EXERCISE_DATABASE, PLAN_TEMPLATES } from '../../src/data.js';
 import { KEYS } from '../../src/storage.js';
 import * as logic from '../../src/logic.js';
 
@@ -195,9 +195,9 @@ describe('week progression', () => {
     expect(result.settings).toBe(settings);
   });
 
-  it('also advances after three sessions even if the ids repeat', () => {
+  it('does not advance after repeated sessions when another planned day is missing', () => {
     const history = [session(1, 'A', 'd1', []), session(1, 'A', 'd2', []), session(1, 'A', 'd3', [])];
-    expect(logic.applyWeekProgress(history, { currentWeek: 1 }).settings.currentWeek).toBe(2);
+    expect(logic.applyWeekProgress(history, { currentWeek: 1 }).settings.currentWeek).toBe(1);
   });
 
   it('suggests the next missing workout after finishing one', () => {
@@ -216,6 +216,35 @@ describe('week progression', () => {
   it('reports remaining workouts for a week', () => {
     expect(logic.remainingWorkoutsThisWeek([session(2, 'B', 'd', [])], 2)).toEqual(['A', 'C']);
     expect(logic.remainingWorkoutsThisWeek([], undefined)).toEqual(['A', 'B', 'C']);
+  });
+
+  it('keeps progress for each plan separate while retaining legacy records for their original plan', () => {
+    const plan = logic.emptyPlan(4);
+    const history = [
+      ...['A', 'B', 'C'].map(id => ({ ...session(1, id, 'old', []), planId: 'old-plan' })),
+      { ...session(1, 'D', 'new', []), planId: 'new-plan' },
+      session(1, 'B', 'legacy', []),
+    ];
+    const settings = { currentWeek: 1, activePlanId: 'new-plan', legacyProgressPlanId: 'old-plan' };
+    expect(logic.applyWeekProgress(history, settings, plan).advanced).toBe(false);
+    expect(logic.remainingWorkoutsThisWeek(history, 1, plan, settings)).toEqual(['A', 'B', 'C']);
+    expect(logic.remainingWorkoutsThisWeek(history, 1, plan, { ...settings, activePlanId: 'old-plan' })).toEqual(['D']);
+  });
+
+  it('recognizes a legacy history record with only a workout name', () => {
+    expect(logic.matchesWorkout({ workoutName: 'TRENING A' }, 'A')).toBe(true);
+    expect(logic.matchesWorkout({ workoutName: 'TRENING AB' }, 'A')).toBe(false);
+  });
+
+  it('handles every unique day of a four- and five-day plan in any order', () => {
+    const fourDays = logic.emptyPlan(4);
+    const fiveDays = logic.emptyPlan(5);
+    const fourHistory = ['D', 'B', 'A', 'C'].map((id, index) => session(1, id, `d${index}`, []));
+    const fiveHistory = ['E', 'C', 'A', 'D', 'B'].map((id, index) => session(1, id, `d${index}`, []));
+    expect(logic.workoutIds(fourDays)).toEqual(['A', 'B', 'C', 'D']);
+    expect(logic.remainingWorkoutsThisWeek(fourHistory.slice(0, 3), 1, fourDays)).toEqual(['C']);
+    expect(logic.applyWeekProgress(fourHistory, { currentWeek: 1 }, fourDays).settings.currentWeek).toBe(2);
+    expect(logic.applyWeekProgress(fiveHistory, { currentWeek: 1 }, fiveDays).settings.currentWeek).toBe(2);
   });
 });
 
@@ -297,6 +326,22 @@ describe('plan helpers', () => {
   it('builds an empty three-workout plan and counts exercises', () => {
     expect(logic.planCounts(logic.emptyPlan())).toEqual([0, 0, 0]);
     expect(logic.planCounts(DEFAULT_PLAN)).toEqual([7, 7, 7]);
+  });
+
+  it('creates empty plans with four or five editable workout days', () => {
+    expect(logic.workoutIds(logic.emptyPlan(4))).toEqual(['A', 'B', 'C', 'D']);
+    expect(logic.planCounts(logic.emptyPlan(5))).toEqual([0, 0, 0, 0, 0]);
+  });
+
+  it('ships six editable gym templates with complete exercise parameters', () => {
+    expect(PLAN_TEMPLATES).toHaveLength(6);
+    expect(PLAN_TEMPLATES.map(template => template.daysPerWeek)).toEqual([3, 3, 4, 4, 5, 5]);
+    for (const template of PLAN_TEMPLATES) {
+      expect(logic.workoutIds(template.workouts)).toHaveLength(template.daysPerWeek);
+      Object.values(template.workouts).flatMap(workout => workout.exercises).forEach(exercise => {
+        expect(exercise).toMatchObject({ id: expect.any(String), name: expect.any(String), sets: expect.any(Number), tempo: expect.any(String), restSeconds: expect.any(Number), progressionType: expect.any(String) });
+      });
+    }
   });
 
   it('validates the exercise form like the legacy modal', () => {

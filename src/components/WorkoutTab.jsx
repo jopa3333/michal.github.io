@@ -1,4 +1,4 @@
-import { formatTime, formatWeightDisplay, repButtonValues, repsDisplay } from '../logic.js';
+import { formatTime, formatWeightDisplay, repButtonValues, repsDisplay, workoutIds } from '../logic.js';
 
 const fmt = formatWeightDisplay;
 
@@ -42,7 +42,7 @@ function WorkoutPicker({ plan, settings, onStart, onWeek }) {
         </div>
 
         <div className="workout-picker-grid">
-          {['A', 'B', 'C'].map(id => {
+          {workoutIds(plan).map(id => {
             const workout = plan[id];
             if (!workout) return null;
             const names = workout.exercises.map(e => e.name).slice(0, 4).join(', ') + (workout.exercises.length > 4 ? '...' : '');

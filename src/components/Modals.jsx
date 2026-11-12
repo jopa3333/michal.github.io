@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { EXERCISE_CATEGORIES, EXERCISE_DATABASE } from '../data.js';
-import { formatWeightDisplay, planCounts, remainingWorkoutsThisWeek } from '../logic.js';
+import { EXERCISE_CATEGORIES, EXERCISE_DATABASE, PLAN_TEMPLATES } from '../data.js';
+import { formatWeightDisplay, planCounts, remainingWorkoutsThisWeek, workoutIds } from '../logic.js';
 
 const fmt = formatWeightDisplay;
 
@@ -178,8 +178,8 @@ export function CustomRepsModal({ onSave, onClose }) {
   );
 }
 
-export function SummaryModal({ data, history, onClose }) {
-  const remaining = remainingWorkoutsThisWeek(history, data.week);
+export function SummaryModal({ data, history, plan, settings, onClose }) {
+  const remaining = remainingWorkoutsThisWeek(history, data.week, plan, settings);
   const advanced = Boolean(data.weekProg && data.weekProg.advanced);
   return (
     <div className="modal-overlay" style={overlayStyle}>
@@ -189,7 +189,7 @@ export function SummaryModal({ data, history, onClose }) {
         <p id="summarySubtitle" style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: 16 }}>
           {advanced ? (
             <>
-              🎉 <strong>Świetna robota!</strong> Ukończyłeś wszystkie 3 treningi w Tygodniu {data.weekProg.previousWeek}.
+              🎉 <strong>Świetna robota!</strong> Ukończyłeś wszystkie {Object.keys(plan).length} treningi w Tygodniu {data.weekProg.previousWeek}.
               <br />
               <span style={{ color: 'var(--accent-gold)', fontWeight: 800 }}>
                 Aplikacja automatycznie przeszła do Tygodnia {data.weekProg.newWeek}! 🚀
@@ -234,7 +234,7 @@ export function SummaryModal({ data, history, onClose }) {
   );
 }
 
-export function SavedPlansModal({ plans, activeId, onLoad, onRename, onDuplicate, onDelete, onCreate, onClose }) {
+export function SavedPlansModal({ plans, activeId, onLoad, onRename, onDuplicate, onDelete, onCreate, onOpenTemplates, onClose }) {
   return (
     <div className="modal-overlay" style={overlayStyle}>
       <div className="modal-box" style={{ maxWidth: 440 }}>
@@ -252,7 +252,8 @@ export function SavedPlansModal({ plans, activeId, onLoad, onRename, onDuplicate
           ) : (
             plans.map(plan => {
               const isActive = plan.id === activeId;
-              const counts = planCounts(plan.workouts);
+              const counts = planCounts(plan.workouts, plan.workoutOrder);
+              const ids = workoutIds(plan.workouts, plan.workoutOrder);
               const date = plan.updatedAt ? new Date(plan.updatedAt).toLocaleDateString('pl-PL') : '';
               return (
                 <div key={plan.id} className={`saved-plan-card${isActive ? ' active-plan' : ''}`}>
@@ -261,7 +262,7 @@ export function SavedPlansModal({ plans, activeId, onLoad, onRename, onDuplicate
                     {isActive && <span className="badge badge-gold saved-plan-active-badge">✓ AKTYWNY</span>}
                   </div>
                   <div className="saved-plan-meta">
-                    Trening A: {counts[0]} ćw. | B: {counts[1]} ćw. | C: {counts[2]} ćw.
+                    {ids.map((id, index) => `${plan.workouts[id].name}: ${counts[index]} ćw.`).join(' | ')}
                     {date ? ` • ${date}` : ''}
                   </div>
                   <div className="saved-plan-btns">
@@ -285,7 +286,8 @@ export function SavedPlansModal({ plans, activeId, onLoad, onRename, onDuplicate
         </div>
 
         <div style={{ display: 'flex', gap: 8, marginTop: 12, borderTop: '1px solid rgba(20, 107, 151, 0.25)', paddingTop: 12 }}>
-          <button type="button" className="btn btn-gold btn-mini" style={{ flex: 1 }} onClick={onCreate}>➕ Stwórz nowy plan</button>
+          <button type="button" className="btn btn-gold btn-mini" style={{ flex: 1 }} onClick={onCreate}>➕ Nowy plan</button>
+          <button type="button" className="btn btn-outline btn-mini" style={{ flex: 1 }} onClick={onOpenTemplates}>📚 Gotowe plany</button>
           <button type="button" className="btn btn-outline btn-mini" onClick={onClose}>Zamknij</button>
         </div>
       </div>
@@ -295,6 +297,7 @@ export function SavedPlansModal({ plans, activeId, onLoad, onRename, onDuplicate
 
 export function SavePlanAsModal({ mode, defaultName, onConfirm, onClose }) {
   const [name, setName] = useState(defaultName);
+  const [days, setDays] = useState('3');
   const title = mode === 'create_new' ? 'Stwórz nowy plan treningowy' : 'Zapisz obecny plan jako...';
   return (
     <div className="modal-overlay" style={overlayStyle}>
@@ -313,9 +316,43 @@ export function SavePlanAsModal({ mode, defaultName, onConfirm, onClose }) {
             onChange={event => setName(event.target.value)}
           />
         </div>
+        {mode === 'create_new' && (
+          <div className="form-group">
+            <label className="form-label">Liczba treningów w tygodniu</label>
+            <select className="modal-select" value={days} onChange={event => setDays(event.target.value)}>
+              <option value="3">3 treningi</option>
+              <option value="4">4 treningi</option>
+              <option value="5">5 treningów</option>
+            </select>
+          </div>
+        )}
         <div className="modal-buttons">
           <button type="button" className="btn btn-outline" onClick={onClose}>Anuluj</button>
-          <button type="button" className="btn btn-gold" id="btnConfirmSavePlanAs" onClick={() => onConfirm(name)}>Zapisz</button>
+          <button type="button" className="btn btn-gold" id="btnConfirmSavePlanAs" onClick={() => onConfirm(name, Number(days))}>{mode === 'create_new' ? 'Utwórz' : 'Zapisz'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function TemplateLibraryModal({ onUse, onClose }) {
+  return (
+    <div className="modal-overlay" style={overlayStyle}>
+      <div className="modal-box template-library-modal" style={{ maxWidth: 460 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+          <div className="modal-title" style={{ marginBottom: 0 }}>📚 Gotowe plany siłowniane</div>
+          <button type="button" className="btn btn-outline btn-mini" onClick={onClose}>✕</button>
+        </div>
+        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 12 }}>Wybrany plan zostanie zapisany jako Twój własny, trwały plan do dowolnej edycji.</p>
+        <div className="template-library-list">
+          {PLAN_TEMPLATES.map(template => (
+            <article className="template-card" key={template.id}>
+              <div className="template-card-title">{template.title}</div>
+              <div className="template-card-meta">{template.daysPerWeek} dni • {template.level} • {template.goal}</div>
+              <p>{template.description}</p>
+              <button type="button" className="btn btn-gold btn-mini" onClick={() => onUse(template.id)}>Użyj tego planu</button>
+            </article>
+          ))}
         </div>
       </div>
     </div>

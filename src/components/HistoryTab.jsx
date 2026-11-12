@@ -1,14 +1,9 @@
-import { exerciseEntries, exerciseNames, filterHistory, formatWeightDisplay, weekOptions } from '../logic.js';
+import { exerciseEntries, exerciseNames, filterHistory, formatWeightDisplay, weekOptions, workoutIds } from '../logic.js';
 
 const fmt = formatWeightDisplay;
-const WORKOUT_PILLS = [
-  ['all', 'Wszystkie'],
-  ['A', 'Trening A'],
-  ['B', 'Trening B'],
-  ['C', 'Trening C'],
-];
-
 export function HistoryTab({ history, plan, workout, week, exerciseMode, exerciseName, onWorkout, onWeek, onWeekSelect, onToggleExerciseMode, onReset, onExerciseName, onDelete }) {
+  const ids = [...new Set([...workoutIds(plan), ...history.map(item => item.workoutId).filter(id => /^[A-E]$/.test(id))])].sort();
+  const workoutPills = [['all', 'Wszystkie'], ...ids.map(id => [id, `Trening ${id}`])];
   const weeks = weekOptions(history, workout);
   const filtered = filterHistory(history, workout, week);
   const names = exerciseNames(history, plan);
@@ -32,8 +27,8 @@ export function HistoryTab({ history, plan, workout, week, exerciseMode, exercis
         <div className="history-filters-box">
           <div>
             <div className="hist-filter-label"><span>Wybierz trening:</span></div>
-            <div className="hist-pills-row">
-              {WORKOUT_PILLS.map(([id, label]) => (
+            <div className={`hist-pills-row${workoutPills.length > 4 ? ' scrollable' : ''}`}>
+              {workoutPills.map(([id, label]) => (
                 <button type="button" key={id} className={`hist-pill${workout === id ? ' active' : ''}`} onClick={() => onWorkout(id)}>
                   {label}
                 </button>

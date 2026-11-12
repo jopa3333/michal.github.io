@@ -6,6 +6,15 @@ export const DEFAULT_PLAN_NAME = 'Mój Plan Główny (A/B/C)';
 
 export const clone = value => JSON.parse(JSON.stringify(value));
 
+// Older backups only contain the A/B/C object. New plans use the same object
+// shape, but may have from three to five workout ids.
+export function workoutIds(plan, preferredOrder) {
+  const available = Object.keys(plan || {}).filter(id => plan[id] && Array.isArray(plan[id].exercises));
+  if (!Array.isArray(preferredOrder)) return available;
+  const ordered = preferredOrder.filter(id => available.includes(id));
+  return [...ordered, ...available.filter(id => !ordered.includes(id))];
+}
+
 export function formatWeightDisplay(num) {
   if (num === null || num === undefined || isNaN(num)) return '0';
   return String(num).replace('.', ',');
@@ -148,47 +157,52 @@ export function createSessionExercises(workout, history) {
   });
 }
 
-export function remainingWorkoutsThisWeek(history, week) {
+function belongsToActivePlan(session, settings) {
+  if (!settings?.activePlanId) return true;
+  return session.planId ? session.planId === settings.activePlanId : settings.activePlanId === settings.legacyProgressPlanId;
+}
+
+export function remainingWorkoutsThisWeek(history, week, plan, settings) {
   const w = Number(week || 1);
-  const done = new Set((history || []).filter(s => Number(s.week) === w).map(s => (s.workoutId || '').toUpperCase()));
-  return WORKOUT_IDS.filter(id => !done.has(id));
+  const done = new Set((history || []).filter(s => Number(s.week) === w && belongsToActivePlan(s, settings)).map(s => (s.workoutId || '').toUpperCase()));
+  const ids = workoutIds(plan).length > 0 ? workoutIds(plan) : WORKOUT_IDS;
+  return ids.filter(id => !done.has(id.toUpperCase()));
 }
 
 // Advances the week when every workout of the current week is done.
-export function applyWeekProgress(history, settings) {
+export function applyWeekProgress(history, settings, plan) {
   const startWeek = Number(settings.currentWeek) || 1;
+  const ids = workoutIds(plan).length > 0 ? workoutIds(plan) : WORKOUT_IDS;
   let cur = startWeek;
   let changed = false;
   for (;;) {
-    const sessions = history.filter(s => Number(s.week) === cur);
+    const sessions = history.filter(s => Number(s.week) === cur && belongsToActivePlan(s, settings));
     const done = new Set(sessions.map(s => (s.workoutId || '').toUpperCase()));
-    const allThreeDone = (done.has('A') && done.has('B') && done.has('C')) || sessions.length >= 3;
-    if (!allThreeDone) break;
+    if (!ids.every(id => done.has(id.toUpperCase()))) break;
     cur += 1;
     changed = true;
   }
   if (!changed) return { advanced: false, settings, weekProg: { advanced: false, currentWeek: startWeek } };
-  const remaining = remainingWorkoutsThisWeek(history, cur);
+  const remaining = remainingWorkoutsThisWeek(history, cur, plan, settings);
   return {
     advanced: true,
-    settings: { ...settings, currentWeek: cur, selectedStartWorkoutId: remaining.length > 0 ? remaining[0] : 'A' },
+    settings: { ...settings, currentWeek: cur, selectedStartWorkoutId: remaining.length > 0 ? remaining[0] : ids[0] },
     weekProg: { advanced: true, newWeek: cur, previousWeek: startWeek },
   };
 }
 
-export function nextWorkoutAfter(workoutId) {
-  if (workoutId === 'A') return 'B';
-  if (workoutId === 'B') return 'C';
-  if (workoutId === 'C') return 'A';
-  return 'A';
+export function nextWorkoutAfter(workoutId, plan) {
+  const ids = workoutIds(plan).length > 0 ? workoutIds(plan) : WORKOUT_IDS;
+  const index = ids.indexOf(workoutId);
+  return ids[(index + 1 + ids.length) % ids.length];
 }
 
 // `history` must already contain the finished session.
-export function settingsAfterFinish(history, settings, workoutId) {
-  const progress = applyWeekProgress(history, settings);
+export function settingsAfterFinish(history, settings, workoutId, plan) {
+  const progress = applyWeekProgress(history, settings, plan);
   if (progress.advanced) return { settings: progress.settings, weekProg: progress.weekProg };
-  const remaining = remainingWorkoutsThisWeek(history, settings.currentWeek);
-  const selected = remaining.length > 0 ? remaining[0] : nextWorkoutAfter(workoutId);
+  const remaining = remainingWorkoutsThisWeek(history, settings.currentWeek, plan, settings);
+  const selected = remaining.length > 0 ? remaining[0] : nextWorkoutAfter(workoutId, plan);
   return { settings: { ...settings, selectedStartWorkoutId: selected }, weekProg: progress.weekProg };
 }
 
@@ -210,6 +224,7 @@ export function buildSessionRecord(session, date) {
     volume,
     record: {
       sessionId: session.sessionId,
+      ...(session.planId ? { planId: session.planId } : {}),
       workoutId: session.workoutId,
       workoutName: session.workoutName,
       week: session.week,
@@ -222,7 +237,10 @@ export function buildSessionRecord(session, date) {
 }
 
 export function matchesWorkout(session, workout) {
-  return workout === 'all' || Boolean(session.workoutName && session.workoutName.toUpperCase().includes(workout));
+  if (workout === 'all') return true;
+  if (session.workoutId) return String(session.workoutId).toUpperCase() === String(workout).toUpperCase();
+  const legacyId = /^TRENING\s+([A-Z])$/i.exec(String(session.workoutName || '').trim())?.[1];
+  return Boolean(legacyId && legacyId.toUpperCase() === String(workout).toUpperCase());
 }
 
 export function filterHistory(history, workout, week) {
@@ -254,16 +272,15 @@ export function exerciseEntries(sessions, exerciseName) {
   return entries;
 }
 
-export function emptyPlan() {
-  return {
-    A: { id: 'A', name: 'TRENING A', exercises: [] },
-    B: { id: 'B', name: 'TRENING B', exercises: [] },
-    C: { id: 'C', name: 'TRENING C', exercises: [] },
-  };
+export function emptyPlan(days = 3) {
+  return Object.fromEntries(Array.from({ length: Math.max(3, Math.min(5, Number(days) || 3)) }, (_, index) => {
+    const id = String.fromCharCode(65 + index);
+    return [id, { id, name: `TRENING ${id}`, exercises: [] }];
+  }));
 }
 
-export function planCounts(workouts) {
-  return WORKOUT_IDS.map(id => (workouts && workouts[id] && workouts[id].exercises ? workouts[id].exercises.length : 0));
+export function planCounts(workouts, order) {
+  return workoutIds(workouts, order).map(id => workouts[id].exercises.length);
 }
 
 export function progressionRuleText(type) {
@@ -286,6 +303,8 @@ export function upsertCurrentPlan(savedPlans, settings, plan, now) {
       createdAt: now,
       updatedAt: now,
       workouts: clone(plan),
+      workoutOrder: workoutIds(plan),
+      source: { type: 'custom' },
     },
   ];
 }

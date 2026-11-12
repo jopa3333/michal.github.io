@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import './styles.css';
-import { DEFAULT_PLAN } from './data.js';
+import { DEFAULT_PLAN, PLAN_TEMPLATES } from './data.js';
 import { KEYS, loadFromStorage, saveToStorage } from './storage.js';
 import * as audio from './audio.js';
 import * as logic from './logic.js';
@@ -16,6 +16,7 @@ import {
   SavedPlansModal,
   SavePlanAsModal,
   SummaryModal,
+  TemplateLibraryModal,
   WeightModal,
 } from './components/Modals.jsx';
 
@@ -54,12 +55,14 @@ function readInitialState() {
         createdAt: now,
         updatedAt: now,
         workouts: logic.clone(plan || DEFAULT_PLAN),
+        workoutOrder: logic.workoutIds(plan || DEFAULT_PLAN),
       },
     ];
   }
   let settings = storedSettings;
   if (!settings.activePlanId) settings = { ...settings, activePlanId: savedPlans[0].id, activePlanName: savedPlans[0].name };
-  const progress = logic.applyWeekProgress(history, settings);
+  if (!settings.legacyProgressPlanId) settings = { ...settings, legacyProgressPlanId: settings.activePlanId };
+  const progress = logic.applyWeekProgress(history, settings, plan);
   return { plan, history, settings: progress.settings, weekProg: progress.weekProg, session, savedPlans };
 }
 
@@ -82,7 +85,7 @@ export default function App() {
   const [session, setSession] = useState(boot.session);
   const [tab, setTab] = useState(boot.session ? 'workout' : 'start');
   const [exerciseIndex, setExerciseIndex] = useState(0);
-  const [planTab, setPlanTab] = useState('A');
+  const [planTab, setPlanTab] = useState(() => logic.workoutIds(boot.plan)[0] || 'A');
   const [notice, setNotice] = useState(null);
   const [timer, setTimer] = useState({ isRunning: false, remaining: 0, total: 0, targetEndTime: null });
   const [modal, setModal] = useState(null);
@@ -242,6 +245,7 @@ export default function App() {
     }
     const next = {
       sessionId: `sess_${Date.now()}`,
+      planId: settings.activePlanId,
       workoutId,
       workoutName: workout.name,
       week: settings.currentWeek || 1,
@@ -379,9 +383,10 @@ export default function App() {
 
   function finishWorkout() {
     if (!session) return;
-    const { record, totalSets, volume } = logic.buildSessionRecord(session, new Date().toISOString());
+    const sessionWithPlan = session.planId ? session : { ...session, planId: settings.legacyProgressPlanId || settings.activePlanId };
+    const { record, totalSets, volume } = logic.buildSessionRecord(sessionWithPlan, new Date().toISOString());
     const nextHistory = [record, ...history];
-    const { settings: nextSettings, weekProg } = logic.settingsAfterFinish(nextHistory, settings, session.workoutId);
+    const { settings: nextSettings, weekProg } = logic.settingsAfterFinish(nextHistory, settings, session.workoutId, plan);
     setHistory(nextHistory);
     setSettings(nextSettings);
     setSession(null);
@@ -447,6 +452,7 @@ export default function App() {
     const nextSettings = { ...settings, activePlanName: 'Domyślny Plan A/B/C' };
     setSettings(nextSettings);
     commitPlan(next, nextSettings);
+    setPlanTab('A');
     notify('Przywrócono domyślny plan treningowy', 'gold');
   }
 
@@ -455,12 +461,14 @@ export default function App() {
     if (!target) return;
     setSavedPlans(logic.upsertCurrentPlan(savedPlans, settings, plan, new Date().toISOString()));
     setPlan(logic.clone(target.workouts));
-    setSettings({ ...settings, activePlanId: target.id, activePlanName: target.name });
+    const ids = logic.workoutIds(target.workouts, target.workoutOrder);
+    setPlanTab(ids[0] || 'A');
+    setSettings({ ...settings, activePlanId: target.id, activePlanName: target.name, selectedStartWorkoutId: ids[0] || 'A' });
     setModal(null);
     notify(`✓ Wczytano plan: ${target.name}!`, 'gold');
   }
 
-  function savePlanAs(mode, rawName) {
+  function savePlanAs(mode, rawName, days = 3) {
     const name = rawName.trim();
     if (!name) {
       notify('Podaj nazwę planu', 'error');
@@ -469,18 +477,46 @@ export default function App() {
     const now = new Date().toISOString();
     const id = `plan_${Date.now()}`;
     if (mode === 'save_as') {
-      setSavedPlans([...savedPlans, { id, name, createdAt: now, updatedAt: now, workouts: logic.clone(plan) }]);
+      setSavedPlans([...savedPlans, { id, name, createdAt: now, updatedAt: now, workouts: logic.clone(plan), workoutOrder: logic.workoutIds(plan), source: { type: 'custom' } }]);
       setSettings({ ...settings, activePlanId: id, activePlanName: name });
       notify(`✓ Zapisano plan jako: "${name}"`, 'gold');
     } else {
       const upserted = logic.upsertCurrentPlan(savedPlans, settings, plan, now);
-      const empty = logic.emptyPlan();
-      setSavedPlans([...upserted, { id, name, createdAt: now, updatedAt: now, workouts: empty }]);
+      const empty = logic.emptyPlan(days);
+      const order = logic.workoutIds(empty);
+      setSavedPlans([...upserted, { id, name, createdAt: now, updatedAt: now, workouts: empty, workoutOrder: order, source: { type: 'custom' } }]);
       setPlan(empty);
-      setSettings({ ...settings, activePlanId: id, activePlanName: name });
+      setPlanTab(order[0]);
+      setSettings({ ...settings, activePlanId: id, activePlanName: name, selectedStartWorkoutId: order[0] });
       notify(`Utworzono plan: "${name}". Dodaj ćwiczenia!`, 'gold');
     }
     setModal(null);
+  }
+
+  function createPlanFromTemplate(templateId) {
+    const template = PLAN_TEMPLATES.find(item => item.id === templateId);
+    if (!template) return;
+    const now = new Date().toISOString();
+    const id = `plan_${Date.now()}`;
+    const workouts = logic.clone(template.workouts);
+    const order = logic.workoutIds(workouts);
+    const nextPlan = {
+      id,
+      name: template.title,
+      createdAt: now,
+      updatedAt: now,
+      workouts,
+      workoutOrder: order,
+      source: { type: 'template', templateId: template.id, version: template.version },
+      availability: { type: 'included' },
+    };
+    const upserted = logic.upsertCurrentPlan(savedPlans, settings, plan, now);
+    setSavedPlans([...upserted, nextPlan]);
+    setPlan(workouts);
+    setPlanTab(order[0]);
+    setSettings({ ...settings, activePlanId: id, activePlanName: template.title, selectedStartWorkoutId: order[0] });
+    setModal(null);
+    notify(`✓ Dodano gotowy plan: ${template.title}`, 'gold');
   }
 
   function renamePlan(id) {
@@ -499,7 +535,15 @@ export default function App() {
     if (!source) return;
     const now = new Date().toISOString();
     const name = `${source.name} (Kopia)`;
-    setSavedPlans([...savedPlans, { id: `plan_${Date.now()}`, name, createdAt: now, updatedAt: now, workouts: logic.clone(source.workouts) }]);
+    setSavedPlans([...savedPlans, {
+      id: `plan_${Date.now()}`,
+      name,
+      createdAt: now,
+      updatedAt: now,
+      workouts: logic.clone(source.workouts),
+      workoutOrder: logic.workoutIds(source.workouts, source.workoutOrder),
+      source: { type: 'copy', copiedFrom: source.id },
+    }]);
     notify(`Skopiowano plan jako: "${name}"`);
   }
 
@@ -550,9 +594,11 @@ export default function App() {
         if (!imported.plan || !imported.history) throw new Error('Plik nie zawiera poprawnych danych planu lub historii');
         if (!window.confirm('Czy na pewno chcesz wczytać dane z tego pliku?\nObecne plany i historia zostaną zastąpione danymi z kopii.')) return;
         setPlan(imported.plan);
+        setPlanTab(logic.workoutIds(imported.plan)[0] || 'A');
+        setHistoryFilters(DEFAULT_HISTORY_FILTERS);
         setHistory(imported.history);
         if (Array.isArray(imported.savedPlans)) setSavedPlans(imported.savedPlans);
-        if (imported.settings) setSettings(imported.settings);
+        if (imported.settings) setSettings({ ...imported.settings, legacyProgressPlanId: imported.settings.legacyProgressPlanId || imported.settings.activePlanId || 'plan_default' });
         notify('Pomyślnie wczytano kopię zapasową!', 'gold');
       } catch (error) {
         window.alert(`Błąd wczytywania pliku JSON: ${error.message}`);
@@ -595,7 +641,7 @@ export default function App() {
       case 'reps':
         return <CustomRepsModal onClose={() => setModal(null)} onSave={saveCustomReps} />;
       case 'summary':
-        return <SummaryModal data={modal.data} history={history} onClose={closeSummary} />;
+        return <SummaryModal data={modal.data} history={history} plan={plan} settings={settings} onClose={closeSummary} />;
       case 'savedPlans':
         return (
           <SavedPlansModal
@@ -606,15 +652,18 @@ export default function App() {
             onDuplicate={duplicatePlan}
             onDelete={deletePlan}
             onCreate={() => setModal({ kind: 'savePlanAs', mode: 'create_new' })}
+            onOpenTemplates={() => setModal({ kind: 'templates' })}
             onClose={() => setModal(null)}
           />
         );
+      case 'templates':
+        return <TemplateLibraryModal onUse={createPlanFromTemplate} onClose={() => setModal(null)} />;
       case 'savePlanAs':
         return (
           <SavePlanAsModal
             mode={modal.mode}
             defaultName={modal.mode === 'create_new' ? 'Mój Nowy Plan 3-Dniowy' : `${settings.activePlanName || 'Plan'} (Kopia)`}
-            onConfirm={name => savePlanAs(modal.mode, name)}
+            onConfirm={(name, days) => savePlanAs(modal.mode, name, days)}
             onClose={() => setModal(null)}
           />
         );
