@@ -363,6 +363,57 @@ test('saved plans can be saved as, loaded, and the default restored', async ({ p
   await expect(page.locator('.plan-item-card').first()).toContainText('1. Przysiad z sztangą na plecach');
 });
 
+test('mobile layout keeps plan preview, saved-plan actions and repetition fields on one row', async ({ page }) => {
+  await page.goto('/');
+
+  const previewExercise = page.locator('.preview-item').first();
+  await expect(previewExercise.locator('.preview-exercise-reps')).toHaveCSS('white-space', 'nowrap');
+  await expect(previewExercise.locator('.preview-exercise-name')).toHaveCSS('text-overflow', 'ellipsis');
+  const previewLayout = await previewExercise.evaluate(element => {
+    const [number, name, reps] = element.children;
+    const item = element.getBoundingClientRect();
+    const nameBox = name.getBoundingClientRect();
+    const repsBox = reps.getBoundingClientRect();
+    return {
+      singleRow: Math.abs(nameBox.top - repsBox.top) < 1,
+      fits: repsBox.right <= item.right + 1,
+    };
+  });
+  expect(previewLayout).toEqual({ singleRow: true, fits: true });
+
+  await page.locator('#nav-plan').click();
+  await page.locator('.plan-mgmt-actions .btn', { hasText: 'Zapisz jako' }).click();
+  await page.locator('#savePlanAsInput').fill('Plan mobilny');
+  await page.locator('.modal-box .btn-gold', { hasText: /^Zapisz$/ }).click();
+  await page.locator('.plan-mgmt-header .btn').click();
+  const savedCard = page.locator('.saved-plan-card', { hasText: 'Mój Plan Główny' });
+  const actions = savedCard.locator('.saved-plan-secondary-actions .btn');
+  await expect(actions).toHaveCount(3);
+  const savedActionsLayout = await actions.evaluateAll(buttons => {
+    const boxes = buttons.map(button => button.getBoundingClientRect());
+    return {
+      singleRow: boxes.every(box => Math.abs(box.top - boxes[0].top) < 1),
+      fits: boxes[boxes.length - 1].right <= buttons[0].parentElement.getBoundingClientRect().right + 1,
+    };
+  });
+  expect(savedActionsLayout).toEqual({ singleRow: true, fits: true });
+
+  await page.locator('.modal-box .btn', { hasText: 'Zamknij' }).click();
+  await page.locator('.plan-mgmt-actions .btn', { hasText: '+ Dodaj ćwiczenie' }).click();
+  const fields = page.locator('.exercise-rep-fields .form-group');
+  await expect(fields).toHaveCount(3);
+  const fieldLayout = await fields.evaluateAll(groups => {
+    const boxes = groups.map(group => group.getBoundingClientRect());
+    const container = groups[0].parentElement.getBoundingClientRect();
+    return {
+      singleRow: boxes.every(box => Math.abs(box.top - boxes[0].top) < 1),
+      equalWidths: Math.max(...boxes.map(box => box.width)) - Math.min(...boxes.map(box => box.width)) < 1,
+      fits: boxes[boxes.length - 1].right <= container.right + 1,
+    };
+  });
+  expect(fieldLayout).toEqual({ singleRow: true, equalWidths: true, fits: true });
+});
+
 test('finishing three workouts in one week moves the app to the next week', async ({ page }) => {
   await page.goto('/');
 

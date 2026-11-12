@@ -463,7 +463,8 @@
     .preview-item {
       font-size: 0.88rem;
       color: #e6e6e6;
-      display: flex;
+      display: grid;
+      grid-template-columns: 18px minmax(0, 1fr) auto;
       align-items: center;
       gap: 8px;
     }
@@ -473,6 +474,20 @@
       font-weight: 700;
       font-size: 0.8rem;
       min-width: 18px;
+    }
+
+    .preview-exercise-name {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .preview-exercise-reps {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      white-space: nowrap;
+      text-align: right;
     }
 
     .manual-picker-label {
@@ -1290,11 +1305,19 @@
       display: flex;
       gap: 6px;
       align-items: center;
+      flex-wrap: nowrap;
+      width: 100%;
     }
 
-    .saved-plan-secondary-actions .btn { white-space: nowrap; }
+    .saved-plan-secondary-actions .btn {
+      flex: 1 1 0;
+      min-width: 0;
+      padding-left: 5px;
+      padding-right: 5px;
+      white-space: nowrap;
+    }
 
-    .saved-plan-delete { align-self: flex-end; }
+    .saved-plan-delete { align-self: auto; }
 
     .plan-tabs {
       display: flex;
@@ -1650,6 +1673,21 @@
 
     .form-group {
       margin-bottom: 14px;
+    }
+
+    .exercise-rep-fields {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .exercise-rep-fields .form-group {
+      min-width: 0;
+    }
+
+    .exercise-rep-fields .form-label {
+      min-height: 2.1em;
+      line-height: 1.05;
     }
 
     .form-label {

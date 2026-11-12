@@ -77,17 +77,17 @@ export function ExerciseModal({ planName, exercise, onSave, onClose }) {
           </datalist>
         </div>
 
-        <div style={{ display: 'flex', gap: 10 }}>
-          <div className="form-group" style={{ flex: 1 }}>
+        <div className="exercise-rep-fields">
+          <div className="form-group">
             <label className="form-label">Liczba serii</label>
             <input type="number" id="modalExSets" className="modal-input" min="1" max="10" value={form.sets} onChange={field('sets')} />
           </div>
-          <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">Min powtórzeń</label>
+          <div className="form-group">
+            <label className="form-label">Min. powtórzeń</label>
             <input type="number" id="modalExRepsMin" className="modal-input" min="1" max="50" value={form.repsMin} onChange={field('repsMin')} />
           </div>
-          <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">Max powtórzeń</label>
+          <div className="form-group">
+            <label className="form-label">Max. powtórzeń</label>
             <input type="text" id="modalExRepsMax" className="modal-input" placeholder="np. 12 lub MAX" value={form.repsMax} onChange={field('repsMax')} />
           </div>
         </div>
@@ -273,10 +273,10 @@ export function SavedPlansModal({ plans, activeId, onLoad, onRename, onDuplicate
                     <div className="saved-plan-secondary-actions">
                       <button type="button" className="btn btn-outline btn-mini" onClick={() => onRename(plan.id)}>✏️ Zmień nazwę</button>
                       <button type="button" className="btn btn-outline btn-mini" onClick={() => onDuplicate(plan.id)}>📋 Kopiuj</button>
+                      {!isActive && (
+                        <button type="button" className="btn btn-danger btn-mini saved-plan-delete" onClick={() => onDelete(plan.id)}>🗑️ Usuń</button>
+                      )}
                     </div>
-                    {!isActive && (
-                      <button type="button" className="btn btn-danger btn-mini saved-plan-delete" onClick={() => onDelete(plan.id)}>🗑️ Usuń</button>
-                    )}
                   </div>
                 </div>
               );

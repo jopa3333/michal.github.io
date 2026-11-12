@@ -36,10 +36,9 @@ export function StartTab({ plan, settings, session, onStart, onContinue, onSelec
           <ul className="preview-list">
             {workout.exercises.map((ex, index) => (
               <li className="preview-item" key={ex.id}>
-                <span className="num">{index + 1}.</span> <strong>{ex.name}</strong>{' '}
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                  ({ex.sets} × {repsDisplay(ex)})
-                </span>
+                <span className="num">{index + 1}.</span>
+                <strong className="preview-exercise-name">{ex.name}</strong>
+                <span className="preview-exercise-reps">({ex.sets} × {repsDisplay(ex)})</span>
               </li>
             ))}
           </ul>
