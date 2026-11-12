@@ -95,6 +95,41 @@ test('a finished workout is saved to history with the right totals', async ({ pa
   await expect(page.locator('.workout-active-pill')).toHaveCount(0);
 });
 
+test('active workout header fits on one line on a narrow phone', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.goto('/');
+  await startWorkoutFromStart(page);
+  const layout = await page.locator('.app-header').evaluate(header => {
+    const elements = [...header.querySelectorAll('.logo-icon, .logo-title, .logo-badge, .workout-active-pill span')];
+    const boxes = elements.map(element => element.getBoundingClientRect());
+    const outer = header.getBoundingClientRect();
+    return { fits: boxes.every(box => box.left >= outer.left && box.right <= outer.right), singleLine: boxes.every(box => Math.abs((box.top + box.bottom) / 2 - (boxes[0].top + boxes[0].bottom) / 2) < 5 && box.height < 30) };
+  });
+  expect(layout).toEqual({ fits: true, singleLine: true });
+  await expect(page.locator('.workout-active-pill')).toContainText('TRENING W TOKU');
+});
+
+test('workout plan drawer title and close button avoid the phone status area', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.goto('/');
+  await startWorkoutFromStart(page);
+  await page.evaluate(key => {
+    const session = JSON.parse(localStorage.getItem(key));
+    session.workoutName = 'KLATKA + TRICEPS';
+    session.week = 5;
+    localStorage.setItem(key, JSON.stringify(session));
+  }, KEYS.active);
+  await page.reload();
+  await page.locator('.btn-plan-toggle').click();
+  const title = page.locator('.drawer-title');
+  await expect(title).toHaveText('KLATKA + TRICEPS (Tydz. 5)');
+  const close = page.locator('.drawer-close-btn');
+  expect((await title.boundingBox()).y).toBeGreaterThanOrEqual(44);
+  expect((await close.boundingBox()).y).toBeGreaterThanOrEqual(44);
+  await close.click();
+  await expect(page.locator('.plan-drawer')).toHaveCount(0);
+});
+
 test('rest timer runs in the background, shows the floating bar and resets after a set', async ({ page }) => {
   await page.goto('/');
   await startWorkoutFromStart(page);
@@ -462,6 +497,42 @@ test('supports creating a five-day plan and applying a five-day gym template', a
   await expect(page.locator('.plan-tab-btn').first()).toHaveText('PUSH');
   await page.locator('#nav-history').click();
   await expect(page.locator('.hist-pills-row .hist-pill')).toHaveCount(6);
+});
+
+test.describe('touch workout selector', () => {
+  test.use({ hasTouch: true, isMobile: true });
+
+  test('dragging across workout buttons highlights only the selected workout', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+    await page.locator('#nav-plan').click();
+    await page.locator('.plan-mgmt-header .btn').click();
+    await page.getByRole('button', { name: '📚 Gotowe plany' }).click();
+    await page.locator('.template-card', { hasText: 'PPL + Góra / Dół — 5 dni' }).getByRole('button', { name: 'Użyj tego planu' }).click();
+    await page.locator('#nav-start').click();
+    const buttons = page.locator('.pill-btn');
+    await buttons.nth(3).scrollIntoViewIfNeeded();
+    await buttons.nth(3).tap();
+    await expect(buttons.nth(3)).toHaveClass(/active/);
+    await buttons.nth(4).scrollIntoViewIfNeeded();
+    const start = await buttons.nth(4).boundingBox();
+    const end = await buttons.nth(3).boundingBox();
+    const cdp = await page.context().newCDPSession(page);
+    const point = box => ({ x: Math.round(box.x + box.width / 2), y: Math.round(box.y + box.height / 2) });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point(start)] });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [point(end)] });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    // Some mobile browsers retain :hover after touch; emulate that state on an unselected button.
+    const unselected = await buttons.evaluateAll(nodes => nodes.findIndex(element => !element.classList.contains('active')));
+    await buttons.nth(unselected).scrollIntoViewIfNeeded();
+    const hovered = await buttons.nth(unselected).boundingBox();
+    await page.mouse.move(hovered.x + hovered.width / 2, hovered.y + hovered.height / 2);
+    await page.waitForTimeout(250);
+    await expect(page.locator('.pill-btn.active')).toHaveCount(1);
+    const styles = await buttons.evaluateAll(nodes => nodes.map(element => ({ selected: element.classList.contains('active'), color: getComputedStyle(element).color, background: getComputedStyle(element).backgroundColor })));
+    const selected = styles.find(item => item.selected);
+    expect(styles.filter(item => item.color === selected.color && item.background === selected.background)).toHaveLength(1);
+  });
 });
 
 test('long split workout names fit inside their tabs on a narrow phone', async ({ page }) => {

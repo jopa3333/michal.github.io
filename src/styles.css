@@ -140,6 +140,14 @@
     }
 
     @media (max-width: 600px) {
+      .app-header { padding-left: 10px; padding-right: 10px; gap: 4px; }
+      .app-logo { gap: 4px; min-width: 0; white-space: nowrap; }
+      .logo-icon { font-size: 18px; }
+      .logo-title { font-size: 0.8rem; letter-spacing: 0; }
+      .logo-badge { font-size: 0.65rem; padding: 3px 5px; white-space: nowrap; }
+      .header-right { flex-shrink: 0; }
+      .workout-active-pill { font-size: 0.62rem; padding: 5px 6px; white-space: nowrap; }
+
       .main-content {
         padding: 8px 10px;
         padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 12px);
@@ -527,10 +535,16 @@
       transition: all 0.15s;
     }
 
-    .pill-btn:hover, .pill-btn.active {
+    .pill-btn.active {
       border-color: var(--accent-gold);
       background: rgba(255, 215, 0, 0.12);
       color: var(--accent-gold);
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .pill-btn:hover:not(.active) {
+        border-color: var(--accent-gold);
+      }
     }
 
     /* ==========================================================================
@@ -1097,7 +1111,7 @@
       background: #032a3f;
       height: 100%;
       border-left: 1px solid var(--border-color);
-      padding: 20px;
+      padding: max(44px, calc(20px + env(safe-area-inset-top, 0px))) max(20px, env(safe-area-inset-right, 0px)) max(20px, env(safe-area-inset-bottom, 0px)) 20px;
       display: flex;
       flex-direction: column;
       box-shadow: -6px 0 25px rgba(0, 0, 0, 0.5);
