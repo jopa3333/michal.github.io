@@ -387,8 +387,15 @@ export default function App() {
     const { record, totalSets, volume } = logic.buildSessionRecord(sessionWithPlan, new Date().toISOString());
     const nextHistory = [record, ...history];
     const { settings: nextSettings, weekProg } = logic.settingsAfterFinish(nextHistory, settings, session.workoutId, plan);
+    const previousCount = Number.isSafeInteger(settings.completedWorkoutCount) && settings.completedWorkoutCount >= 0
+      ? settings.completedWorkoutCount : history.length;
+    const completedWorkoutCount = previousCount + 1;
     setHistory(nextHistory);
-    setSettings(nextSettings);
+    setSettings({
+      ...nextSettings,
+      completedWorkoutCount,
+      backupReminderPending: Boolean(settings.backupReminderPending) || completedWorkoutCount % 20 === 0,
+    });
     setSession(null);
     setTimer(prev => ({ ...prev, isRunning: false, targetEndTime: null }));
     audio.playTone(settingsRef.current, 523.25, 0.3, 'sine', 0.2);
@@ -718,6 +725,12 @@ export default function App() {
       </header>
 
       <main className="main-content">
+        {settings.backupReminderPending && !modal && (
+          <section className="backup-reminder" role="region" aria-label="Przypomnienie o kopii zapasowej">
+            <span>💾 Zrób szybką kopię swoich wyników w ustawieniach na wypadek zmiany telefonu</span>
+            <button type="button" aria-label="Zamknij przypomnienie" onClick={() => setSettings(current => ({ ...current, backupReminderPending: false }))}>✕</button>
+          </section>
+        )}
         {tab === 'start' && (
           <StartTab
             plan={plan}

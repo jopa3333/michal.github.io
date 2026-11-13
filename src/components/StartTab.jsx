@@ -9,7 +9,7 @@ export function StartTab({ plan, settings, session, onStart, onContinue, onSelec
     <section className="tab-view active" id="view-start">
       <div className="start-hero">
         <div className="start-subtitle">DZISIEJSZY TRENING</div>
-        <h1 className="start-title">{workout.name}</h1>
+        <h1 className={`start-title${workout.name.length >= 18 ? ' start-title-long' : ''}`}>{workout.name}</h1>
 
         <div className="start-meta-row">
           <div className="week-stepper">

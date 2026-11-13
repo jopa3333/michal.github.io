@@ -580,6 +580,63 @@ test.describe('touch workout selector', () => {
   });
 });
 
+test('backup reminder appears at the twentieth completed workout and stays closed until the next milestone', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  const initialHistory = Array.from({ length: 19 }, (_, i) => ({ ...legacyHistory[0], sessionId: `old_${i}`, week: 0 }));
+  await seed(page, { [KEYS.history]: initialHistory });
+  await expect(page.getByText('Zrób szybką kopię swoich wyników w ustawieniach na wypadek zmiany telefonu')).toHaveCount(0);
+  await startWorkoutFromStart(page);
+  await page.locator('.rep-btn').first().click();
+  await finishWorkout(page);
+  const reminder = page.getByRole('region', { name: 'Przypomnienie o kopii zapasowej' });
+  await expect(reminder).toBeVisible();
+  await expect(reminder).toContainText('Zrób szybką kopię swoich wyników w ustawieniach na wypadek zmiany telefonu');
+  await page.reload();
+  await expect(reminder).toBeVisible();
+  await reminder.getByRole('button', { name: 'Zamknij przypomnienie' }).click();
+  await expect(reminder).toHaveCount(0);
+  await page.reload();
+  await expect(reminder).toHaveCount(0);
+  await page.locator('#nav-start').click();
+  await startWorkoutFromStart(page);
+  await page.locator('.rep-btn').first().click();
+  await finishWorkout(page);
+  await expect(reminder).toHaveCount(0);
+});
+
+test('backup reminder appears at forty even if historical workouts were deleted', async ({ page }) => {
+  const settings = { currentWeek: 1, selectedStartWorkoutId: 'A', activePlanId: 'plan_default', activePlanName: 'Plan domyślny', soundEnabled: false, vibrateEnabled: false, completedWorkoutCount: 39, backupReminderPending: false };
+  await seed(page, { [KEYS.history]: [legacyHistory[0]], [KEYS.settings]: settings });
+  await startWorkoutFromStart(page);
+  await page.locator('.rep-btn').first().click();
+  await finishWorkout(page);
+  const reminder = page.getByRole('region', { name: 'Przypomnienie o kopii zapasowej' });
+  await expect(reminder).toBeVisible();
+  expect(await page.evaluate(key => JSON.parse(localStorage.getItem(key)).completedWorkoutCount, KEYS.settings)).toBe(40);
+});
+
+test('start title for the five-day split stays on one line on a narrow phone', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.goto('/');
+  await page.locator('#nav-plan').click();
+  await page.locator('.plan-mgmt-header .btn').click();
+  await page.getByRole('button', { name: '📚 Gotowe plany' }).click();
+  await page.locator('.template-card', { hasText: 'Split partii mięśniowych — 5 dni' }).getByRole('button', { name: 'Użyj tego planu' }).click();
+  await page.locator('#nav-start').click();
+  await page.getByRole('button', { name: 'TRENING E' }).click();
+  const title = page.locator('.start-title');
+  await expect(title).toHaveText('GÓRA UZUPEŁNIAJĄCA');
+  const layout = await title.evaluate(element => {
+    const range = document.createRange(); range.selectNodeContents(element);
+    const rects = [...range.getClientRects()];
+    const box = element.getBoundingClientRect();
+    return { lines: new Set(rects.map(r => Math.round(r.top))).size, textLeft: Math.min(...rects.map(r => r.left)), textRight: Math.max(...rects.map(r => r.right)), left: box.left, right: box.right };
+  });
+  expect(layout.lines).toBe(1);
+  expect(layout.textLeft).toBeGreaterThanOrEqual(layout.left);
+  expect(layout.textRight).toBeLessThanOrEqual(layout.right);
+});
+
 test('long split workout names fit inside their tabs on a narrow phone', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 700 });
   await page.goto('/');
