@@ -1,3 +1,5 @@
+import restVoice from './assets/komunikat-przerwa.mp3?inline';
+
 // Sound, speech, vibration and system notifications, ported from the legacy script.
 // Every function that makes noise takes the settings object so the sound/vibration toggles apply.
 
@@ -102,6 +104,21 @@ export function soundTimerFinished(settings) {
 
 export function speakVoiceNotification(settings, text = 'Koniec przerwy!') {
   if (!settings.soundEnabled) return;
+  if (text === 'Koniec przerwy! Czas na serię.') {
+    try {
+      const clip = new Audio(restVoice);
+      const playback = clip.play();
+      if (playback && typeof playback.catch === 'function') playback.catch(() => speakDeviceVoice(settings, text));
+      return;
+    } catch {
+      // Use device speech if the browser cannot start the recording.
+    }
+  }
+  speakDeviceVoice(settings, text);
+}
+
+function speakDeviceVoice(settings, text) {
+  if (!settings.soundEnabled) return;
   try {
     if (!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
@@ -111,13 +128,15 @@ export function speakVoiceNotification(settings, text = 'Koniec przerwy!') {
         const utterance = new SpeechSynthesisUtterance(text);
         activeUtterance = utterance;
         utterance.lang = 'pl-PL';
-        utterance.rate = 0.88;
-        utterance.pitch = 1.08;
+        utterance.rate = 0.95;
+        utterance.pitch = 1.0;
         utterance.volume = 1.0;
         const voices = window.speechSynthesis.getVoices();
         if (voices && voices.length > 0) {
-          const voice = voices.find(v => v.localService && v.lang && v.lang.startsWith('pl'))
-            || voices.find(v => v.lang && v.lang.startsWith('pl'));
+          const polish = voices.filter(v => /^pl(?:[-_]|$)/i.test(v.lang || ''));
+          const voice = polish.find(v => v.localService && /enhanced|premium|natural|neural|ulepszon/i.test(v.name || ''))
+            || polish.find(v => v.localService)
+            || polish[0];
           if (voice) utterance.voice = voice;
         }
         utterance.onend = () => {

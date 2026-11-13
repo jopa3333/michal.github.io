@@ -1197,7 +1197,7 @@
       grid-template-areas:
         "badge saved"
         "title title";
-      align-items: start;
+      align-items: center;
       margin-bottom: 10px;
       gap: 10px;
     }
@@ -1215,7 +1215,6 @@
       border: 1px solid rgba(255, 215, 0, 0.35);
       padding: 2px 6px;
       border-radius: 4px;
-      margin-bottom: 3px;
     }
 
     .plan-mgmt-title {
@@ -1334,14 +1333,31 @@
     }
 
     .saved-plan-secondary-actions .btn {
-      flex: 1 1 0;
-      min-width: 0;
-      padding-left: 5px;
-      padding-right: 5px;
+      flex: 1 1 auto;
+      min-width: max-content;
+      padding-left: 4px;
+      padding-right: 4px;
+      font-size: 0.64rem;
       white-space: nowrap;
     }
 
     .saved-plan-delete { align-self: auto; }
+
+    .saved-plans-footer {
+      display: flex;
+      gap: 4px;
+      margin-top: 12px;
+      border-top: 1px solid rgba(20, 107, 151, 0.25);
+      padding-top: 12px;
+    }
+
+    .saved-plans-footer .btn {
+      flex: 1 1 auto;
+      min-width: max-content;
+      padding: 6px 4px;
+      font-size: 0.64rem;
+      white-space: nowrap;
+    }
 
     .template-library-list {
       display: flex;

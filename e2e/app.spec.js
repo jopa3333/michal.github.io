@@ -169,6 +169,7 @@ test('a completed timer uses one persistent banner after the app wakes up', asyn
   await page.addInitScript(() => {
     window.__timerBannerCount = 0;
     window.__timerVoiceCount = 0;
+    HTMLMediaElement.prototype.play = function () { window.__timerVoiceCount += 1; return Promise.resolve(); };
     const registration = {
       update() { return Promise.resolve(); },
       showNotification() { window.__timerBannerCount += 1; return Promise.resolve(); },
@@ -189,7 +190,7 @@ test('a completed timer uses one persistent banner after the app wakes up', asyn
         cancel() {},
         getVoices() { return []; },
         resume() {},
-        speak() { window.__timerVoiceCount += 1; },
+        speak(utterance) { if (utterance.volume !== 0) window.__timerVoiceCount += 1; },
       },
     });
     window.SpeechSynthesisUtterance = class TestUtterance { constructor(text) { this.text = text; } };
@@ -216,6 +217,7 @@ test('a muted timer still shows one system banner without voice', async ({ page 
   await page.addInitScript(() => {
     window.__timerBannerCount = 0;
     window.__timerVoiceCount = 0;
+    HTMLMediaElement.prototype.play = function () { window.__timerVoiceCount += 1; return Promise.resolve(); };
     class TestNotification {
       static permission = 'granted';
       constructor() { window.__timerBannerCount += 1; }
@@ -242,13 +244,56 @@ test('a muted timer still shows one system banner without voice', async ({ page 
   await expect.poll(() => page.evaluate(() => window.__timerVoiceCount)).toBe(0);
 });
 
+test('the supplied audio decodes in the browser', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.__recordedAudioSrc = null;
+    HTMLMediaElement.prototype.play = function () {
+      window.__recordedAudioSrc = this.src;
+      return Promise.resolve();
+    };
+  });
+  await page.goto('/');
+  await page.locator('#nav-settings').click();
+  await page.getByRole('button', { name: /Przetestuj dźwięk/ }).click();
+  await expect.poll(() => page.evaluate(() => window.__recordedAudioSrc)).toMatch(/^data:audio\/mpeg;base64,/);
+  const duration = await page.evaluate(async () => {
+    const ctx = new AudioContext();
+    const bytes = await (await fetch(window.__recordedAudioSrc)).arrayBuffer();
+    const decoded = await ctx.decodeAudioData(bytes);
+    await ctx.close();
+    return decoded.duration;
+  });
+  expect(duration).toBeGreaterThan(2);
+  expect(duration).toBeLessThan(3);
+});
+
+test('saved plan controls stay aligned and text fits at 320px', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.goto('/');
+  await page.locator('#nav-plan').click();
+  const alignment = await page.locator('.plan-mgmt-badge, .plan-mgmt-header > .btn').evaluateAll(elements => elements.map(element => { const r = element.getBoundingClientRect(); return (r.top + r.bottom) / 2; }));
+  expect(Math.abs(alignment[0] - alignment[1])).toBeLessThan(1);
+  await page.locator('.plan-mgmt-header .btn').click();
+  await page.getByRole('button', { name: '📚 Gotowe plany' }).click();
+  await expect(page.locator('.template-library-modal .modal-title')).toHaveText('📚 Gotowe plany na siłownię');
+  await page.locator('.template-card', { hasText: 'Split partii mięśniowych — 5 dni' }).getByRole('button', { name: 'Użyj tego planu' }).click();
+  await page.locator('.plan-mgmt-header .btn').click();
+  const buttons = page.locator('.saved-plan-secondary-actions .btn');
+  expect(await buttons.evaluateAll(nodes => nodes.every(node => node.scrollWidth <= node.clientWidth))).toBe(true);
+  const footer = page.locator('.saved-plans-list + div > button');
+  expect(await footer.evaluateAll(nodes => nodes.every(node => node.scrollWidth <= node.clientWidth && node.scrollHeight <= node.clientHeight && getComputedStyle(node).whiteSpace === 'nowrap'))).toBe(true);
+  const boxes = await footer.evaluateAll(nodes => nodes.map(node => { const r = node.getBoundingClientRect(); return {top:r.top,right:r.right,left:r.left}; }));
+  expect(new Set(boxes.map(box => box.top)).size).toBe(1);
+  expect(boxes.every(box => box.left >= 0 && box.right <= 320)).toBe(true);
+});
+
 test('plan and history controls stay in one row on a narrow phone', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 800 });
   await page.goto('/');
   await page.locator('#nav-plan').click();
 
-  const planHeaderRows = await page.locator('.plan-mgmt-badge, .plan-mgmt-header > .btn').evaluateAll(elements => elements.map(element => element.getBoundingClientRect().top));
-  expect(new Set(planHeaderRows).size).toBe(1);
+  const planHeaderRows = await page.locator('.plan-mgmt-badge, .plan-mgmt-header > .btn').evaluateAll(elements => elements.map(element => { const r = element.getBoundingClientRect(); return (r.top + r.bottom) / 2; }));
+  expect(Math.abs(planHeaderRows[0] - planHeaderRows[1])).toBeLessThan(1);
   expect(await page.locator('.plan-mgmt-badge').evaluate(element => element.scrollHeight <= element.clientHeight)).toBe(true);
   const planActionRows = await page.locator('.plan-mgmt-actions .btn').evaluateAll(buttons => buttons.map(button => button.getBoundingClientRect().top));
   expect(new Set(planActionRows).size).toBe(1);

@@ -285,9 +285,9 @@ export function SavedPlansModal({ plans, activeId, onLoad, onRename, onDuplicate
           )}
         </div>
 
-        <div style={{ display: 'flex', gap: 8, marginTop: 12, borderTop: '1px solid rgba(20, 107, 151, 0.25)', paddingTop: 12 }}>
-          <button type="button" className="btn btn-gold btn-mini" style={{ flex: 1 }} onClick={onCreate}>➕ Nowy plan</button>
-          <button type="button" className="btn btn-outline btn-mini" style={{ flex: 1 }} onClick={onOpenTemplates}>📚 Gotowe plany</button>
+        <div className="saved-plans-footer">
+          <button type="button" className="btn btn-gold btn-mini" onClick={onCreate}>➕ Nowy plan</button>
+          <button type="button" className="btn btn-outline btn-mini" onClick={onOpenTemplates}>📚 Gotowe plany</button>
           <button type="button" className="btn btn-outline btn-mini" onClick={onClose}>Zamknij</button>
         </div>
       </div>
@@ -340,7 +340,7 @@ export function TemplateLibraryModal({ onUse, onClose }) {
     <div className="modal-overlay" style={overlayStyle}>
       <div className="modal-box template-library-modal" style={{ maxWidth: 460 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-          <div className="modal-title" style={{ marginBottom: 0 }}>📚 Gotowe plany siłowniane</div>
+          <div className="modal-title" style={{ marginBottom: 0 }}>📚 Gotowe plany na siłownię</div>
           <button type="button" className="btn btn-outline btn-mini" onClick={onClose}>✕</button>
         </div>
         <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 12 }}>Wybrany plan zostanie zapisany jako Twój własny, trwały plan do dowolnej edycji.</p>
