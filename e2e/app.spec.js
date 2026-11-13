@@ -403,6 +403,58 @@ test('history filters by workout, week and exercise, and can delete an entry', a
   await expect(page.locator('.history-session-card')).toHaveCount(1);
 });
 
+test('toast notification clears the phone status area', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.goto('/');
+  await page.locator('.start-hero .btn-gold').click();
+  const toast = page.locator('#notification.show');
+  await expect(toast).toBeVisible();
+  const top = await toast.evaluate(el => el.getBoundingClientRect().top);
+  expect(top).toBeGreaterThanOrEqual(48);
+});
+
+test('bodyweight exercises hide weight progression without losing saved values', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#nav-plan').click();
+  const bodyweight = page.locator('.plan-item-card', { hasText: 'Wznosy nóg do klatki' });
+  await bodyweight.getByRole('button', { name: '✏️ Edytuj' }).click();
+  let modal = page.locator('.modal-box');
+  await expect(modal.locator('#modalExStep')).toHaveCount(0);
+  await expect(modal.locator('#modalExProgressionType')).toHaveCount(0);
+  await modal.getByRole('button', { name: 'Zapisz ćwiczenie' }).click();
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('trening2026_plan_v1')).A.exercises.find(item => item.name === 'Wznosy nóg do klatki'));
+  expect(saved.progressionStep).toBe(0);
+  expect(saved.progressionType).toBe('manual');
+  await bodyweight.getByRole('button', { name: '✏️ Edytuj' }).click();
+  await expect(modal.locator('#modalExStep')).toHaveCount(0);
+  await modal.getByRole('button', { name: 'Anuluj' }).click();
+  await page.locator('.plan-mgmt-actions .btn', { hasText: '+ Dodaj ćwiczenie' }).click();
+  for (const name of ['Plank (deska klasyczna)', 'Pompki klasyczne', 'Wznosy nóg w zwisie na drążku']) {
+    await modal.locator('select').first().selectOption({ label: name });
+    await expect(modal.locator('#modalExStep')).toHaveCount(0);
+  }
+  await modal.locator('select').first().selectOption({ label: 'Wyciskanie hantli na ławce poziomej' });
+  await expect(modal.locator('#modalExStep')).toHaveValue('2');
+  await expect(modal.locator('#modalExProgressionType')).toBeVisible();
+  await modal.locator('#modalExStep').fill('1');
+  await modal.locator('#modalExName').fill('Pompki klasyczne');
+  await expect(modal.locator('#modalExStep')).toHaveValue('1');
+});
+
+test('exercise library heading fits on one line at mobile width', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.goto('/');
+  await page.locator('#nav-plan').click();
+  await page.locator('.plan-mgmt-actions .btn', { hasText: '+ Dodaj ćwiczenie' }).click();
+  const label = page.locator('.modal-box label', { hasText: 'Baza ćwiczeń' });
+  await expect(label).toHaveText('⚡ Baza ćwiczeń');
+  const lines = await label.evaluate(el => {
+    const range = document.createRange(); range.selectNodeContents(el);
+    return new Set([...range.getClientRects()].map(r => Math.round(r.top))).size;
+  });
+  expect(lines).toBe(1);
+});
+
 test('adding an exercise from the library fills the form and persists after reload', async ({ page }) => {
   await page.goto('/');
   await page.locator('#nav-plan').click();

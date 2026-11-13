@@ -1853,7 +1853,7 @@
        ========================================================================== */
     .notification {
       position: fixed;
-      top: 20px;
+      top: max(68px, calc(env(safe-area-inset-top, 0px) + 48px));
       right: 20px;
       left: 20px;
       max-width: 380px;

@@ -5,6 +5,16 @@ import { formatWeightDisplay, planCounts, remainingWorkoutsThisWeek, workoutIds 
 const fmt = formatWeightDisplay;
 
 const overlayStyle = { display: 'flex' };
+const BODYWEIGHT_NAMES = new Set([
+  'wznosy nóg do klatki',
+  'wznosy nóg w zwisie na drążku',
+  'wznosy nóg na poręczach stacyjnych',
+  'pompki klasyczne',
+  'plank (deska klasyczna)',
+  'plank',
+  'kółko do brzucha (ab wheel rollout)',
+  'spięcia brzucha na ławce skośnej',
+]);
 
 // Add / edit exercise dialog. Form fields are strings, validated by logic.exerciseFromForm on save.
 function initialForm(exercise) {
@@ -44,6 +54,8 @@ export function ExerciseModal({ planName, exercise, onSave, onClose }) {
   };
 
   const title = exercise ? `Edytuj: ${exercise.name}` : `Dodaj ćwiczenie do ${planName}`;
+  const hideWeightProgression = BODYWEIGHT_NAMES.has(form.name.trim().toLocaleLowerCase('pl'))
+    && Number(String(form.step).replace(',', '.')) === 0;
 
   return (
     <div className="modal-overlay" style={overlayStyle}>
@@ -51,12 +63,9 @@ export function ExerciseModal({ planName, exercise, onSave, onClose }) {
         <div className="modal-title">{title}</div>
 
         <div className="form-group" style={{ background: 'rgba(2, 44, 67, 0.6)', padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(20, 107, 151, 0.35)' }}>
-          <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-            <span>⚡ Baza ćwiczeń (gotowe)</span>
-            <span style={{ color: 'var(--accent-gold)', fontSize: '0.75rem', fontWeight: 'normal' }}>Wybierz lub wpisz niżej</span>
-          </label>
-          <select className="modal-select" value={form.quick} onChange={event => pickFromDatabase(event.target.value)} style={{ fontSize: '0.85rem' }}>
-            <option value="">— Wybierz z bazy (lub wpisz własne poniżej) —</option>
+          <label className="form-label" htmlFor="exerciseLibrary" style={{ marginBottom: 4 }}>⚡ Baza ćwiczeń</label>
+          <select id="exerciseLibrary" className="modal-select" value={form.quick} onChange={event => pickFromDatabase(event.target.value)} style={{ fontSize: '0.85rem' }}>
+            <option value="">— Wybierz lub wpisz poniżej —</option>
             {EXERCISE_CATEGORIES.map(([category, items]) => (
               <optgroup label={category} key={category}>
                 {items.map(item => (
@@ -97,10 +106,10 @@ export function ExerciseModal({ planName, exercise, onSave, onClose }) {
             <label className="form-label">Tempo</label>
             <input type="text" id="modalExTempo" className="modal-input" placeholder="np. 2010" value={form.tempo} onChange={field('tempo')} />
           </div>
-          <div className="form-group" style={{ flex: 1 }}>
+          {!hideWeightProgression && <div className="form-group" style={{ flex: 1 }}>
             <label className="form-label">Krok progresji (kg)</label>
             <input type="text" inputMode="decimal" id="modalExStep" className="modal-input" value={form.step} onChange={field('step')} />
-          </div>
+          </div>}
         </div>
 
         <div className="form-group">
@@ -108,14 +117,14 @@ export function ExerciseModal({ planName, exercise, onSave, onClose }) {
           <input type="number" id="modalExRest" className="modal-input" min="15" max="600" step="15" value={form.rest} onChange={field('rest')} />
         </div>
 
-        <div className="form-group">
+        {!hideWeightProgression && <div className="form-group">
           <label className="form-label">Reguła Progresji Ciężaru</label>
           <select id="modalExProgressionType" className="modal-select" value={form.progressionType} onChange={field('progressionType')}>
             <option value="top_all_sets">Górny zakres we wszystkich seriach (np. 5/5/5 lub 12/12)</option>
             <option value="top_first_set">Górny zakres w 1. serii (np. 12 w pierwszej serii)</option>
             <option value="manual">Ręczna / brak automatycznej sugestii</option>
           </select>
-        </div>
+        </div>}
 
         <div className="modal-buttons">
           <button type="button" className="btn btn-outline" onClick={onClose}>Anuluj</button>
