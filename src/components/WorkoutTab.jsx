@@ -1,4 +1,4 @@
-import { formatTime, formatWeightDisplay, repButtonValues, repsDisplay, workoutIds } from '../logic.js';
+import { formatRecordedSet, formatTime, formatWeightDisplay, isBodyweightExercise, isTimedExercise, repButtonValues, repsDisplay, workoutIds } from '../logic.js';
 
 const fmt = formatWeightDisplay;
 
@@ -75,10 +75,13 @@ function WorkoutPicker({ plan, settings, onStart, onWeek }) {
 
 function ActiveWorkout(props) {
   const {
-    session, index, timer, onOpenDrawer, onOpenWeight, onAdjustWeight, onRecord, onOpenReps,
+    session, index, timer, onOpenDrawer, onOpenWeight, onAdjustWeight, onToggleWeight, onRecord, onOpenReps,
     onRemoveSet, onAddSet, onRemoveSetTarget, onNavigate, onFinish, onToggleTimer, onAdjustTimer, onResetTimer,
   } = props;
   const ex = session.exercises[index];
+  const bodyweight = isBodyweightExercise(ex);
+  const weightEnabled = !bodyweight || (ex.weightEnabled ?? (Number(ex.currentWeight) > 0 || Number(ex.progressionStep) > 0));
+  const timed = isTimedExercise(ex);
   const completed = ex.completedSets.length;
   const isCompleted = completed >= ex.setsTarget;
   const isLast = index === session.exercises.length - 1;
@@ -107,7 +110,7 @@ function ActiveWorkout(props) {
           <div className="exercise-header-compact">
             <h2 className="exercise-name-header">{ex.name}</h2>
             <div className="exercise-tags">
-              <span className="tag">{ex.setsTarget} serie × {repsDisplay(ex)} powt.</span>
+              <span className="tag">{ex.setsTarget} serie × {repsDisplay(ex)} {timed ? 'sek.' : 'powt.'}</span>
               <span className="tag tag-tempo">Tempo: {ex.tempo || '2010'}</span>
               <span className="tag">Odpoczynek: {ex.restSeconds || 90}s</span>
             </div>
@@ -118,7 +121,7 @@ function ActiveWorkout(props) {
               <span className="strip-lbl">OSTATNIO</span>
               <span className="strip-val">{ex.lastSummary || 'BRAK POPRZEDNIEGO WYNIKU'}</span>
             </div>
-            <div className={`info-strip-col target${ex.isProgressionHit ? ' progres-hit' : ''}`}>
+            {weightEnabled && <div className={`info-strip-col target${ex.isProgressionHit ? ' progres-hit' : ''}`}>
               <span className="strip-lbl">{ex.isProgressionHit ? '🎯 DZISIAJ' : 'DZISIAJ'}</span>
               <div className="strip-val-row">
                 <span className="strip-val">
@@ -130,10 +133,11 @@ function ActiveWorkout(props) {
                   </span>
                 )}
               </div>
-            </div>
+            </div>}
           </div>
 
-          <div className="weight-adjuster-section">
+          {bodyweight && <label className="weight-toggle"><input type="checkbox" checked={weightEnabled} onChange={event => onToggleWeight(event.target.checked)} /> Dodatkowe obciążenie (kg)</label>}
+          {weightEnabled && <div className="weight-adjuster-section">
             <div className="weight-display-wrapper">
               <button type="button" className="weight-display-btn" onClick={onOpenWeight} title="Kliknij, aby wpisać ręcznie">
                 <span>{fmt(ex.currentWeight)}</span>
@@ -147,7 +151,7 @@ function ActiveWorkout(props) {
                 </button>
               ))}
             </div>
-          </div>
+          </div>}
 
           <div className="sets-progress-box">
             <div className="sets-header">
@@ -171,7 +175,7 @@ function ActiveWorkout(props) {
                     <div className="set-row completed" key={`set-${i}`}>
                       <div>
                         <span className="set-status-icon" style={{ color: 'var(--success-green)' }}>✓</span>{' '}
-                        <span>{setNumber}. <strong>{fmt(set.weight)} kg × {set.reps}</strong></span>
+                        <span>{setNumber}. <strong>{formatRecordedSet(set, ex)}</strong></span>
                       </div>
                       <button type="button" className="set-actions-btn" onClick={() => onRemoveSet(i)} title="Usuń tę serię">
                         ✕ Usuń
@@ -184,7 +188,7 @@ function ActiveWorkout(props) {
                     <div className="set-row active" key={`set-${i}`}>
                       <div>
                         <span className="set-status-icon">○</span>{' '}
-                        <span>{setNumber}. <strong>{fmt(ex.currentWeight)} kg × ?</strong></span>
+                        <span>{setNumber}. <strong>{weightEnabled ? `${fmt(ex.currentWeight)} kg × ?${timed ? ' s' : ''}` : `? ${timed ? 's' : 'powt.'}`}</strong></span>
                       </div>
                       <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--accent-gold)' }}>Aktualna</span>
                     </div>
@@ -195,7 +199,7 @@ function ActiveWorkout(props) {
                     <div>
                       <span className="set-status-icon" style={{ color: 'var(--text-muted)' }}>○</span>{' '}
                       <span>
-                        {setNumber}. <span style={{ color: 'var(--text-muted)' }}>{fmt(ex.currentWeight)} kg × ?</span>
+                        {setNumber}. <span style={{ color: 'var(--text-muted)' }}>{weightEnabled ? `${fmt(ex.currentWeight)} kg × ?${timed ? ' s' : ''}` : `? ${timed ? 's' : 'powt.'}`}</span>
                       </span>
                     </div>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Oczekuje</span>
@@ -213,13 +217,13 @@ function ActiveWorkout(props) {
 
           <div className="reps-picker-container">
             <div className="reps-buttons-grid">
-              {repButtonValues(ex).map(value => (
+              {(timed ? [15, 30, 45, 60, 75, 90] : repButtonValues(ex)).map(value => (
                 <button type="button" key={value} className={value === 'MAX' ? 'rep-btn rep-max' : 'rep-btn'} onClick={() => onRecord(value)}>
-                  {value}
+                  {value}{timed ? ' s' : ''}
                 </button>
               ))}
               <button type="button" className="rep-btn-custom" onClick={onOpenReps}>
-                Inne...
+                {timed ? 'Wpisz czas' : 'Inne...'}
               </button>
             </div>
           </div>

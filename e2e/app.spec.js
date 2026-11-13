@@ -455,6 +455,60 @@ test('exercise library heading fits on one line at mobile width', async ({ page 
   expect(lines).toBe(1);
 });
 
+test('bodyweight exercise can record reps without or with weight and keeps history after reload', async ({ page }) => {
+  await page.goto('/');
+  await startWorkoutFromStart(page);
+  await page.locator('.btn-plan-toggle').click();
+  await page.locator('.drawer-ex-item', { hasText: 'Wznosy nóg do klatki' }).click();
+  const checkbox = page.getByRole('checkbox', { name: 'Dodatkowe obciążenie (kg)' });
+  await expect(checkbox).not.toBeChecked();
+  await expect(page.locator('.weight-adjuster-section')).toHaveCount(0);
+  await page.locator('.rep-btn-custom').click();
+  await page.locator('#modalCustomRepsInput').fill('12');
+  await page.getByRole('button', { name: 'Zapisz serię' }).click();
+  await expect(page.locator('.set-row.completed').first()).toContainText('12 powt.');
+  await checkbox.check();
+  await page.locator('.btn-step', { hasText: '+2,5' }).click();
+  await page.reload();
+  await expect(page.getByRole('checkbox', { name: 'Dodatkowe obciążenie (kg)' })).toBeChecked();
+  await expect(page.locator('.weight-display-btn')).toContainText('2,5');
+  await page.locator('.rep-btn-custom').click();
+  await page.locator('#modalCustomRepsInput').fill('10');
+  await page.getByRole('button', { name: 'Zapisz serię' }).click();
+  await expect(page.locator('.set-row.completed').last()).toContainText('2,5 kg × 10');
+  await finishWorkout(page);
+  await expect(page.locator('.history-session-card').first()).toContainText('12 powt.');
+  await expect(page.locator('.history-session-card').first()).toContainText('2,5 kg × 10');
+  await page.reload();
+  await page.locator('#nav-history').click();
+  await expect(page.locator('.history-session-card').first()).toContainText('12 powt.');
+});
+
+test('plank records seconds separately from rest timer and preserves history', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#nav-plan').click();
+  await page.locator('.plan-mgmt-header .btn').click();
+  await page.getByRole('button', { name: '📚 Gotowe plany' }).click();
+  await page.locator('.template-card', { hasText: 'FBW — 3 dni' }).getByRole('button', { name: 'Użyj tego planu' }).click();
+  await page.locator('#nav-start').click();
+  await page.locator('.start-hero .btn-gold').click();
+  await page.locator('.btn-plan-toggle').click();
+  await page.locator('.drawer-ex-item', { hasText: 'Plank (deska klasyczna)' }).click();
+  await expect(page.locator('.exercise-tags')).toContainText('30–45 sek.');
+  await expect(page.locator('.weight-adjuster-section')).toHaveCount(0);
+  for (const seconds of [15, 30, 45, 60, 75, 90]) await expect(page.getByRole('button', { name: `${seconds} s`, exact: true })).toBeVisible();
+  await page.getByRole('button', { name: '30 s', exact: true }).click();
+  await expect(page.locator('.set-row.completed').first()).toContainText('30 s');
+  await page.getByRole('button', { name: 'Wpisz czas' }).click();
+  await expect(page.locator('.modal-title')).toHaveText('Czas serii (sekundy)');
+  await page.locator('#modalCustomRepsInput').fill('45');
+  await page.getByRole('button', { name: 'Zapisz serię' }).click();
+  await expect(page.locator('.set-row.completed').last()).toContainText('45 s');
+  await expect(page.locator('.timer-btn-main')).toContainText('START 1:00');
+  await finishWorkout(page);
+  await expect(page.locator('.history-session-card').first()).toContainText('45 s');
+});
+
 test('adding an exercise from the library fills the form and persists after reload', async ({ page }) => {
   await page.goto('/');
   await page.locator('#nav-plan').click();

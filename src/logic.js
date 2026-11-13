@@ -4,6 +4,24 @@
 export const WORKOUT_IDS = ['A', 'B', 'C'];
 export const DEFAULT_PLAN_NAME = 'Mój Plan Główny (A/B/C)';
 
+const BODYWEIGHT_NAMES = new Set([
+  'wznosy nóg do klatki', 'wznosy nóg w zwisie na drążku', 'wznosy nóg na poręczach stacyjnych',
+  'pompki klasyczne', 'plank (deska klasyczna)', 'plank',
+  'kółko do brzucha (ab wheel rollout)', 'spięcia brzucha na ławce skośnej',
+]);
+export function isBodyweightExercise(ex) {
+  return BODYWEIGHT_NAMES.has(String(ex.name || '').trim().toLocaleLowerCase('pl'));
+}
+export function isTimedExercise(ex) {
+  return ['plank', 'plank (deska klasyczna)'].includes(String(ex.name || '').trim().toLocaleLowerCase('pl'));
+}
+export function formatRecordedSet(set, exercise) {
+  const timed = set.measurement === 'seconds';
+  const unit = timed ? 's' : 'powt.';
+  const weighted = set.hasWeight ?? (!isBodyweightExercise(exercise) || Number(set.weight) > 0);
+  return weighted ? `${formatWeightDisplay(set.weight)} kg × ${set.reps}${timed ? ' s' : ''}` : `${set.reps} ${unit}`;
+}
+
 export const clone = value => JSON.parse(JSON.stringify(value));
 
 // Older backups only contain the A/B/C object. New plans use the same object
@@ -89,9 +107,11 @@ export function calculateProgression(history, def) {
   const sets = last.sets;
   const lastWeight = sets[0].weight || 0;
   const allSameWeight = sets.every(s => s.weight === lastWeight);
-  const lastSummaryText = allSameWeight
-    ? `${formatWeightDisplay(lastWeight)} kg • ${sets.map(s => s.reps).join(' / ')}`
-    : sets.map(s => `${formatWeightDisplay(s.weight)}kg × ${s.reps}`).join(' / ');
+  const lastSummaryText = isBodyweightExercise(def)
+    ? sets.map(s => formatRecordedSet(s, def)).join(' / ')
+    : allSameWeight
+      ? `${formatWeightDisplay(lastWeight)} kg • ${sets.map(s => s.reps).join(' / ')}`
+      : sets.map(s => `${formatWeightDisplay(s.weight)}kg × ${s.reps}`).join(' / ');
 
   const dateObj = new Date(last.sessionDate);
   const lastDateText = !isNaN(dateObj)
@@ -118,6 +138,7 @@ export function calculateProgression(history, def) {
     }
   }
 
+  if (isTimedExercise(def)) shouldProgress = false;
   const step = def.progressionStep || 0;
   let suggestedWeight = lastWeight;
   if (shouldProgress && step > 0) suggestedWeight = Number((lastWeight + step).toFixed(2));
@@ -150,6 +171,7 @@ export function createSessionExercises(workout, history) {
       currentWeight: prog.hasHistory ? prog.suggestedWeight : 0,
       suggestedWeight: prog.suggestedWeight ? prog.suggestedWeight : 0,
       isProgressionHit: prog.isProgression,
+      ...(isBodyweightExercise(def) ? { weightEnabled: Number(def.progressionStep) > 0 || Number(prog.lastWeight) > 0 } : {}),
       lastSummary: prog.lastSummaryText,
       lastDate: prog.lastDateText,
       completedSets: [],
@@ -213,8 +235,8 @@ export function buildSessionRecord(session, date) {
     const sets = (ex.completedSets || []).map(s => {
       totalSets++;
       const repsNum = typeof s.reps === 'number' ? s.reps : parseInt(s.reps, 10);
-      if (!isNaN(repsNum)) totalVolume += s.weight * repsNum;
-      return { weight: s.weight, reps: s.reps };
+      if (!isNaN(repsNum) && s.measurement !== 'seconds') totalVolume += s.weight * repsNum;
+      return { weight: s.weight, reps: s.reps, ...(s.hasWeight !== undefined ? { hasWeight: s.hasWeight } : {}), ...(s.measurement ? { measurement: s.measurement } : {}) };
     });
     return { id: ex.id, name: ex.name, targetSets: ex.setsTarget, tempo: ex.tempo, sets };
   });

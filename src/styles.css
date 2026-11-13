@@ -811,6 +811,17 @@
     }
 
     /* Ciężar — Ultra-kompaktowy */
+    .weight-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 12px 0;
+      color: var(--text-main);
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    .weight-toggle input { width: 20px; height: 20px; accent-color: var(--accent-gold); }
+
     .weight-adjuster-section {
       margin-bottom: 8px;
     }

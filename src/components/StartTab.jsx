@@ -1,4 +1,4 @@
-import { repsDisplay, workoutIds } from '../logic.js';
+import { isTimedExercise, repsDisplay, workoutIds } from '../logic.js';
 
 export function StartTab({ plan, settings, session, onStart, onContinue, onSelect, onWeek }) {
   const ids = workoutIds(plan);
@@ -39,7 +39,7 @@ export function StartTab({ plan, settings, session, onStart, onContinue, onSelec
               <li className="preview-item" key={ex.id}>
                 <span className="num">{index + 1}.</span>
                 <strong className="preview-exercise-name">{ex.name}</strong>
-                <span className="preview-exercise-reps">({ex.sets} × {repsDisplay(ex)})</span>
+                <span className="preview-exercise-reps">({ex.sets} × {repsDisplay(ex)}{isTimedExercise(ex) ? ' s' : ''})</span>
               </li>
             ))}
           </ul>

@@ -84,7 +84,7 @@ export default function App() {
   const [savedPlans, setSavedPlans] = useState(boot.savedPlans);
   const [session, setSession] = useState(boot.session);
   const [tab, setTab] = useState(boot.session ? 'workout' : 'start');
-  const [exerciseIndex, setExerciseIndex] = useState(0);
+  const [exerciseIndex, setExerciseIndex] = useState(() => Number.isInteger(boot.session?.currentExerciseIndex) ? boot.session.currentExerciseIndex : 0);
   const [planTab, setPlanTab] = useState(() => logic.workoutIds(boot.plan)[0] || 'A');
   const [notice, setNotice] = useState(null);
   const [timer, setTimer] = useState({ isRunning: false, remaining: 0, total: 0, targetEndTime: null });
@@ -290,11 +290,14 @@ export default function App() {
   function recordSet(reps) {
     if (!session || !currentExercise) return;
     const ex = currentExercise;
-    const weight = ex.currentWeight || 0;
-    patchExercise(exIndex, e => ({ completedSets: [...e.completedSets, { weight, reps }] }));
+    const bodyweight = logic.isBodyweightExercise(ex);
+    const hasWeight = !bodyweight || (ex.weightEnabled ?? (Number(ex.currentWeight) > 0 || Number(ex.progressionStep) > 0));
+    const weight = hasWeight ? (ex.currentWeight || 0) : 0;
+    const set = { weight, reps, ...(bodyweight ? { hasWeight } : {}), ...(logic.isTimedExercise(ex) ? { measurement: 'seconds' } : {}) };
+    patchExercise(exIndex, e => ({ completedSets: [...e.completedSets, set] }));
     audio.unlockAudioAndSpeech();
     audio.soundSetLogged(settingsRef.current);
-    notify(`✓ Zapisano serię: ${fmt(weight)} kg × ${reps}`);
+    notify(`✓ Zapisano serię: ${logic.formatRecordedSet(set, ex)}`);
     if (ex.completedSets.length + 1 >= ex.setsTarget) {
       initExerciseTimer(restAt(exIndex));
       notify(`🎉 Ukończono: ${ex.name}!`, 'gold');
@@ -646,7 +649,7 @@ export default function App() {
       case 'weight':
         return <WeightModal value={currentWeight} onClose={() => setModal(null)} onSave={saveWeight} />;
       case 'reps':
-        return <CustomRepsModal onClose={() => setModal(null)} onSave={saveCustomReps} />;
+        return <CustomRepsModal timed={currentExercise ? logic.isTimedExercise(currentExercise) : false} onClose={() => setModal(null)} onSave={saveCustomReps} />;
       case 'summary':
         return <SummaryModal data={modal.data} history={history} plan={plan} settings={settings} onClose={closeSummary} />;
       case 'savedPlans':
@@ -754,6 +757,7 @@ export default function App() {
             onOpenDrawer={() => setModal({ kind: 'drawer' })}
             onOpenWeight={() => setModal({ kind: 'weight' })}
             onAdjustWeight={adjustWeight}
+            onToggleWeight={enabled => patchExercise(exIndex, () => ({ weightEnabled: enabled }))}
             onRecord={recordSet}
             onOpenReps={() => setModal({ kind: 'reps' })}
             onRemoveSet={removeSet}

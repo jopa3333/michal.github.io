@@ -1,6 +1,5 @@
-import { exerciseEntries, exerciseNames, filterHistory, formatWeightDisplay, weekOptions, workoutIds } from '../logic.js';
+import { exerciseEntries, exerciseNames, filterHistory, formatRecordedSet, weekOptions, workoutIds } from '../logic.js';
 
-const fmt = formatWeightDisplay;
 export function HistoryTab({ history, plan, workout, week, exerciseMode, exerciseName, onWorkout, onWeek, onWeekSelect, onToggleExerciseMode, onReset, onExerciseName, onDelete }) {
   const ids = [...new Set([...workoutIds(plan), ...history.map(item => item.workoutId).filter(id => /^[A-E]$/.test(id))])].sort();
   const workoutPills = [['all', 'Wszystkie'], ...ids.map(id => [id, `Trening ${id}`])];
@@ -128,7 +127,7 @@ function AllSessions({ history, sessions, onDelete }) {
         </div>
         <div style={{ marginBottom: 12 }}>
           {(session.exercises || []).map((ex, index) => {
-            const setsText = ex.sets.map(s => `${fmt(s.weight)}kg × ${s.reps}`).join('  |  ');
+            const setsText = ex.sets.map(s => formatRecordedSet(s, ex)).join('  |  ');
             return (
               <div className="session-ex-row" key={`${ex.name}-${index}`}>
                 <div className="session-ex-name"><strong>{ex.name}</strong></div>
@@ -169,7 +168,7 @@ function ExerciseHistory({ sessions, exerciseName }) {
       {entries.map((entry, index) => {
         const date = new Date(entry.date);
         const dateText = !isNaN(date) ? date.toLocaleDateString('pl-PL') : entry.date;
-        const setsText = entry.sets.map(s => `${fmt(s.weight)} kg × ${s.reps}`).join('  |  ');
+        const setsText = entry.sets.map(s => formatRecordedSet(s, { name: exerciseName })).join('  |  ');
         return (
           <div key={`${entry.date}-${index}`} style={{ padding: '10px 0', borderBottom: '1px solid rgba(20, 107, 151, 0.3)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: '0.85rem' }}>

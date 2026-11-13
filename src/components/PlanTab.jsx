@@ -1,4 +1,4 @@
-import { formatWeightDisplay, progressionRuleText, repsDisplay, workoutIds } from '../logic.js';
+import { formatWeightDisplay, isTimedExercise, progressionRuleText, repsDisplay, workoutIds } from '../logic.js';
 
 export function PlanTab({ plan, planTab, onPlanTab, settings, savedCount, onOpenSaved, onSaveAs, onCreate, onAdd, onEdit, onMove, onDelete, onResetDefault }) {
   const ids = workoutIds(plan);
@@ -48,7 +48,7 @@ export function PlanTab({ plan, planTab, onPlanTab, settings, savedCount, onOpen
                 <div>
                   <div className="plan-item-title">{index + 1}. {ex.name}</div>
                   <div className="plan-item-details" style={{ marginTop: 4 }}>
-                    <span>🎯 {ex.sets} serie × {repsDisplay(ex)}</span>
+                    <span>🎯 {ex.sets} serie × {repsDisplay(ex)}{isTimedExercise(ex) ? ' s' : ''}</span>
                     <span>⏱ Tempo: {ex.tempo || '-'}</span>
                     <span>⏳ Odpoczynek: {ex.restSeconds}s</span>
                     <span>📈 Progres: +{formatWeightDisplay(ex.progressionStep)} kg ({progressionRuleText(ex.progressionType)})</span>

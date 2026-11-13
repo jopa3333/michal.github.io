@@ -1,20 +1,10 @@
 import { useState } from 'react';
 import { EXERCISE_CATEGORIES, EXERCISE_DATABASE, PLAN_TEMPLATES } from '../data.js';
-import { formatWeightDisplay, planCounts, remainingWorkoutsThisWeek, workoutIds } from '../logic.js';
+import { formatWeightDisplay, isBodyweightExercise, isTimedExercise, planCounts, remainingWorkoutsThisWeek, workoutIds } from '../logic.js';
 
 const fmt = formatWeightDisplay;
 
 const overlayStyle = { display: 'flex' };
-const BODYWEIGHT_NAMES = new Set([
-  'wznosy nóg do klatki',
-  'wznosy nóg w zwisie na drążku',
-  'wznosy nóg na poręczach stacyjnych',
-  'pompki klasyczne',
-  'plank (deska klasyczna)',
-  'plank',
-  'kółko do brzucha (ab wheel rollout)',
-  'spięcia brzucha na ławce skośnej',
-]);
 
 // Add / edit exercise dialog. Form fields are strings, validated by logic.exerciseFromForm on save.
 function initialForm(exercise) {
@@ -54,7 +44,7 @@ export function ExerciseModal({ planName, exercise, onSave, onClose }) {
   };
 
   const title = exercise ? `Edytuj: ${exercise.name}` : `Dodaj ćwiczenie do ${planName}`;
-  const hideWeightProgression = BODYWEIGHT_NAMES.has(form.name.trim().toLocaleLowerCase('pl'))
+  const hideWeightProgression = isBodyweightExercise({ name: form.name })
     && Number(String(form.step).replace(',', '.')) === 0;
 
   return (
@@ -92,11 +82,11 @@ export function ExerciseModal({ planName, exercise, onSave, onClose }) {
             <input type="number" id="modalExSets" className="modal-input" min="1" max="10" value={form.sets} onChange={field('sets')} />
           </div>
           <div className="form-group">
-            <label className="form-label">Min. powtórzeń</label>
-            <input type="number" id="modalExRepsMin" className="modal-input" min="1" max="50" value={form.repsMin} onChange={field('repsMin')} />
+            <label className="form-label">{isTimedExercise({ name: form.name }) ? 'Min. sekund' : 'Min. powtórzeń'}</label>
+            <input type="number" id="modalExRepsMin" className="modal-input" min="1" max={isTimedExercise({ name: form.name }) ? 3600 : 50} value={form.repsMin} onChange={field('repsMin')} />
           </div>
           <div className="form-group">
-            <label className="form-label">Max. powtórzeń</label>
+            <label className="form-label">{isTimedExercise({ name: form.name }) ? 'Max. sekund' : 'Max. powtórzeń'}</label>
             <input type="text" id="modalExRepsMax" className="modal-input" placeholder="np. 12 lub MAX" value={form.repsMax} onChange={field('repsMax')} />
           </div>
         </div>
@@ -161,19 +151,19 @@ export function WeightModal({ value, onSave, onClose }) {
   );
 }
 
-export function CustomRepsModal({ onSave, onClose }) {
+export function CustomRepsModal({ onSave, onClose, timed = false }) {
   const [text, setText] = useState('');
   return (
     <div className="modal-overlay" style={overlayStyle}>
       <div className="modal-box" style={{ maxWidth: 320, textAlign: 'center' }}>
-        <div className="modal-title">Liczba powtórzeń</div>
+        <div className="modal-title">{timed ? 'Czas serii (sekundy)' : 'Liczba powtórzeń'}</div>
         <input
           type="number"
           id="modalCustomRepsInput"
           className="modal-input"
           style={{ fontSize: '1.8rem', textAlign: 'center', fontWeight: 900 }}
           min="1"
-          max="100"
+          max={timed ? 3600 : 100}
           value={text}
           autoFocus
           onChange={event => setText(event.target.value)}
