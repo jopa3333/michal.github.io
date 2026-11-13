@@ -577,7 +577,13 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 6px;
       margin-bottom: 10px;
+    }
+
+    .w-card-header .badge {
+      flex-shrink: 0;
+      white-space: nowrap;
     }
 
     .w-card-title {
@@ -587,6 +593,11 @@
       display: flex;
       align-items: center;
       gap: 8px;
+    }
+
+    @media (max-width: 480px) {
+      .w-card-title { font-size: 0.8rem; min-width: 0; }
+      .w-card-header .badge { font-size: 0.65rem; padding: 4px 6px; }
     }
 
     .w-card-meta {
@@ -1400,6 +1411,10 @@
       min-width: 0;
       white-space: normal;
       overflow-wrap: anywhere;
+    }
+
+    .plan-tabs-many .plan-tab-btn:last-child:nth-child(odd) {
+      grid-column: 1 / -1;
     }
 
     .plan-tab-btn {

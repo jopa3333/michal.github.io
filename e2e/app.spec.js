@@ -602,7 +602,48 @@ test('long split workout names fit inside their tabs on a narrow phone', async (
     expect(geometry).toEqual({ textFits: true, visible: true });
   }
   await expect(tabs.last()).toHaveText('GÓRA UZUPEŁNIAJĄCA');
+  const lines = await tabs.last().evaluate(element => {
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    return range.getClientRects().length;
+  });
+  expect(lines).toBe(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
+test('five-day workout card title and exercise badge stay on one line on a phone', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.goto('/');
+  await page.locator('#nav-plan').click();
+  await page.locator('.plan-mgmt-header .btn').click();
+  await page.getByRole('button', { name: '📚 Gotowe plany' }).click();
+  await page.locator('.template-card', { hasText: 'Split partii mięśniowych — 5 dni' }).getByRole('button', { name: 'Użyj tego planu' }).click();
+  await page.locator('#nav-workout').click();
+  const card = page.locator('.workout-choice-card', { hasText: 'GÓRA UZUPEŁNIAJĄCA' });
+  const layout = await card.evaluate(element => {
+    const title = element.querySelector('.w-card-title');
+    const badge = element.querySelector('.badge');
+    const rect = node => { const range = document.createRange(); range.selectNodeContents(node); const rects = [...range.getClientRects()]; const rows = []; for (const r of rects) { const row = rows.find(v => Math.abs(v.top - r.top) < 1); if (row) row.right = Math.max(row.right, r.right); else rows.push({ left: r.left, right: r.right, top: r.top, bottom: r.bottom }); } return rows; };
+    const cardBounds = element.getBoundingClientRect();
+    return { title: rect(title), badge: rect(badge), cardLeft: cardBounds.left, cardRight: cardBounds.right };
+  });
+  expect(layout.title).toHaveLength(1);
+  expect(layout.badge).toHaveLength(1);
+  expect(layout.title[0].right).toBeLessThanOrEqual(layout.badge[0].left);
+  expect(layout.badge[0].right).toBeLessThanOrEqual(layout.cardRight);
+  expect(Math.abs(layout.title[0].top - layout.badge[0].top)).toBeLessThan(10);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
+test('workout picker has short start labels while the start screen keeps its label', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#view-start .btn-gold')).toHaveText('🚀 ROZPOCZNIJ TRENING');
+  await page.locator('#nav-workout').click();
+  const buttons = page.locator('.workout-choice-card button');
+  await expect(buttons).toHaveCount(3);
+  for (const button of await buttons.all()) await expect(button).toHaveText('ROZPOCZNIJ');
+  await buttons.nth(1).click();
+  await expect(page.locator('.assistant-ex-count')).toBeVisible();
 });
 
 test('four and five day plans finish only after all days in any order', async ({ page }) => {

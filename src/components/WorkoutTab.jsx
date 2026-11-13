@@ -62,7 +62,7 @@ function WorkoutPicker({ plan, settings, onStart, onWeek }) {
                     onStart(id);
                   }}
                 >
-                  ROZPOCZNIJ {workout.name}
+                  ROZPOCZNIJ
                 </button>
               </div>
             );
