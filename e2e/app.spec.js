@@ -484,6 +484,33 @@ test('bodyweight exercise can record reps without or with weight and keeps histo
   await expect(page.locator('.history-session-card').first()).toContainText('12 powt.');
 });
 
+test('hanging leg raises offer repetitions 8 to 12 and custom entry instead of MAX', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.goto('/');
+  await page.locator('#nav-plan').click();
+  await page.locator('.plan-mgmt-header .btn').click();
+  await page.getByRole('button', { name: '📚 Gotowe plany' }).click();
+  await page.locator('.template-card', { hasText: 'Split partii mięśniowych — 5 dni' }).getByRole('button', { name: 'Użyj tego planu' }).click();
+  await page.locator('#nav-start').click();
+  await page.getByRole('button', { name: 'TRENING D' }).click();
+  await page.locator('.start-hero .btn-gold').click();
+  await page.locator('.btn-plan-toggle').click();
+  await page.locator('.drawer-ex-item', { hasText: 'Wznosy nóg w zwisie na drążku' }).click();
+  const buttons = page.locator('.reps-buttons-grid');
+  for (const reps of [8, 9, 10, 11, 12]) await expect(buttons.getByRole('button', { name: String(reps), exact: true })).toBeVisible();
+  await expect(buttons.getByRole('button', { name: 'MAX', exact: true })).toHaveCount(0);
+  await expect(buttons.getByRole('button', { name: 'Inne...' })).toBeVisible();
+  await buttons.getByRole('button', { name: '11', exact: true }).click();
+  await expect(page.locator('.set-row.completed').first()).toContainText('11 powt.');
+  await buttons.getByRole('button', { name: 'Inne...' }).click();
+  await page.locator('#modalCustomRepsInput').fill('17');
+  await page.getByRole('button', { name: 'Zapisz serię' }).click();
+  await expect(page.locator('.set-row.completed').last()).toContainText('17 powt.');
+  await finishWorkout(page);
+  await expect(page.locator('.history-session-card').first()).toContainText('11 powt.');
+  await expect(page.locator('.history-session-card').first()).toContainText('17 powt.');
+});
+
 test('plank records seconds separately from rest timer and preserves history', async ({ page }) => {
   await page.goto('/');
   await page.locator('#nav-plan').click();
@@ -507,6 +534,33 @@ test('plank records seconds separately from rest timer and preserves history', a
   await expect(page.locator('.timer-btn-main')).toContainText('START 1:00');
   await finishWorkout(page);
   await expect(page.locator('.history-session-card').first()).toContainText('45 s');
+});
+
+test('name autocomplete applies library defaults and bodyweight mode', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#nav-plan').click();
+  await page.locator('.plan-mgmt-actions .btn', { hasText: '+ Dodaj ćwiczenie' }).click();
+  const modal = page.locator('.modal-box');
+  await modal.locator('#modalExName').fill('wznosy');
+  await modal.locator('#modalExName').fill('Wznosy nóg w zwisie na drążku');
+  await expect(modal.locator('#exerciseLibrary')).toHaveValue('Wznosy nóg w zwisie na drążku');
+  await expect(modal.locator('#modalExStep')).toHaveCount(0);
+  await expect(modal.locator('#modalExProgressionType')).toHaveCount(0);
+  await expect(modal.locator('#modalExRest')).toHaveValue('60');
+  await modal.getByRole('button', { name: 'Zapisz ćwiczenie' }).click();
+  await expect(page.locator('.modal-box')).toHaveCount(0);
+  await page.reload();
+  await page.locator('#nav-plan').click();
+  const exercise = page.locator('.plan-item-card', { hasText: 'Wznosy nóg w zwisie na drążku' });
+  await exercise.getByRole('button', { name: '✏️ Edytuj' }).click();
+  await expect(modal.locator('#modalExStep')).toHaveCount(0);
+  await modal.getByRole('button', { name: 'Anuluj' }).click();
+  await page.locator('#nav-start').click();
+  await page.locator('.start-hero .btn-gold').click();
+  await page.locator('.btn-plan-toggle').click();
+  await page.locator('.drawer-ex-item', { hasText: 'Wznosy nóg w zwisie na drążku' }).click();
+  await expect(page.getByRole('checkbox', { name: 'Dodatkowe obciążenie (kg)' })).not.toBeChecked();
+  await expect(page.locator('.weight-adjuster-section')).toHaveCount(0);
 });
 
 test('adding an exercise from the library fills the form and persists after reload', async ({ page }) => {

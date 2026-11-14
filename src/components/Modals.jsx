@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { EXERCISE_CATEGORIES, EXERCISE_DATABASE, PLAN_TEMPLATES } from '../data.js';
 import { formatWeightDisplay, isBodyweightExercise, isTimedExercise, planCounts, remainingWorkoutsThisWeek, workoutIds } from '../logic.js';
 
@@ -27,7 +27,11 @@ function initialForm(exercise) {
 
 export function ExerciseModal({ planName, exercise, onSave, onClose }) {
   const [form, setForm] = useState(() => initialForm(exercise));
-  const field = key => event => setForm(prev => ({ ...prev, [key]: event.target.value }));
+  const editedFields = useRef(new Set());
+  const field = key => event => {
+    editedFields.current.add(key);
+    setForm(prev => ({ ...prev, [key]: event.target.value }));
+  };
 
   const pickFromDatabase = name => {
     if (!name) return;
@@ -41,6 +45,23 @@ export function ExerciseModal({ planName, exercise, onSave, onClose }) {
       }
       return next;
     });
+  };
+
+  const nameChanged = event => {
+    const name = event.target.value;
+    const known = EXERCISE_DATABASE.find(item => item.name === name);
+    if (name && known?.step === 0) {
+      setForm(prev => ({
+        ...prev,
+        name,
+        quick: known.name,
+        ...(!exercise && !editedFields.current.has('tempo') && (!prev.tempo || prev.tempo === '2010') ? { tempo: known.tempo || '2010' } : {}),
+        ...(!exercise && !editedFields.current.has('rest') ? { rest: String(known.rest || 90) } : {}),
+        ...(!exercise && !editedFields.current.has('step') ? { step: fmt(known.step) } : {}),
+      }));
+    } else {
+      setForm(prev => ({ ...prev, name, quick: known ? known.name : '' }));
+    }
   };
 
   const title = exercise ? `Edytuj: ${exercise.name}` : `Dodaj ćwiczenie do ${planName}`;
@@ -68,7 +89,7 @@ export function ExerciseModal({ planName, exercise, onSave, onClose }) {
 
         <div className="form-group">
           <label className="form-label">Nazwa ćwiczenia</label>
-          <input type="text" id="modalExName" className="modal-input" placeholder="np. Przysiad ze sztangą na plecach" list="exerciseDatalist" value={form.name} onChange={field('name')} />
+          <input type="text" id="modalExName" className="modal-input" placeholder="np. Przysiad ze sztangą na plecach" list="exerciseDatalist" value={form.name} onChange={nameChanged} />
           <datalist id="exerciseDatalist">
             {EXERCISE_DATABASE.map(item => (
               <option key={item.name} value={item.name} />
