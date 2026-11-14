@@ -71,7 +71,7 @@ test('start screen shows today\'s plan and loads without errors', async ({ page 
   await expect(page.locator('.start-title')).toHaveText('TRENING A');
   await expect(page.locator('.logo-badge')).toHaveText('TYDZIEŃ 1');
   await expect(page.locator('.preview-item')).toHaveCount(7);
-  await expect(page.locator('.preview-item').last()).toContainText('(2 × 10+ MAX)');
+  await expect(page.locator('.preview-item').last()).toContainText('(2 × 8–12)');
   await expect(page.locator('.workout-active-pill')).toHaveCount(0);
   await expect(page.locator('.floating-timer-bar')).toHaveCount(0);
   expect(errors).toEqual([]);
@@ -482,6 +482,30 @@ test('bodyweight exercise can record reps without or with weight and keeps histo
   await page.reload();
   await page.locator('#nav-history').click();
   await expect(page.locator('.history-session-card').first()).toContainText('12 powt.');
+});
+
+test('legacy leg raise plan and history remain intact while old target displays 8–12', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(() => {
+    const plan = JSON.parse(localStorage.getItem('trening2026_plan_v1'));
+    const ex = plan.A.exercises.find(e => e.name === 'Wznosy nóg do klatki');
+    ex.repsMin = 10; ex.repsMax = 'MAX';
+    localStorage.setItem('trening2026_plan_v1', JSON.stringify(plan));
+    localStorage.setItem('trening2026_history_v1', JSON.stringify([{ sessionId: 'old-raise', workoutId: 'A', workoutName: 'TRENING A', week: 0, date: '2025-01-01T10:00:00.000Z', exercises: [{ id: ex.id, name: ex.name, targetSets: 2, sets: [{ weight: 0, reps: 'MAX' }, { weight: 0, reps: 14 }] }] }]));
+  });
+  const originalHistory = await page.evaluate(() => localStorage.getItem('trening2026_history_v1'));
+  await page.reload();
+  await expect(page.locator('.preview-item').last()).toContainText('(2 × 8–12)');
+  await page.locator('.start-hero .btn-gold').click();
+  await page.locator('.btn-plan-toggle').click();
+  await page.locator('.drawer-ex-item', { hasText: 'Wznosy nóg do klatki' }).click();
+  const buttons = page.locator('.reps-buttons-grid');
+  for (const reps of [8, 9, 10, 11, 12]) await expect(buttons.getByRole('button', { name: String(reps), exact: true })).toBeVisible();
+  await expect(page.locator('.info-strip-col.prev')).toContainText('MAX');
+  await expect(page.locator('.info-strip-col.prev')).toContainText('14');
+  expect(await page.evaluate(() => localStorage.getItem('trening2026_history_v1'))).toBe(originalHistory);
+  const savedTarget = await page.evaluate(() => JSON.parse(localStorage.getItem('trening2026_plan_v1')).A.exercises.find(e => e.name === 'Wznosy nóg do klatki'));
+  expect(savedTarget).toMatchObject({ repsMin: 10, repsMax: 'MAX' });
 });
 
 test('hanging leg raises offer repetitions 8 to 12 and custom entry instead of MAX', async ({ page }) => {

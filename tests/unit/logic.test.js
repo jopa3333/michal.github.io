@@ -38,7 +38,21 @@ describe('default plan (port of legacy DEFAULT_PLAN)', () => {
     expect(DEFAULT_PLAN.A.name).toBe('TRENING A');
     expect(DEFAULT_PLAN.A.exercises[0]).toMatchObject({ id: 'ex_a_1', name: 'Przysiad z sztangą na plecach', sets: 3, repsMin: 3, repsMax: 5, tempo: '2010', progressionStep: 2.5, restSeconds: 180 });
     expect(DEFAULT_PLAN.B.exercises[1]).toMatchObject({ id: 'ex_b_2', name: 'Leg press', progressionStep: 5, restSeconds: 120 });
-    expect(DEFAULT_PLAN.C.exercises[6]).toMatchObject({ id: 'ex_c_7', repsMin: 10, repsMax: 'MAX' });
+    expect(DEFAULT_PLAN.C.exercises[6]).toMatchObject({ id: 'ex_c_7', repsMin: 8, repsMax: 12 });
+  });
+
+  it('shows 8–12 for built-in leg raises while preserving old saved MAX records', () => {
+    for (const id of ['A', 'C']) expect(DEFAULT_PLAN[id].exercises.find(e => e.name === 'Wznosy nóg do klatki')).toMatchObject({ repsMin: 8, repsMax: 12 });
+    const raises = PLAN_TEMPLATES.flatMap(t => Object.values(t.workouts).flatMap(w => w.exercises)).filter(e => e.name === 'Wznosy nóg w zwisie na drążku');
+    expect(raises.length).toBeGreaterThan(0);
+    for (const item of raises) expect(item).toMatchObject({ repsMin: 8, repsMax: 12 });
+    for (const name of ['Wznosy nóg do klatki', 'Wznosy nóg w zwisie na drążku']) {
+      const old = { name, repsMin: 10, repsMax: 'MAX' };
+      expect(logic.repsDisplay(old)).toBe('8–12');
+      expect(logic.repButtonValues(old)).toEqual([8, 9, 10, 11, 12]);
+      expect(old).toEqual({ name, repsMin: 10, repsMax: 'MAX' });
+      expect(logic.repsDisplay({ name, repsMin: 15, repsMax: 'MAX' })).toBe('15+ MAX');
+    }
   });
 
   it('marks only zero-step exercises as manual progression', () => {

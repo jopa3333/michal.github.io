@@ -11,7 +11,7 @@ const PLAN_TUPLES = {
       ['Uginanie ramion z supinacją', 2, 8, 12, '2111', 1.0, 90],
       ['Wznosy w bok', 2, 8, 12, '2010', 1.0, 90],
       ['Łydka stojąc', 2, 8, 12, '2111', 2.5, 90],
-      ['Wznosy nóg do klatki', 2, 10, 'MAX', '1111', 0, 60],
+      ['Wznosy nóg do klatki', 2, 8, 12, '1111', 0, 60],
     ],
   },
   B: {
@@ -35,7 +35,7 @@ const PLAN_TUPLES = {
       ['Wyciskanie francuskie hantlami', 2, 8, 12, '2010', 1.0, 90],
       ['Uginanie ramion z oparciem o kolano', 2, 8, 12, '2111', 1.0, 90],
       ['Odwrotny butterfly', 2, 8, 12, '2111', 1.0, 90],
-      ['Wznosy nóg do klatki', 2, 10, 'MAX', '1111', 0, 60],
+      ['Wznosy nóg do klatki', 2, 8, 12, '1111', 0, 60],
     ],
   },
 };
@@ -116,7 +116,7 @@ export const PLAN_TEMPLATES = [
       ['A', 'GÓRA PUSH', [['Wyciskanie hantli na ławce skośnej dodatniej', 4, 8, 12], ['Wyciskanie na maszynie Chest Press', 3, 10, 12], ['Wyciskanie hantli siedząc', 3, 8, 12], ['Wznosy hantli bokiem stojąc', 4, 12, 20, '2011', 1, 60], ['Prostowanie ramion na wyciągu ze sznurem', 3, 12, 15, '2011', 1.25, 60]]],
       ['B', 'DÓŁ QUAD', [['Hack Przysiad (maszyna)', 4, 8, 12, '2010', 2.5, 120], ['Suwnica na nogi (Leg Press)', 3, 12, 15, '2010', 5, 120], ['Prostowanie nóg na maszynie', 3, 12, 15, '2011', 2.5, 60], ['Wykroki chodzone z hantlami', 3, 10, 12, '2010', 2, 90], ['Wspięcia na łydki siedząc', 4, 12, 20, '2111', 2.5, 60]]],
       ['C', 'GÓRA PULL', [['Ściąganie drążka wyciągu górnego do klatki', 4, 8, 12], ['Wiosłowanie na maszynie T-Bar', 3, 8, 12], ['Przyciąganie uchwytu wyciągu dolnego do brzucha', 3, 10, 12], ['Odwrotny butterfly na maszynie (tył barku)', 3, 12, 15, '2011', 2.5, 60], ['Uginanie ramion z hantlami z supinacją', 3, 10, 15, '2011', 1, 60]]],
-      ['D', 'DÓŁ TYŁ', [['Martwy ciąg rumuński ze sztangą (RDL)', 4, 8, 10, '3010', 2.5, 150], ['Hip Thrust ze sztangą na biodrach', 4, 8, 12, '2011', 5, 120], ['Uginanie nóg siedząc na maszynie', 3, 10, 15, '2011', 2.5, 75], ['Odwodzenie nóg na maszynie', 3, 12, 20, '2011', 2.5, 60], ['Wznosy nóg w zwisie na drążku', 3, 10, 'MAX', '2010', 0, 60]]],
+      ['D', 'DÓŁ TYŁ', [['Martwy ciąg rumuński ze sztangą (RDL)', 4, 8, 10, '3010', 2.5, 150], ['Hip Thrust ze sztangą na biodrach', 4, 8, 12, '2011', 5, 120], ['Uginanie nóg siedząc na maszynie', 3, 10, 15, '2011', 2.5, 75], ['Odwodzenie nóg na maszynie', 3, 12, 20, '2011', 2.5, 60], ['Wznosy nóg w zwisie na drążku', 3, 8, 12, '2010', 0, 60]]],
     ]),
   },
   {
@@ -137,7 +137,7 @@ export const PLAN_TEMPLATES = [
       ['A', 'KLATKA + TRICEPS', [['Wyciskanie sztangi leżąc na ławce poziomej', 4, 6, 10, '2010', 2.5, 150], ['Wyciskanie hantli na ławce skośnej dodatniej', 3, 8, 12], ['Rozpiętki na bramie z linkami wyciągu', 3, 12, 15, '2011', 1.25, 60], ['Prostowanie ramion na wyciągu ze sznurem', 3, 10, 15, '2011', 1.25, 60], ['Wyciskanie francuskie ze sztangą łamaną leżąc', 3, 8, 12]]],
       ['B', 'PLECY + BICEPS', [['Podciąganie na drążku nachwytem', 4, 6, 10, '2010', 1.25, 120], ['Wiosłowanie sztangą w opadzie tułowia', 4, 8, 10, '2010', 2.5, 120], ['Przyciąganie uchwytu wyciągu dolnego do brzucha', 3, 10, 12], ['Uginanie przedramion ze sztangą stojąc', 3, 8, 12], ['Uginanie ramion z hantlami chwytem młotkowym', 3, 10, 15, '2011', 1, 60]]],
       ['C', 'NOGI', [['Przysiad ze sztangą na plecach', 4, 6, 10, '2010', 2.5, 150], ['Martwy ciąg rumuński ze sztangą (RDL)', 4, 8, 10, '3010', 2.5, 120], ['Suwnica na nogi (Leg Press)', 3, 10, 15, '2010', 5, 120], ['Uginanie nóg leżąc na maszynie', 3, 10, 15, '2011', 2.5, 75], ['Wspięcia na łydki stojąc', 4, 12, 15, '2111', 2.5, 60]]],
-      ['D', 'BARKI + BRZUCH', [['Wyciskanie żołnierskie stojąc ze sztangą (OHP)', 4, 6, 10, '2010', 1.25, 150], ['Wznosy hantli bokiem stojąc', 4, 12, 20, '2011', 1, 60], ['Odwrotny butterfly na maszynie (tył barku)', 3, 12, 15, '2011', 2.5, 60], ['Allahy (spięcia brzucha klęcząc na wyciągu)', 3, 10, 15, '2011', 2.5, 60], ['Wznosy nóg w zwisie na drążku', 3, 10, 'MAX', '2010', 0, 60]]],
+      ['D', 'BARKI + BRZUCH', [['Wyciskanie żołnierskie stojąc ze sztangą (OHP)', 4, 6, 10, '2010', 1.25, 150], ['Wznosy hantli bokiem stojąc', 4, 12, 20, '2011', 1, 60], ['Odwrotny butterfly na maszynie (tył barku)', 3, 12, 15, '2011', 2.5, 60], ['Allahy (spięcia brzucha klęcząc na wyciągu)', 3, 10, 15, '2011', 2.5, 60], ['Wznosy nóg w zwisie na drążku', 3, 8, 12, '2010', 0, 60]]],
       ['E', 'GÓRA UZUPEŁNIAJĄCA', [['Wyciskanie na maszynie Chest Press', 3, 10, 12], ['Ściąganie drążka wyciągu górnego do klatki', 3, 10, 12], ['Wznosy bokiem na wyciągu jednorącz', 3, 12, 15, '2011', 1.25, 60], ['Face Pull z linką wyciągu górnego', 3, 12, 15, '2011', 1.25, 60], ['Uginanie ramion na wyciągu dolnym', 2, 12, 15, '2011', 1.25, 60], ['Prostowanie ramion na wyciągu z drążkiem prostym', 2, 12, 15, '2011', 1.25, 60]]],
     ]),
   },

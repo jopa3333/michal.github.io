@@ -51,7 +51,14 @@ export function formatTime(seconds) {
   return `${m}:${s < 10 ? '0' : ''}${s}`;
 }
 
+function isLegacyLegRaiseRange(ex) {
+  const name = String(ex.name || '').trim().toLocaleLowerCase('pl');
+  return (name === 'wznosy nóg do klatki' || name === 'wznosy nóg w zwisie na drążku')
+    && Number(ex.repsMin) === 10 && ex.repsMax === 'MAX';
+}
+
 export function repsDisplay(ex) {
+  if (isLegacyLegRaiseRange(ex)) return '8–12';
   return ex.repsMax === 'MAX' ? `${ex.repsMin}+ MAX` : `${ex.repsMin}–${ex.repsMax}`;
 }
 
@@ -60,7 +67,7 @@ export function repButtonValues(ex) {
   const min = typeof ex.repsMin === 'number' ? ex.repsMin : parseInt(ex.repsMin, 10);
   const max = typeof ex.repsMax === 'number' ? ex.repsMax : parseInt(ex.repsMax, 10);
   const isMaxTag = ex.repsMax === 'MAX' || isNaN(max);
-  if (isMaxTag && String(ex.name || '').trim().toLocaleLowerCase('pl') === 'wznosy nóg w zwisie na drążku') return [8, 9, 10, 11, 12];
+  if (isLegacyLegRaiseRange(ex)) return [8, 9, 10, 11, 12];
   if (isMaxTag) return ['MAX'];
   if (!isNaN(min) && !isNaN(max)) {
     const values = [];
