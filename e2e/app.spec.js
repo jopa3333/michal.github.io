@@ -53,6 +53,8 @@ async function finishWorkout(page) {
 
 test.beforeEach(async ({ page }) => {
   page.on('dialog', dialog => dialog.accept());
+  // Existing tests assume Polish: pre-select it so the first-run language gate never shows.
+  await page.addInitScript(() => localStorage.setItem('trening2026_lang_v1', JSON.stringify('pl')));
 });
 
 test('start screen shows today\'s plan and loads without errors', async ({ page }) => {

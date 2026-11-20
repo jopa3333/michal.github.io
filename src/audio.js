@@ -1,4 +1,5 @@
 import restVoice from './assets/komunikat-przerwa.mp3?inline';
+import { getLang, tFor } from './i18n/core.js';
 
 // Sound, speech, vibration and system notifications, ported from the legacy script.
 // Every function that makes noise takes the settings object so the sound/vibration toggles apply.
@@ -42,7 +43,7 @@ export function unlockAudioAndSpeech() {
       if ('speechSynthesis' in window) {
         const dummy = new SpeechSynthesisUtterance('​');
         dummy.volume = 0;
-        dummy.lang = 'pl-PL';
+        dummy.lang = getLang() === 'en' ? 'en-US' : 'pl-PL';
         window.speechSynthesis.speak(dummy);
       }
     }
@@ -102,9 +103,11 @@ export function soundTimerFinished(settings) {
   vibrate(settings, [300, 150, 300, 150, 450]);
 }
 
-export function speakVoiceNotification(settings, text = 'Koniec przerwy!') {
+export function speakVoiceNotification(settings, text) {
   if (!settings.soundEnabled) return;
-  if (text === 'Koniec przerwy! Czas na serię.') {
+  if (text === undefined) text = tFor(getLang())('audio.restOverShort');
+  // The recorded clip is Polish; in English mode use the device voice instead.
+  if (getLang() === 'pl' && text === 'Koniec przerwy! Czas na serię.') {
     try {
       const clip = new Audio(restVoice);
       const playback = clip.play();
@@ -121,22 +124,24 @@ function speakDeviceVoice(settings, text) {
   if (!settings.soundEnabled) return;
   try {
     if (!('speechSynthesis' in window)) return;
+    const lang = getLang();
+    const voicePrefix = lang === 'en' ? 'en' : 'pl';
     window.speechSynthesis.cancel();
     setTimeout(() => {
       try {
         window.speechSynthesis.resume();
         const utterance = new SpeechSynthesisUtterance(text);
         activeUtterance = utterance;
-        utterance.lang = 'pl-PL';
+        utterance.lang = lang === 'en' ? 'en-US' : 'pl-PL';
         utterance.rate = 0.95;
         utterance.pitch = 1.0;
         utterance.volume = 1.0;
         const voices = window.speechSynthesis.getVoices();
         if (voices && voices.length > 0) {
-          const polish = voices.filter(v => /^pl(?:[-_]|$)/i.test(v.lang || ''));
-          const voice = polish.find(v => v.localService && /enhanced|premium|natural|neural|ulepszon/i.test(v.name || ''))
-            || polish.find(v => v.localService)
-            || polish[0];
+          const matching = voices.filter(v => new RegExp(`^${voicePrefix}(?:[-_]|$)`, 'i').test(v.lang || ''));
+          const voice = matching.find(v => v.localService && /enhanced|premium|natural|neural|ulepszon/i.test(v.name || ''))
+            || matching.find(v => v.localService)
+            || matching[0];
           if (voice) utterance.voice = voice;
         }
         utterance.onend = () => {
@@ -161,7 +166,7 @@ function speakDeviceVoice(settings, text) {
 export function testAudioAndSpeech(settings) {
   unlockAudioAndSpeech();
   soundTimerFinished(settings);
-  setTimeout(() => speakVoiceNotification(settings, 'Koniec przerwy! Czas na serię.'), 420);
+  setTimeout(() => speakVoiceNotification(settings, tFor(getLang())('audio.restOver')), 420);
 }
 
 export function requestNotificationPermissionIfNeeded() {

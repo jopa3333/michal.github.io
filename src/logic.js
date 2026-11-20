@@ -1,5 +1,8 @@
 // Pure logic ported from the legacy index.html script. No DOM, no React, no storage access here,
 // so it can be unit-tested directly.
+// Language-aware helpers take an optional lang ('pl' default, 'en') so old callers and data keep working.
+import { tFor, dateLocale, canonicalExerciseName } from './i18n/core.js';
+import { BODYWEIGHT_ALIASES_EN, TIMED_ALIASES_EN } from './i18n/names.js';
 
 export const WORKOUT_IDS = ['A', 'B', 'C'];
 export const DEFAULT_PLAN_NAME = 'Mój Plan Główny (A/B/C)';
@@ -10,16 +13,18 @@ const BODYWEIGHT_NAMES = new Set([
   'kółko do brzucha (ab wheel rollout)', 'spięcia brzucha na ławce skośnej',
 ]);
 export function isBodyweightExercise(ex) {
-  return BODYWEIGHT_NAMES.has(String(ex.name || '').trim().toLocaleLowerCase('pl'));
+  const name = canonicalExerciseName(String(ex.name || '').trim()).toLocaleLowerCase('pl');
+  return BODYWEIGHT_NAMES.has(name) || BODYWEIGHT_ALIASES_EN.includes(name);
 }
 export function isTimedExercise(ex) {
-  return ['plank', 'plank (deska klasyczna)'].includes(String(ex.name || '').trim().toLocaleLowerCase('pl'));
+  const name = canonicalExerciseName(String(ex.name || '').trim()).toLocaleLowerCase('pl');
+  return ['plank', 'plank (deska klasyczna)'].includes(name) || TIMED_ALIASES_EN.includes(name);
 }
-export function formatRecordedSet(set, exercise) {
+export function formatRecordedSet(set, exercise, lang = 'pl') {
   const timed = set.measurement === 'seconds';
-  const unit = timed ? 's' : 'powt.';
+  const unit = timed ? 's' : tFor(lang)('common.reps');
   const weighted = set.hasWeight ?? (!isBodyweightExercise(exercise) || Number(set.weight) > 0);
-  return weighted ? `${formatWeightDisplay(set.weight)} kg × ${set.reps}${timed ? ' s' : ''}` : `${set.reps} ${unit}`;
+  return weighted ? `${formatWeightDisplay(set.weight, lang)} kg × ${set.reps}${timed ? ' s' : ''}` : `${set.reps} ${unit}`;
 }
 
 export const clone = value => JSON.parse(JSON.stringify(value));
@@ -33,9 +38,9 @@ export function workoutIds(plan, preferredOrder) {
   return [...ordered, ...available.filter(id => !ordered.includes(id))];
 }
 
-export function formatWeightDisplay(num) {
+export function formatWeightDisplay(num, lang = 'pl') {
   if (num === null || num === undefined || isNaN(num)) return '0';
-  return String(num).replace('.', ',');
+  return lang === 'en' ? String(num) : String(num).replace('.', ',');
 }
 
 export function parseWeightInput(str) {
@@ -99,7 +104,8 @@ export function getLastExerciseResult(history, exerciseName) {
   return null;
 }
 
-export function calculateProgression(history, def) {
+export function calculateProgression(history, def, lang = 'pl') {
+  const t = tFor(lang);
   const last = getLastExerciseResult(history, def.name);
   if (!last) {
     return {
@@ -107,7 +113,7 @@ export function calculateProgression(history, def) {
       suggestedWeight: 0,
       isProgression: false,
       progressionBadgeText: '',
-      lastSummaryText: 'BRAK POPRZEDNIEGO WYNIKU',
+      lastSummaryText: t('common.noPreviousResult'),
       lastDateText: '',
     };
   }
@@ -116,15 +122,15 @@ export function calculateProgression(history, def) {
   const lastWeight = sets[0].weight || 0;
   const allSameWeight = sets.every(s => s.weight === lastWeight);
   const lastSummaryText = isBodyweightExercise(def)
-    ? sets.map(s => formatRecordedSet(s, def)).join(' / ')
+    ? sets.map(s => formatRecordedSet(s, def, lang)).join(' / ')
     : allSameWeight
-      ? `${formatWeightDisplay(lastWeight)} kg • ${sets.map(s => s.reps).join(' / ')}`
-      : sets.map(s => `${formatWeightDisplay(s.weight)}kg × ${s.reps}`).join(' / ');
+      ? `${formatWeightDisplay(lastWeight, lang)} kg • ${sets.map(s => s.reps).join(' / ')}`
+      : sets.map(s => `${formatWeightDisplay(s.weight, lang)}kg × ${s.reps}`).join(' / ');
 
   const dateObj = new Date(last.sessionDate);
   const lastDateText = !isNaN(dateObj)
-    ? `${dateObj.toLocaleDateString('pl-PL')} (Tydz. ${last.sessionWeek})`
-    : `Tydzień ${last.sessionWeek}`;
+    ? `${dateObj.toLocaleDateString(dateLocale(lang))} (${t('common.weekShort')} ${last.sessionWeek})`
+    : `${t('common.week')} ${last.sessionWeek}`;
 
   const asNumber = value => (typeof value === 'number' ? value : parseInt(value, 10));
   const maxReps = asNumber(def.repsMax);
@@ -156,16 +162,16 @@ export function calculateProgression(history, def) {
     lastWeight,
     suggestedWeight,
     isProgression: shouldProgress,
-    progressionBadgeText: shouldProgress ? `PROGRES +${formatWeightDisplay(step)} kg` : '',
+    progressionBadgeText: shouldProgress ? t('common.progress', { step: formatWeightDisplay(step, lang) }) : '',
     lastSummaryText,
     lastDateText,
   };
 }
 
 // Exercises for a new workout session, with suggested weights from history.
-export function createSessionExercises(workout, history) {
+export function createSessionExercises(workout, history, lang = 'pl') {
   return workout.exercises.map(def => {
-    const prog = calculateProgression(history, def);
+    const prog = calculateProgression(history, def, lang);
     return {
       id: def.id,
       name: def.name,
@@ -313,10 +319,11 @@ export function planCounts(workouts, order) {
   return workoutIds(workouts, order).map(id => workouts[id].exercises.length);
 }
 
-export function progressionRuleText(type) {
-  if (type === 'top_all_sets') return 'Górny zakres we wszystkich seriach';
-  if (type === 'top_first_set') return 'Górny zakres w 1. serii';
-  return 'Ręczna';
+export function progressionRuleText(type, lang = 'pl') {
+  const t = tFor(lang);
+  if (type === 'top_all_sets') return t('common.progressRuleAll');
+  if (type === 'top_first_set') return t('common.progressRuleFirst');
+  return t('common.progressRuleManual');
 }
 
 // Writes the current plan into the saved-plan entry it came from (the legacy "autoSaveCurrentPlan").
@@ -340,8 +347,9 @@ export function upsertCurrentPlan(savedPlans, settings, plan, now) {
 }
 
 // Validates the exercise form exactly like the legacy saveExerciseModal().
-export function exerciseFromForm(form, existingId, nowMs) {
-  const name = form.name.trim();
+export function exerciseFromForm(form, existingId, nowMs, lang = 'pl') {
+  const t = tFor(lang);
+  const name = canonicalExerciseName(form.name.trim());
   const sets = parseInt(form.sets, 10);
   const repsMin = parseInt(form.repsMin, 10);
   const repsMaxInput = form.repsMax.trim();
@@ -350,8 +358,8 @@ export function exerciseFromForm(form, existingId, nowMs) {
   const step = parseWeightInput(form.step);
   const rest = parseInt(form.rest, 10);
 
-  if (!name) return { error: 'Podaj nazwę ćwiczenia' };
-  if (isNaN(sets) || sets < 1) return { error: 'Podaj prawidłową liczbę serii' };
+  if (!name) return { error: t('common.errorExerciseName') };
+  if (isNaN(sets) || sets < 1) return { error: t('common.errorSets') };
 
   return {
     exercise: {

@@ -4,6 +4,10 @@ import { DEFAULT_PLAN, PLAN_TEMPLATES } from './data.js';
 import { KEYS, loadFromStorage, saveToStorage } from './storage.js';
 import * as audio from './audio.js';
 import * as logic from './logic.js';
+import { useT } from './i18n.jsx';
+import {
+  getStoredLang, getLang, tFor, exerciseDisplayName, workoutDisplayName, planDisplayName, templateText,
+} from './i18n/core.js';
 import { HistoryTab } from './components/HistoryTab.jsx';
 import { PlanTab } from './components/PlanTab.jsx';
 import { SettingsTab } from './components/SettingsTab.jsx';
@@ -23,11 +27,11 @@ import {
 const TICK_MS = 400;
 const TOAST_MS = 2600;
 const NAV = [
-  ['start', '🏠', 'Start'],
-  ['workout', '🏋️', 'Trening'],
-  ['plan', '📋', 'Plan'],
-  ['history', '📊', 'Historia'],
-  ['settings', '⚙️', 'Ustawienia'],
+  ['start', '🏠'],
+  ['workout', '🏋️'],
+  ['plan', '📋'],
+  ['history', '📊'],
+  ['settings', '⚙️'],
 ];
 const DEFAULT_SETTINGS = {
   currentWeek: 1,
@@ -38,7 +42,6 @@ const DEFAULT_SETTINGS = {
   vibrateEnabled: true,
 };
 const DEFAULT_HISTORY_FILTERS = { workout: 'all', week: 'all', exerciseMode: false, exerciseName: '' };
-const fmt = logic.formatWeightDisplay;
 
 function readInitialState() {
   const plan = loadFromStorage(KEYS.plan, logic.clone(DEFAULT_PLAN));
@@ -66,17 +69,46 @@ function readInitialState() {
   return { plan, history, settings: progress.settings, weekProg: progress.weekProg, session, savedPlans };
 }
 
+// First launch: no language chosen yet and no existing user data.
+function isFirstRun() {
+  return !getStoredLang()
+    && loadFromStorage(KEYS.history, null) === null
+    && loadFromStorage(KEYS.settings, null) === null
+    && loadFromStorage(KEYS.plan, null) === null;
+}
+
+function LanguageGate({ onChoose }) {
+  return (
+    <div className="modal-overlay" style={{ display: 'flex', zIndex: 1000 }}>
+      <div className="modal-box" style={{ maxWidth: 340, textAlign: 'center' }}>
+        <div style={{ fontSize: '2.5rem', marginBottom: 8 }}>🏋️</div>
+        <div className="modal-title">Wybierz język<br />Choose language</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
+          <button type="button" id="langGatePl" className="btn btn-gold btn-large" onClick={() => onChoose('pl')}>Polski</button>
+          <button type="button" id="langGateEn" className="btn btn-outline btn-large" onClick={() => onChoose('en')}>English</button>
+        </div>
+        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 14, lineHeight: 1.4 }}>
+          Język możesz później zmienić w ustawieniach.<br />
+          You can change the language later in settings.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function Toast({ notice }) {
+  const { t } = useT();
   const icon = notice?.type === 'error' ? '✕' : notice?.type === 'gold' ? '★' : '✓';
   return (
     <div id="notification" className={`notification${notice?.visible ? ' show' : ''} ${notice ? notice.type : ''}`}>
       <span id="notif-icon">{notice ? icon : '✓'}</span>
-      <span id="notif-msg">{notice ? notice.message : 'Powiadomienie'}</span>
+      <span id="notif-msg">{notice ? notice.message : t('app.notification')}</span>
     </div>
   );
 }
 
 export default function App() {
+  const { t, lang, setLang } = useT();
   const [boot] = useState(readInitialState);
   const [plan, setPlan] = useState(boot.plan);
   const [history, setHistory] = useState(boot.history);
@@ -90,6 +122,7 @@ export default function App() {
   const [timer, setTimer] = useState({ isRunning: false, remaining: 0, total: 0, targetEndTime: null });
   const [modal, setModal] = useState(null);
   const [historyFilters, setHistoryFilters] = useState(DEFAULT_HISTORY_FILTERS);
+  const [showLangGate, setShowLangGate] = useState(isFirstRun);
 
   const timerRef = useRef(timer);
   timerRef.current = timer;
@@ -98,9 +131,10 @@ export default function App() {
   const finishedTimerTargetRef = useRef(null);
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
+  const langRef = useRef(lang);
+  langRef.current = lang;
 
   const notify = (message, type = 'success') => setNotice({ message, type, visible: true, id: Date.now() + Math.random() });
-
   // Persist every piece of state under the legacy localStorage keys.
   useEffect(() => saveToStorage(KEYS.plan, plan), [plan]);
   useEffect(() => saveToStorage(KEYS.history, history), [history]);
@@ -118,7 +152,7 @@ export default function App() {
   // Week progression on load (legacy initApp).
   useEffect(() => {
     if (boot.weekProg.advanced) {
-      notify(`🚀 Zaktualizowano na Tydzień ${boot.weekProg.newWeek} (ukończono Tydzień ${boot.weekProg.previousWeek})!`, 'gold');
+      notify(t('app.weekAdvanced', { newWeek: boot.weekProg.newWeek, previousWeek: boot.weekProg.previousWeek }), 'gold');
     }
     // Runs once on mount, like the legacy initApp().
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -126,7 +160,7 @@ export default function App() {
 
   // Uncaught errors show a toast, like the legacy window.onerror.
   useEffect(() => {
-    const onError = event => setNotice({ message: `Błąd: ${event.message}`, type: 'error', visible: true, id: Date.now() + Math.random() });
+    const onError = event => setNotice({ message: tFor(getLang())('app.error', { message: event.message }), type: 'error', visible: true, id: Date.now() + Math.random() });
     window.addEventListener('error', onError);
     return () => window.removeEventListener('error', onError);
   }, []);
@@ -136,7 +170,7 @@ export default function App() {
     if (!session) return undefined;
     const warn = event => {
       event.preventDefault();
-      event.returnValue = 'Trwa aktywny trening. Czy na pewno chcesz opuścić stronę?';
+      event.returnValue = tFor(getLang())('app.leaveWarning');
     };
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
@@ -154,10 +188,11 @@ export default function App() {
     if (finishedTimerTargetRef.current === current.targetEndTime) return;
     finishedTimerTargetRef.current = current.targetEndTime;
     setTimer(prev => ({ ...prev, remaining: 0, isRunning: false, targetEndTime: null }));
+    const tt = tFor(langRef.current);
     audio.soundTimerFinished(settingsRef.current);
-    setTimeout(() => audio.speakVoiceNotification(settingsRef.current, 'Koniec przerwy! Czas na serię.'), 450);
-    audio.sendSystemNotification('Koniec przerwy! ⏱', 'Czas na kolejną serię!');
-    notify('⏱ Koniec przerwy! Czas na kolejną serię.', 'gold');
+    setTimeout(() => audio.speakVoiceNotification(settingsRef.current, tt('audio.restOver')), 450);
+    audio.sendSystemNotification(tt('audio.restOverTitle'), tt('audio.restOverBody'));
+    notify(tt('audio.restOverToast'), 'gold');
   }
   const tickRef = useRef(tickTimer);
   tickRef.current = tickTimer;
@@ -240,7 +275,7 @@ export default function App() {
       return;
     }
     if (!workout.exercises.length) {
-      notify('Ten trening nie ma ćwiczeń.', 'error');
+      notify(t('app.noExercises'), 'error');
       return;
     }
     const next = {
@@ -251,14 +286,14 @@ export default function App() {
       week: settings.currentWeek || 1,
       startTime: new Date().toISOString(),
       currentExerciseIndex: 0,
-      exercises: logic.createSessionExercises(workout, history),
+      exercises: logic.createSessionExercises(workout, history, lang),
     };
     setSession(next);
     setExerciseIndex(0);
     setTab('workout');
     initExerciseTimer(next.exercises[0].restSeconds || 90);
     window.scrollTo(0, 0);
-    notify(`Rozpoczęto ${workout.name} (Tydzień ${settings.currentWeek})!`);
+    notify(t('app.started', { name: workoutDisplayName(workout.name, lang), week: settings.currentWeek }));
   }
 
   function patchExercise(index, change) {
@@ -297,10 +332,10 @@ export default function App() {
     patchExercise(exIndex, e => ({ completedSets: [...e.completedSets, set] }));
     audio.unlockAudioAndSpeech();
     audio.soundSetLogged(settingsRef.current);
-    notify(`✓ Zapisano serię: ${logic.formatRecordedSet(set, ex)}`);
+    notify(t('app.setSaved', { set: logic.formatRecordedSet(set, ex, lang) }));
     if (ex.completedSets.length + 1 >= ex.setsTarget) {
       initExerciseTimer(restAt(exIndex));
-      notify(`🎉 Ukończono: ${ex.name}!`, 'gold');
+      notify(t('app.exerciseDone', { name: exerciseDisplayName(ex.name, lang) }), 'gold');
     } else {
       resetTimer(restAt(exIndex));
     }
@@ -310,20 +345,20 @@ export default function App() {
     if (!session) return;
     patchExercise(exIndex, e => ({ completedSets: e.completedSets.filter((_, i) => i !== setIndex) }));
     initExerciseTimer(restAt(exIndex));
-    notify('Usunięto serię');
+    notify(t('app.setRemoved'));
   }
 
   function addSet() {
     if (!currentExercise) return;
     patchExercise(exIndex, e => ({ setsTarget: e.setsTarget + 1 }));
     initExerciseTimer(restAt(exIndex));
-    notify(`Dodano serię (cel: ${currentExercise.setsTarget + 1} serii)`);
+    notify(t('app.setAdded', { count: currentExercise.setsTarget + 1 }));
   }
 
   function removeSetTarget() {
     if (!currentExercise) return;
     if (currentExercise.setsTarget <= 1) {
-      notify('Minimalna liczba serii to 1', 'error');
+      notify(t('app.minSets'), 'error');
       return;
     }
     patchExercise(exIndex, e => ({
@@ -331,7 +366,7 @@ export default function App() {
       completedSets: e.completedSets.length >= e.setsTarget ? e.completedSets.slice(0, -1) : e.completedSets,
     }));
     initExerciseTimer(restAt(exIndex));
-    notify(`Zmniejszono liczbę serii do ${currentExercise.setsTarget - 1}`);
+    notify(t('app.setsReduced', { count: currentExercise.setsTarget - 1 }));
   }
 
   function adjustWeight(delta) {
@@ -343,13 +378,13 @@ export default function App() {
   function saveWeight(text) {
     const value = logic.parseWeightInput(text);
     if (isNaN(value) || value < 0) {
-      notify('Podaj prawidłowy ciężar', 'error');
+      notify(t('app.invalidWeight'), 'error');
       return;
     }
     patchExercise(exIndex, () => ({ currentWeight: value }));
     initExerciseTimer(restAt(exIndex));
     setModal(null);
-    notify(`Ustawiono ciężar ${fmt(value)} kg`);
+    notify(t('app.weightSet', { weight: logic.formatWeightDisplay(value, lang) }));
   }
 
   function saveCustomReps(text) {
@@ -358,14 +393,14 @@ export default function App() {
       setModal(null);
       recordSet(value);
     } else {
-      notify('Podaj prawidłową liczbę powtórzeń', 'error');
+      notify(t('app.invalidReps'), 'error');
     }
   }
 
   function adjustWeekSetting(delta) {
     const week = Math.max(1, (settings.currentWeek || 1) + delta);
     setSettings({ ...settings, currentWeek: week });
-    notify(`Ustawiono tydzień ${week}`, 'gold');
+    notify(t('app.weekSet', { week }), 'gold');
   }
 
   // ---- Finishing a workout (legacy section 14) ----
@@ -374,14 +409,14 @@ export default function App() {
     if (!session) return;
     const anySets = session.exercises.some(e => e.completedSets && e.completedSets.length > 0);
     if (!anySets) {
-      if (window.confirm('Nie wykonano jeszcze żadnej serii. Czy na pewno chcesz anulować ten trening?')) {
+      if (window.confirm(t('app.confirmCancelNoSets'))) {
         setSession(null);
         setTab('start');
-        notify('Anulowano trening');
+        notify(t('app.cancelled'));
       }
       return;
     }
-    if (window.confirm('Czy na pewno chcesz zakończyć ten trening i zapisać wyniki do historii?')) finishWorkout();
+    if (window.confirm(t('app.confirmFinish'))) finishWorkout();
   }
 
   function finishWorkout() {
@@ -409,7 +444,7 @@ export default function App() {
     setModal(null);
     setTab('history');
     window.scrollTo(0, 0);
-    notify('Trening zapisany pomyślnie!', 'gold');
+    notify(t('app.savedOk'), 'gold');
   }
 
   // ---- Plans (legacy section 15) ----
@@ -422,7 +457,7 @@ export default function App() {
   function saveExercise(form, index) {
     const isNew = index < 0;
     const existingId = isNew ? null : plan[planTab].exercises[index].id;
-    const result = logic.exerciseFromForm(form, existingId, Date.now());
+    const result = logic.exerciseFromForm(form, existingId, Date.now(), lang);
     if (result.error) {
       notify(result.error, 'error');
       return;
@@ -431,7 +466,9 @@ export default function App() {
     if (isNew) next[planTab].exercises.push(result.exercise);
     else next[planTab].exercises[index] = result.exercise;
     commitPlan(next);
-    notify(isNew ? `Dodano "${result.exercise.name}" do ${plan[planTab].name}` : `Zapisano zmiany w "${result.exercise.name}"`);
+    notify(isNew
+      ? t('app.exerciseAdded', { name: exerciseDisplayName(result.exercise.name, lang), plan: workoutDisplayName(plan[planTab].name, lang) })
+      : t('app.exerciseSaved', { name: exerciseDisplayName(result.exercise.name, lang) }));
     setModal(null);
   }
 
@@ -444,26 +481,26 @@ export default function App() {
     const [item] = exercises.splice(index, 1);
     exercises.splice(target, 0, item);
     commitPlan(next);
-    notify('Zmieniono kolejność ćwiczeń');
+    notify(t('app.orderChanged'));
   }
 
   function deleteExercise(index) {
     const name = plan[planTab].exercises[index].name;
-    if (!window.confirm(`Czy na pewno chcesz usunąć ćwiczenie "${name}" z ${plan[planTab].name}?\n(Twoja dotychczasowa historia wyników zostanie zachowana)`)) return;
+    if (!window.confirm(t('app.confirmDeleteExercise', { name: exerciseDisplayName(name, lang), plan: workoutDisplayName(plan[planTab].name, lang) }))) return;
     const next = logic.clone(plan);
     next[planTab].exercises.splice(index, 1);
     commitPlan(next);
-    notify('Usunięto ćwiczenie z planu');
+    notify(t('app.exerciseDeleted'));
   }
 
   function resetDefaultPlan() {
-    if (!window.confirm('Czy na pewno chcesz przywrócić domyślny plan treningowy A/B/C?\nTwoja historia wykonanych treningów pozostanie nienaruszona!')) return;
+    if (!window.confirm(t('app.confirmResetPlan'))) return;
     const next = logic.clone(DEFAULT_PLAN);
     const nextSettings = { ...settings, activePlanName: 'Domyślny Plan A/B/C' };
     setSettings(nextSettings);
     commitPlan(next, nextSettings);
     setPlanTab('A');
-    notify('Przywrócono domyślny plan treningowy', 'gold');
+    notify(t('app.planReset'), 'gold');
   }
 
   function loadPlan(id) {
@@ -475,13 +512,13 @@ export default function App() {
     setPlanTab(ids[0] || 'A');
     setSettings({ ...settings, activePlanId: target.id, activePlanName: target.name, selectedStartWorkoutId: ids[0] || 'A' });
     setModal(null);
-    notify(`✓ Wczytano plan: ${target.name}!`, 'gold');
+    notify(t('app.planLoaded', { name: planDisplayName(target.name, lang) }), 'gold');
   }
 
   function savePlanAs(mode, rawName, days = 3) {
     const name = rawName.trim();
     if (!name) {
-      notify('Podaj nazwę planu', 'error');
+      notify(t('app.enterPlanName'), 'error');
       return;
     }
     const now = new Date().toISOString();
@@ -489,7 +526,7 @@ export default function App() {
     if (mode === 'save_as') {
       setSavedPlans([...savedPlans, { id, name, createdAt: now, updatedAt: now, workouts: logic.clone(plan), workoutOrder: logic.workoutIds(plan), source: { type: 'custom' } }]);
       setSettings({ ...settings, activePlanId: id, activePlanName: name });
-      notify(`✓ Zapisano plan jako: "${name}"`, 'gold');
+      notify(t('app.planSavedAs', { name }), 'gold');
     } else {
       const upserted = logic.upsertCurrentPlan(savedPlans, settings, plan, now);
       const empty = logic.emptyPlan(days);
@@ -498,7 +535,7 @@ export default function App() {
       setPlan(empty);
       setPlanTab(order[0]);
       setSettings({ ...settings, activePlanId: id, activePlanName: name, selectedStartWorkoutId: order[0] });
-      notify(`Utworzono plan: "${name}". Dodaj ćwiczenia!`, 'gold');
+      notify(t('app.planCreated', { name }), 'gold');
     }
     setModal(null);
   }
@@ -526,25 +563,25 @@ export default function App() {
     setPlanTab(order[0]);
     setSettings({ ...settings, activePlanId: id, activePlanName: template.title, selectedStartWorkoutId: order[0] });
     setModal(null);
-    notify(`✓ Dodano gotowy plan: ${template.title}`, 'gold');
+    notify(t('app.templateAdded', { name: templateText(template, lang).title }), 'gold');
   }
 
   function renamePlan(id) {
     const existing = savedPlans.find(p => p.id === id);
     if (!existing) return;
-    const newName = window.prompt('Podaj nową nazwę planu:', existing.name);
+    const newName = window.prompt(t('app.enterNewPlanName'), existing.name);
     if (!newName || !newName.trim()) return;
     const name = newName.trim();
     setSavedPlans(savedPlans.map(p => (p.id === id ? { ...p, name, updatedAt: new Date().toISOString() } : p)));
     if (settings.activePlanId === id) setSettings({ ...settings, activePlanName: name });
-    notify(`Zmieniono nazwę na: "${name}"`);
+    notify(t('app.renamed', { name }));
   }
 
   function duplicatePlan(id) {
     const source = savedPlans.find(p => p.id === id);
     if (!source) return;
     const now = new Date().toISOString();
-    const name = `${source.name} (Kopia)`;
+    const name = `${source.name} ${t('common.copySuffix')}`;
     setSavedPlans([...savedPlans, {
       id: `plan_${Date.now()}`,
       name,
@@ -554,27 +591,27 @@ export default function App() {
       workoutOrder: logic.workoutIds(source.workouts, source.workoutOrder),
       source: { type: 'copy', copiedFrom: source.id },
     }]);
-    notify(`Skopiowano plan jako: "${name}"`);
+    notify(t('app.planCopied', { name }));
   }
 
   function deletePlan(id) {
     if (settings.activePlanId === id) {
-      notify('Nie możesz usunąć aktualnie aktywnego planu!', 'error');
+      notify(t('app.cannotDeleteActive'), 'error');
       return;
     }
     const target = savedPlans.find(p => p.id === id);
     if (!target) return;
-    if (!window.confirm(`Czy na pewno chcesz usunąć plan "${target.name}"?\nTwoja historia wykonanych treningów pozostanie nienaruszona!`)) return;
+    if (!window.confirm(t('app.confirmDeletePlan', { name: planDisplayName(target.name, lang) }))) return;
     setSavedPlans(savedPlans.filter(p => p.id !== id));
-    notify(`Usunięto plan "${target.name}"`);
+    notify(t('app.planDeleted', { name: planDisplayName(target.name, lang) }));
   }
 
   // ---- History filters (legacy section 16) ----
 
   function deleteSession(index) {
-    if (!window.confirm('Czy na pewno chcesz usunąć ten trening z historii?')) return;
+    if (!window.confirm(t('app.confirmDeleteSession'))) return;
     setHistory(history.filter((_, i) => i !== index));
-    notify('Usunięto sesję z historii');
+    notify(t('app.sessionDeleted'));
   }
 
   // ---- Settings, backup and restore (legacy section 17) ----
@@ -593,7 +630,7 @@ export default function App() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    notify('Wyeksportowano kopię zapasową JSON (z planami i historią)!', 'gold');
+    notify(t('app.exported'), 'gold');
   }
 
   function importFile(file) {
@@ -601,37 +638,36 @@ export default function App() {
     reader.onload = event => {
       try {
         const imported = JSON.parse(event.target.result);
-        if (!imported.plan || !imported.history) throw new Error('Plik nie zawiera poprawnych danych planu lub historii');
-        if (!window.confirm('Czy na pewno chcesz wczytać dane z tego pliku?\nObecne plany i historia zostaną zastąpione danymi z kopii.')) return;
+        if (!imported.plan || !imported.history) throw new Error(t('app.importInvalid'));
+        if (!window.confirm(t('app.confirmImport'))) return;
         setPlan(imported.plan);
         setPlanTab(logic.workoutIds(imported.plan)[0] || 'A');
         setHistoryFilters(DEFAULT_HISTORY_FILTERS);
         setHistory(imported.history);
         if (Array.isArray(imported.savedPlans)) setSavedPlans(imported.savedPlans);
         if (imported.settings) setSettings({ ...imported.settings, legacyProgressPlanId: imported.settings.legacyProgressPlanId || imported.settings.activePlanId || 'plan_default' });
-        notify('Pomyślnie wczytano kopię zapasową!', 'gold');
+        notify(t('app.imported'), 'gold');
       } catch (error) {
-        window.alert(`Błąd wczytywania pliku JSON: ${error.message}`);
+        window.alert(t('app.importError', { message: error.message }));
       }
     };
     reader.readAsText(file);
   }
 
   function clearHistory() {
-    if (!window.confirm('UWAGA! Czy na pewno chcesz trwale usunąć całą historię treningów?\nTej operacji nie można cofnąć!')) return;
+    if (!window.confirm(t('app.confirmClearHistory'))) return;
     setHistory([]);
-    notify('Historia treningów została wyczyszczona', 'error');
+    notify(t('app.historyCleared'), 'error');
   }
 
   function toggleSetting(key, enabled, label) {
     setSettings({ ...settingsRef.current, [key]: enabled });
-    notify(`${label}: ${enabled ? 'Włączone' : 'Wyłączone'}`);
+    notify(t('app.toggled', { label, state: enabled ? t('app.on') : t('app.off') }));
   }
 
   // ---- Render ----
 
   const currentWeight = currentExercise ? currentExercise.currentWeight : 0;
-
   function renderModal() {
     if (!modal) return null;
     switch (modal.kind) {
@@ -672,7 +708,9 @@ export default function App() {
         return (
           <SavePlanAsModal
             mode={modal.mode}
-            defaultName={modal.mode === 'create_new' ? 'Mój Nowy Plan 3-Dniowy' : `${settings.activePlanName || 'Plan'} (Kopia)`}
+            defaultName={modal.mode === 'create_new'
+              ? planDisplayName('Mój Nowy Plan 3-Dniowy', lang)
+              : `${planDisplayName(settings.activePlanName || 'Plan', lang)} ${t('common.copySuffix')}`}
             onConfirm={(name, days) => savePlanAs(modal.mode, name, days)}
             onClose={() => setModal(null)}
           />
@@ -704,10 +742,10 @@ export default function App() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ color: 'var(--accent-gold)', fontSize: '1.1rem' }}>⏱</span>
             <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>{logic.formatTime(timer.remaining)}</span>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>(Odpoczynek w toku)</span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t('app.restInProgress')}</span>
           </div>
           <button type="button" className="btn btn-primary btn-mini" onClick={() => goTab('workout')}>
-            Wróć do ćwiczenia
+            {t('app.backToExercise')}
           </button>
         </div>
       )}
@@ -715,13 +753,13 @@ export default function App() {
       <header className="app-header">
         <div className="app-logo">
           <span className="logo-icon">🏋️</span>
-          <span className="logo-title">SIŁOWNIA</span>
-          <span className="logo-badge" id="headerWeekBadge">TYDZIEŃ {settings.currentWeek}</span>
+          <span className="logo-title">{t('app.logo')}</span>
+          <span className="logo-badge" id="headerWeekBadge">{t('app.weekBadge', { week: settings.currentWeek })}</span>
         </div>
         <div className="header-right">
           {session && (
             <div id="activeWorkoutHeaderPill" className="workout-active-pill" style={{ display: 'flex' }} onClick={() => goTab('workout')}>
-              <span>⚡ TRENING W TOKU</span>
+              <span>{t('app.workoutInProgress')}</span>
             </div>
           )}
         </div>
@@ -729,9 +767,9 @@ export default function App() {
 
       <main className="main-content">
         {settings.backupReminderPending && !modal && (
-          <section className="backup-reminder" role="region" aria-label="Przypomnienie o kopii zapasowej">
-            <span>💾 Zrób szybką kopię swoich wyników w ustawieniach na wypadek zmiany telefonu</span>
-            <button type="button" aria-label="Zamknij przypomnienie" onClick={() => setSettings(current => ({ ...current, backupReminderPending: false }))}>✕</button>
+          <section className="backup-reminder" role="region" aria-label={t('app.backupReminderLabel')}>
+            <span>{t('app.backupReminder')}</span>
+            <button type="button" aria-label={t('app.closeReminder')} onClick={() => setSettings(current => ({ ...current, backupReminderPending: false }))}>✕</button>
           </section>
         )}
         {tab === 'start' && (
@@ -807,11 +845,11 @@ export default function App() {
         {tab === 'settings' && (
           <SettingsTab
             settings={settings}
-            onSound={enabled => toggleSetting('soundEnabled', enabled, 'Dźwięki')}
-            onVibrate={enabled => toggleSetting('vibrateEnabled', enabled, 'Wibracje')}
+            onSound={enabled => toggleSetting('soundEnabled', enabled, t('app.soundsLabel'))}
+            onVibrate={enabled => toggleSetting('vibrateEnabled', enabled, t('app.vibrateLabel'))}
             onTest={() => {
               audio.testAudioAndSpeech(settingsRef.current);
-              notify('🔊 Odtworzono dźwięk i lektora', 'gold');
+              notify(t('app.testPlayed'), 'gold');
             }}
             onExport={exportData}
             onImport={importFile}
@@ -821,16 +859,17 @@ export default function App() {
       </main>
 
       <nav className="bottom-nav">
-        {NAV.map(([id, icon, label]) => (
+        {NAV.map(([id, icon]) => (
           <button type="button" key={id} id={`nav-${id}`} className={`nav-item${tab === id ? ' active' : ''}`} onClick={() => goTab(id)}>
             <span className="nav-icon">{icon}</span>
-            <span className="nav-label">{label}</span>
+            <span className="nav-label">{t(`app.nav.${id}`)}</span>
             {id === 'workout' && session && <span className="nav-badge-dot" id="navWorkoutDot" style={{ display: 'block' }} />}
           </button>
         ))}
       </nav>
 
       {renderModal()}
+      {showLangGate && <LanguageGate onChoose={chosen => { setLang(chosen); setShowLangGate(false); }} />}
     </>
   );
 }
