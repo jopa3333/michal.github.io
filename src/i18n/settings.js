@@ -2,6 +2,8 @@ export default {
   pl: {
     'settings.title': 'Ustawienia Aplikacji',
     'settings.languageSection': 'Język aplikacji',
+    'settings.unitSection': 'Jednostki wagi',
+    'settings.autoRest': 'Auto-start przerwy po serii',
     'settings.backup': 'Kopia zapasowa danych',
     'settings.backupInfo': 'Wszystkie Twoje plany i historia treningów zapisują się w pamięci tej przeglądarki. Możesz w każdej chwili pobrać plik kopii zapasowej.',
     'settings.export': '💾 Pobierz kopię zapasową (JSON)',
@@ -18,6 +20,8 @@ export default {
   en: {
     'settings.title': 'App Settings',
     'settings.languageSection': 'App language',
+    'settings.unitSection': 'Weight units',
+    'settings.autoRest': 'Auto-start rest after a set',
     'settings.backup': 'Data backup',
     'settings.backupInfo': 'All your plans and workout history are stored in this browser. You can download a backup file at any time.',
     'settings.export': '💾 Download backup (JSON)',

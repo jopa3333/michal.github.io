@@ -1,8 +1,9 @@
+import { achievementsState, weekStreak } from '../logic.js';
 import { useT } from '../i18n.jsx';
 import { dateLocale } from '../i18n/core.js';
 
 // Start is now the account/dashboard hub; the workout picker hero lives in WorkoutTab.
-export function StartTab({ settings, session, history, onContinue, onOpenSettings }) {
+export function StartTab({ settings, session, history, onContinue, onOpenSettings, onOpenAchievements }) {
   const { t, lang } = useT();
   const total = Number.isSafeInteger(settings.completedWorkoutCount) && settings.completedWorkoutCount >= 0
     ? settings.completedWorkoutCount
@@ -10,6 +11,9 @@ export function StartTab({ settings, session, history, onContinue, onOpenSetting
   const thisWeek = history.filter(entry => entry.week === settings.currentWeek).length;
   const lastDate = history[0] ? new Date(history[0].date) : null;
   const lastText = lastDate && !isNaN(lastDate) ? lastDate.toLocaleDateString(dateLocale(lang)) : t('start.noWorkouts');
+  const badges = achievementsState(history, settings);
+  const earnedBadges = badges.filter(b => b.earned);
+  const streak = weekStreak(history, settings.currentWeek);
 
   return (
     <section className="tab-view active" id="view-start">
@@ -36,6 +40,19 @@ export function StartTab({ settings, session, history, onContinue, onOpenSetting
             <span className="stat-label">{t('start.statLast')}</span>
           </div>
         </div>
+
+        <button type="button" className="dashboard-card dashboard-badges" onClick={onOpenAchievements}>
+          <div className="dashboard-card-title">
+            🏅 {t('start.badgesTitle')}
+            <span className="badge badge-soon">{t('start.badgesCount', { earned: earnedBadges.length, total: badges.length })}</span>
+          </div>
+          <div className="badge-icons">
+            {earnedBadges.length > 0
+              ? earnedBadges.map(b => <span key={b.id} title={t(`start.badge.${b.id}`)}>{b.icon}</span>)
+              : <span className="badge-empty">🔒</span>}
+          </div>
+          <p className="dashboard-card-text">{t('start.streakLine', { count: streak })}</p>
+        </button>
 
         <div className="dashboard-card">
           <div className="dashboard-card-title">💾 {t('start.backupTitle')}</div>

@@ -22,6 +22,8 @@ import {
   SummaryModal,
   TemplateLibraryModal,
   WeightModal,
+  PlatesModal,
+  AchievementsModal,
 } from './components/Modals.jsx';
 
 const TICK_MS = 400;
@@ -40,6 +42,8 @@ const DEFAULT_SETTINGS = {
   activePlanName: logic.DEFAULT_PLAN_NAME,
   soundEnabled: true,
   vibrateEnabled: true,
+  unit: 'kg',
+  autoStartRest: false,
 };
 const DEFAULT_HISTORY_FILTERS = { workout: 'all', week: 'all', exerciseMode: false, exerciseName: '' };
 
@@ -133,6 +137,8 @@ export default function App() {
   settingsRef.current = settings;
   const langRef = useRef(lang);
   langRef.current = lang;
+  // Storage stays canonical kg; lb is a display/input layer only.
+  const unit = settings.unit === 'lb' ? 'lb' : 'kg';
 
   const notify = (message, type = 'success') => setNotice({ message, type, visible: true, id: Date.now() + Math.random() });
   // Persist every piece of state under the legacy localStorage keys.
@@ -286,7 +292,7 @@ export default function App() {
       week: settings.currentWeek || 1,
       startTime: new Date().toISOString(),
       currentExerciseIndex: 0,
-      exercises: logic.createSessionExercises(workout, history, lang),
+      exercises: logic.createSessionExercises(workout, history, lang, unit),
     };
     setSession(next);
     setExerciseIndex(0);
@@ -329,15 +335,24 @@ export default function App() {
     const hasWeight = !bodyweight || (ex.weightEnabled ?? (Number(ex.currentWeight) > 0 || Number(ex.progressionStep) > 0));
     const weight = hasWeight ? (ex.currentWeight || 0) : 0;
     const set = { weight, reps, ...(bodyweight ? { hasWeight } : {}), ...(logic.isTimedExercise(ex) ? { measurement: 'seconds' } : {}) };
+    const isPr = logic.isPersonalRecord(set, ex, history);
     patchExercise(exIndex, e => ({ completedSets: [...e.completedSets, set] }));
     audio.unlockAudioAndSpeech();
     audio.soundSetLogged(settingsRef.current);
-    notify(t('app.setSaved', { set: logic.formatRecordedSet(set, ex, lang) }));
+    notify(t('app.setSaved', { set: logic.formatRecordedSet(set, ex, lang, unit) }));
     if (ex.completedSets.length + 1 >= ex.setsTarget) {
       initExerciseTimer(restAt(exIndex));
       notify(t('app.exerciseDone', { name: exerciseDisplayName(ex.name, lang) }), 'gold');
     } else {
       resetTimer(restAt(exIndex));
+    }
+    if (isPr) {
+      setSettings(prev => ({ ...prev, prCount: (Number(prev.prCount) || 0) + 1 }));
+      notify(t('app.newPr', { value: logic.formatRecordedSet(set, ex, lang, unit) }), 'gold');
+    }
+    if (settingsRef.current.autoStartRest) {
+      resetTimer(restAt(exIndex));
+      startTimer(restAt(exIndex));
     }
   }
 
@@ -371,12 +386,12 @@ export default function App() {
 
   function adjustWeight(delta) {
     if (!session) return;
-    patchExercise(exIndex, e => ({ currentWeight: logic.clampWeight(Number(((e.currentWeight || 0) + delta).toFixed(2))) }));
+    patchExercise(exIndex, e => ({ currentWeight: logic.clampWeight(Number(((e.currentWeight || 0) + logic.fromDisplayWeight(delta, unit)).toFixed(2))) }));
     audio.playTone(settingsRef.current, 440, 0.04, 'sine', 0.05);
   }
 
   function saveWeight(text) {
-    const value = logic.parseWeightInput(text);
+    const value = logic.fromDisplayWeight(logic.parseWeightInput(text), unit);
     if (isNaN(value) || value < 0) {
       notify(t('app.invalidWeight'), 'error');
       return;
@@ -384,7 +399,17 @@ export default function App() {
     patchExercise(exIndex, () => ({ currentWeight: value }));
     initExerciseTimer(restAt(exIndex));
     setModal(null);
-    notify(t('app.weightSet', { weight: logic.formatWeightDisplay(value, lang) }));
+    notify(t('app.weightSet', { weight: logic.formatWeightDisplay(value, lang, unit), unit }));
+  }
+
+  function changeUnit(nextUnit) {
+    setSettings({ ...settingsRef.current, unit: nextUnit });
+    // Refresh precomputed "last result" texts so an active session follows the unit.
+    setSession(prev => (prev ? {
+      ...prev,
+      exercises: prev.exercises.map(ex => ({ ...ex, lastSummary: logic.calculateProgression(history, ex, lang, nextUnit).lastSummaryText })),
+    } : prev));
+    notify(t('app.unitChanged', { unit: nextUnit }), 'gold');
   }
 
   function saveCustomReps(text) {
@@ -457,7 +482,7 @@ export default function App() {
   function saveExercise(form, index) {
     const isNew = index < 0;
     const existingId = isNew ? null : plan[planTab].exercises[index].id;
-    const result = logic.exerciseFromForm(form, existingId, Date.now(), lang);
+    const result = logic.exerciseFromForm(form, existingId, Date.now(), lang, unit);
     if (result.error) {
       notify(result.error, 'error');
       return;
@@ -677,13 +702,18 @@ export default function App() {
           <ExerciseModal
             planName={plan[planTab].name}
             exercise={existing}
+            unit={unit}
             onClose={() => setModal(null)}
             onSave={form => saveExercise(form, modal.index)}
           />
         );
       }
       case 'weight':
-        return <WeightModal value={currentWeight} onClose={() => setModal(null)} onSave={saveWeight} />;
+        return <WeightModal value={currentWeight} unit={unit} onClose={() => setModal(null)} onSave={saveWeight} />;
+      case 'plates':
+        return <PlatesModal weightKg={currentWeight} unit={unit} onClose={() => setModal(null)} />;
+      case 'achievements':
+        return <AchievementsModal history={history} settings={settings} onClose={() => setModal(null)} />;
       case 'reps':
         return <CustomRepsModal timed={currentExercise ? logic.isTimedExercise(currentExercise) : false} onClose={() => setModal(null)} onSave={saveCustomReps} />;
       case 'summary':
@@ -779,6 +809,7 @@ export default function App() {
             history={history}
             onContinue={() => goTab('workout')}
             onOpenSettings={() => goTab('settings')}
+            onOpenAchievements={() => setModal({ kind: 'achievements' })}
           />
         )}
         {tab === 'workout' && (
@@ -805,6 +836,7 @@ export default function App() {
             onToggleTimer={() => (timerRef.current.isRunning ? pauseTimer() : startTimer(restAt(exIndex)))}
             onAdjustTimer={adjustTimer}
             onResetTimer={() => resetTimer(restAt(exIndex))}
+            onOpenPlates={() => setModal({ kind: 'plates' })}
           />
         )}
         {tab === 'plan' && (
@@ -828,6 +860,7 @@ export default function App() {
           <HistoryTab
             history={history}
             plan={plan}
+            unit={unit}
             workout={historyFilters.workout}
             week={historyFilters.week}
             exerciseMode={historyFilters.exerciseMode}
@@ -853,6 +886,8 @@ export default function App() {
             onExport={exportData}
             onImport={importFile}
             onClear={clearHistory}
+            onUnit={changeUnit}
+            onAutoRest={enabled => toggleSetting('autoStartRest', enabled, t('settings.autoRest'))}
           />
         )}
       </main>

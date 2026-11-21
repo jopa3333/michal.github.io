@@ -1,8 +1,8 @@
-import { exerciseEntries, exerciseNames, filterHistory, formatRecordedSet, weekOptions, workoutIds } from '../logic.js';
+import { exerciseEntries, exerciseNames, filterHistory, formatRecordedSet, toDisplayWeight, weekOptions, workoutIds } from '../logic.js';
 import { useT } from '../i18n.jsx';
 import { dateLocale, exerciseDisplayName, workoutDisplayName } from '../i18n/core.js';
 
-export function HistoryTab({ history, plan, workout, week, exerciseMode, exerciseName, onWorkout, onWeek, onWeekSelect, onToggleExerciseMode, onReset, onExerciseName, onDelete }) {
+export function HistoryTab({ history, plan, workout, week, exerciseMode, exerciseName, unit = 'kg', onWorkout, onWeek, onWeekSelect, onToggleExerciseMode, onReset, onExerciseName, onDelete }) {
   const { t, lang } = useT();
   const ids = [...new Set([...workoutIds(plan), ...history.map(item => item.workoutId).filter(id => /^[A-E]$/.test(id))])].sort();
   const workoutPills = [['all', t('history.allWorkouts')], ...ids.map(id => [id, t('history.workoutPill', { id })])];
@@ -91,16 +91,16 @@ export function HistoryTab({ history, plan, workout, week, exerciseMode, exercis
             </p>
           </div>
         ) : exerciseMode ? (
-          <ExerciseHistory sessions={filtered} exerciseName={selectedExercise} />
+          <ExerciseHistory sessions={filtered} exerciseName={selectedExercise} unit={unit} />
         ) : (
-          <AllSessions history={history} sessions={filtered} onDelete={onDelete} />
+          <AllSessions history={history} sessions={filtered} unit={unit} onDelete={onDelete} />
         )}
       </div>
     </section>
   );
 }
 
-function AllSessions({ history, sessions, onDelete }) {
+function AllSessions({ history, sessions, unit = 'kg', onDelete }) {
   const { t, lang } = useT();
   if (sessions.length === 0) {
     return (
@@ -131,7 +131,7 @@ function AllSessions({ history, sessions, onDelete }) {
         </div>
         <div style={{ marginBottom: 12 }}>
           {(session.exercises || []).map((ex, index) => {
-            const setsText = ex.sets.map(s => formatRecordedSet(s, ex, lang)).join('  |  ');
+            const setsText = ex.sets.map(s => formatRecordedSet(s, ex, lang, unit)).join('  |  ');
             return (
               <div className="session-ex-row" key={`${ex.name}-${index}`}>
                 <div className="session-ex-name"><strong>{exerciseDisplayName(ex.name, lang)}</strong></div>
@@ -142,7 +142,7 @@ function AllSessions({ history, sessions, onDelete }) {
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(20, 107, 151, 0.3)', paddingTop: 8, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
           <span>
-            {t('history.volumeLabel')} <strong>{(session.totalVolume || 0).toLocaleString(dateLocale(lang))} kg</strong> ({t('common.setsCount', { count: session.totalSets || 0 })})
+            {t('history.volumeLabel')} <strong>{Math.round(toDisplayWeight(session.totalVolume || 0, unit)).toLocaleString(dateLocale(lang))} {unit}</strong> ({t('common.setsCount', { count: session.totalSets || 0 })})
           </span>
           <button type="button" className="btn btn-outline btn-mini" style={{ color: 'var(--danger-red)', borderColor: 'transparent' }} onClick={() => onDelete(realIndex)}>
             {t('history.deleteEntry')}
@@ -153,7 +153,7 @@ function AllSessions({ history, sessions, onDelete }) {
   });
 }
 
-function ExerciseHistory({ sessions, exerciseName }) {
+function ExerciseHistory({ sessions, exerciseName, unit = 'kg' }) {
   const { t, lang } = useT();
   if (!exerciseName) {
     return <div style={{ color: 'var(--text-muted)', textAlign: 'center' }}>{t('history.chooseExercise')}</div>;
@@ -173,7 +173,7 @@ function ExerciseHistory({ sessions, exerciseName }) {
       {entries.map((entry, index) => {
         const date = new Date(entry.date);
         const dateText = !isNaN(date) ? date.toLocaleDateString(dateLocale(lang)) : entry.date;
-        const setsText = entry.sets.map(s => formatRecordedSet(s, { name: exerciseName }, lang)).join('  |  ');
+        const setsText = entry.sets.map(s => formatRecordedSet(s, { name: exerciseName }, lang, unit)).join('  |  ');
         return (
           <div key={`${entry.date}-${index}`} style={{ padding: '10px 0', borderBottom: '1px solid rgba(20, 107, 151, 0.3)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: '0.85rem' }}>

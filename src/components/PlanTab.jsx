@@ -4,6 +4,7 @@ import { exerciseDisplayName, planDisplayName, workoutDisplayName } from '../i18
 
 export function PlanTab({ plan, planTab, onPlanTab, settings, savedCount, onOpenSaved, onSaveAs, onCreate, onAdd, onEdit, onMove, onDelete, onResetDefault }) {
   const { t, lang } = useT();
+  const unit = settings?.unit === 'lb' ? 'lb' : 'kg';
   const ids = workoutIds(plan);
   const activeId = ids.includes(planTab) ? planTab : ids[0];
   const exercises = plan[activeId].exercises;
@@ -57,7 +58,7 @@ export function PlanTab({ plan, planTab, onPlanTab, settings, savedCount, onOpen
                     <span>{t('plan.setsReps', { sets: ex.sets, reps: repsDisplay(ex) })}{isTimedExercise(ex) ? ' s' : ''}</span>
                     <span>{t('plan.tempo', { tempo: ex.tempo || '-' })}</span>
                     <span>{t('plan.rest', { n: ex.restSeconds })}</span>
-                    <span>{t('plan.progress', { step: formatWeightDisplay(ex.progressionStep, lang), rule: progressionRuleText(ex.progressionType, lang) })}</span>
+                    <span>{t('plan.progress', { step: formatWeightDisplay(ex.progressionStep, lang, unit), unit, rule: progressionRuleText(ex.progressionType, lang) })}</span>
                   </div>
                 </div>
               </div>

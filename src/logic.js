@@ -20,11 +20,11 @@ export function isTimedExercise(ex) {
   const name = canonicalExerciseName(String(ex.name || '').trim()).toLocaleLowerCase('pl');
   return ['plank', 'plank (deska klasyczna)'].includes(name) || TIMED_ALIASES_EN.includes(name);
 }
-export function formatRecordedSet(set, exercise, lang = 'pl') {
+export function formatRecordedSet(set, exercise, lang = 'pl', weightUnit = 'kg') {
   const timed = set.measurement === 'seconds';
   const unit = timed ? 's' : tFor(lang)('common.reps');
   const weighted = set.hasWeight ?? (!isBodyweightExercise(exercise) || Number(set.weight) > 0);
-  return weighted ? `${formatWeightDisplay(set.weight, lang)} kg × ${set.reps}${timed ? ' s' : ''}` : `${set.reps} ${unit}`;
+  return weighted ? `${formatWeightDisplay(set.weight, lang, weightUnit)} ${weightUnit} × ${set.reps}${timed ? ' s' : ''}` : `${set.reps} ${unit}`;
 }
 
 export const clone = value => JSON.parse(JSON.stringify(value));
@@ -38,9 +38,25 @@ export function workoutIds(plan, preferredOrder) {
   return [...ordered, ...available.filter(id => !ordered.includes(id))];
 }
 
-export function formatWeightDisplay(num, lang = 'pl') {
+export const LB_PER_KG = 2.2046226218;
+
+// Storage is ALWAYS kg. Pounds are a display/input layer only (like translations).
+export function toDisplayWeight(kg, unit = 'kg') {
+  const value = Number(kg) || 0;
+  return unit === 'lb' ? Math.round(value * LB_PER_KG * 10) / 10 : value;
+}
+export function fromDisplayWeight(value, unit = 'kg') {
+  const num = Number(value) || 0;
+  return unit === 'lb' ? Math.round((num / LB_PER_KG) * 100) / 100 : num;
+}
+export function weightStepValues(unit = 'kg') {
+  return unit === 'lb' ? [1, 2.5, 5] : [0.5, 1, 2.5];
+}
+
+export function formatWeightDisplay(num, lang = 'pl', unit = 'kg') {
   if (num === null || num === undefined || isNaN(num)) return '0';
-  return lang === 'en' ? String(num) : String(num).replace('.', ',');
+  const value = toDisplayWeight(num, unit);
+  return lang === 'en' ? String(value) : String(value).replace('.', ',');
 }
 
 export function parseWeightInput(str) {
@@ -104,7 +120,7 @@ export function getLastExerciseResult(history, exerciseName) {
   return null;
 }
 
-export function calculateProgression(history, def, lang = 'pl') {
+export function calculateProgression(history, def, lang = 'pl', weightUnit = 'kg') {
   const t = tFor(lang);
   const last = getLastExerciseResult(history, def.name);
   if (!last) {
@@ -122,10 +138,10 @@ export function calculateProgression(history, def, lang = 'pl') {
   const lastWeight = sets[0].weight || 0;
   const allSameWeight = sets.every(s => s.weight === lastWeight);
   const lastSummaryText = isBodyweightExercise(def)
-    ? sets.map(s => formatRecordedSet(s, def, lang)).join(' / ')
+    ? sets.map(s => formatRecordedSet(s, def, lang, weightUnit)).join(' / ')
     : allSameWeight
-      ? `${formatWeightDisplay(lastWeight, lang)} kg • ${sets.map(s => s.reps).join(' / ')}`
-      : sets.map(s => `${formatWeightDisplay(s.weight, lang)}kg × ${s.reps}`).join(' / ');
+      ? `${formatWeightDisplay(lastWeight, lang, weightUnit)} ${weightUnit} • ${sets.map(s => s.reps).join(' / ')}`
+      : sets.map(s => `${formatWeightDisplay(s.weight, lang, weightUnit)}${weightUnit} × ${s.reps}`).join(' / ');
 
   const dateObj = new Date(last.sessionDate);
   const lastDateText = !isNaN(dateObj)
@@ -162,16 +178,16 @@ export function calculateProgression(history, def, lang = 'pl') {
     lastWeight,
     suggestedWeight,
     isProgression: shouldProgress,
-    progressionBadgeText: shouldProgress ? t('common.progress', { step: formatWeightDisplay(step, lang) }) : '',
+    progressionBadgeText: shouldProgress ? t('common.progress', { step: formatWeightDisplay(step, lang, weightUnit), unit: weightUnit }) : '',
     lastSummaryText,
     lastDateText,
   };
 }
 
 // Exercises for a new workout session, with suggested weights from history.
-export function createSessionExercises(workout, history, lang = 'pl') {
+export function createSessionExercises(workout, history, lang = 'pl', weightUnit = 'kg') {
   return workout.exercises.map(def => {
-    const prog = calculateProgression(history, def, lang);
+    const prog = calculateProgression(history, def, lang, weightUnit);
     return {
       id: def.id,
       name: def.name,
@@ -347,7 +363,7 @@ export function upsertCurrentPlan(savedPlans, settings, plan, now) {
 }
 
 // Validates the exercise form exactly like the legacy saveExerciseModal().
-export function exerciseFromForm(form, existingId, nowMs, lang = 'pl') {
+export function exerciseFromForm(form, existingId, nowMs, lang = 'pl', weightUnit = 'kg') {
   const t = tFor(lang);
   const name = canonicalExerciseName(form.name.trim());
   const sets = parseInt(form.sets, 10);
@@ -355,7 +371,7 @@ export function exerciseFromForm(form, existingId, nowMs, lang = 'pl') {
   const repsMaxInput = form.repsMax.trim();
   const repsMax = repsMaxInput.toUpperCase() === 'MAX' ? 'MAX' : parseInt(repsMaxInput, 10);
   const tempo = form.tempo.trim();
-  const step = parseWeightInput(form.step);
+  const step = fromDisplayWeight(parseWeightInput(form.step), weightUnit);
   const rest = parseInt(form.rest, 10);
 
   if (!name) return { error: t('common.errorExerciseName') };
@@ -378,4 +394,98 @@ export function exerciseFromForm(form, existingId, nowMs, lang = 'pl') {
 
 export function clampWeight(value) {
   return value < 0 ? 0 : value;
+}
+
+
+// ---- Plate calculator (display units; bar 20 kg / 45 lb) ----
+const PLATE_SETS = {
+  kg: { bar: 20, plates: [25, 20, 15, 10, 5, 2.5, 1.25] },
+  lb: { bar: 45, plates: [45, 25, 10, 5, 2.5] },
+};
+export function platesForWeight(total, unit = 'kg') {
+  const { bar, plates } = PLATE_SETS[unit] || PLATE_SETS.kg;
+  const value = Number(total) || 0;
+  if (value < bar) return { bar, perSide: [], remainder: 0, belowBar: true, exact: false };
+  let side = Math.round(((value - bar) / 2) * 100) / 100;
+  const perSide = [];
+  for (const plate of plates) {
+    const count = Math.floor((side + 1e-9) / plate);
+    if (count > 0) {
+      perSide.push({ plate, count });
+      side = Math.round((side - count * plate) * 100) / 100;
+    }
+  }
+  return { bar, perSide, remainder: side, belowBar: false, exact: side <= 0.001 };
+}
+
+// ---- Personal records (history is newest-first; active session is not in it) ----
+export function exerciseRecord(history, exerciseName) {
+  const wanted = String(exerciseName || '').trim().toLowerCase();
+  const best = { weight: 0, reps: 0, seconds: 0, hasHistory: false };
+  for (const session of history || []) {
+    for (const ex of session.exercises || []) {
+      if (!ex.name || ex.name.trim().toLowerCase() !== wanted) continue;
+      for (const set of ex.sets || []) {
+        best.hasHistory = true;
+        const reps = Number(set.reps);
+        if (set.measurement === 'seconds') {
+          if (!isNaN(reps) && reps > best.seconds) best.seconds = reps;
+        } else {
+          if (Number(set.weight) > best.weight) best.weight = Number(set.weight);
+          if (!isNaN(reps) && reps > best.reps) best.reps = reps;
+        }
+      }
+    }
+  }
+  return best;
+}
+export function isPersonalRecord(set, exercise, history) {
+  const best = exerciseRecord(history, exercise.name);
+  if (!best.hasHistory) return false;
+  if (set.measurement === 'seconds') return Number(set.reps) > best.seconds;
+  const weighted = set.hasWeight ?? (!isBodyweightExercise(exercise) || Number(set.weight) > 0);
+  if (weighted && Number(set.weight) > 0) return Number(set.weight) > best.weight;
+  return Number(set.reps) > best.reps;
+}
+
+// ---- Streak: consecutive weeks with at least one workout ----
+export function weekStreak(history, currentWeek) {
+  const weeks = new Set((history || []).map(s => Number(s.week)));
+  let week = Number(currentWeek) || 1;
+  // The current week may still be in progress; the streak survives until it ends.
+  if (!weeks.has(week)) week -= 1;
+  let streak = 0;
+  while (weeks.has(week)) {
+    streak += 1;
+    week -= 1;
+  }
+  return streak;
+}
+
+// ---- Achievements ----
+export const ACHIEVEMENTS = [
+  { id: 'first', icon: '🎯', type: 'workouts', target: 1 },
+  { id: 'w10', icon: '💪', type: 'workouts', target: 10 },
+  { id: 'w25', icon: '🏋️', type: 'workouts', target: 25 },
+  { id: 'w50', icon: '🔥', type: 'workouts', target: 50 },
+  { id: 'w100', icon: '💯', type: 'workouts', target: 100 },
+  { id: 'w200', icon: '👑', type: 'workouts', target: 200 },
+  { id: 'streak4', icon: '📅', type: 'streak', target: 4 },
+  { id: 'streak12', icon: '🗓️', type: 'streak', target: 12 },
+  { id: 'vol10k', icon: '🏗️', type: 'volume', target: 10000 },
+  { id: 'vol50k', icon: '🚀', type: 'volume', target: 50000 },
+  { id: 'pr1', icon: '🏆', type: 'pr', target: 1 },
+  { id: 'pr10', icon: '⭐', type: 'pr', target: 10 },
+];
+export function achievementsState(history, settings) {
+  const workouts = Number.isSafeInteger(settings?.completedWorkoutCount) && settings.completedWorkoutCount >= 0
+    ? settings.completedWorkoutCount
+    : (history || []).length;
+  const values = {
+    workouts,
+    streak: weekStreak(history, settings?.currentWeek),
+    volume: (history || []).reduce((sum, s) => sum + (Number(s.totalVolume) || 0), 0),
+    pr: Number(settings?.prCount) || 0,
+  };
+  return ACHIEVEMENTS.map(a => ({ ...a, value: values[a.type], earned: values[a.type] >= a.target }));
 }

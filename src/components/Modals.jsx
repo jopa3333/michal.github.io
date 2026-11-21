@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { EXERCISE_CATEGORIES, EXERCISE_DATABASE, PLAN_TEMPLATES } from '../data.js';
-import { formatWeightDisplay, isBodyweightExercise, isTimedExercise, planCounts, remainingWorkoutsThisWeek, workoutIds } from '../logic.js';
+import { achievementsState, formatWeightDisplay, isBodyweightExercise, isTimedExercise, parseWeightInput, planCounts, platesForWeight, remainingWorkoutsThisWeek, toDisplayWeight, weekStreak, workoutIds } from '../logic.js';
 import { useT } from '../i18n.jsx';
 import {
   exerciseDisplayName, canonicalExerciseName, workoutDisplayName, categoryDisplayName,
@@ -12,9 +12,9 @@ const fmt = formatWeightDisplay;
 const overlayStyle = { display: 'flex' };
 
 // Add / edit exercise dialog. Form fields are strings, validated by logic.exerciseFromForm on save.
-function initialForm(exercise, lang) {
+function initialForm(exercise, lang, unit) {
   if (!exercise) {
-    return { quick: '', name: '', sets: '3', repsMin: '8', repsMax: '12', tempo: '2010', step: fmt(2.5, lang), rest: '90', progressionType: 'top_all_sets' };
+    return { quick: '', name: '', sets: '3', repsMin: '8', repsMax: '12', tempo: '2010', step: fmt(2.5, lang, unit), rest: '90', progressionType: 'top_all_sets' };
   }
   const known = EXERCISE_DATABASE.find(item => item.name.toLowerCase() === exercise.name.toLowerCase());
   return {
@@ -24,15 +24,15 @@ function initialForm(exercise, lang) {
     repsMin: String(exercise.repsMin),
     repsMax: String(exercise.repsMax),
     tempo: exercise.tempo || '2010',
-    step: fmt(exercise.progressionStep || 0, lang),
+    step: fmt(exercise.progressionStep || 0, lang, unit),
     rest: String(exercise.restSeconds || 90),
     progressionType: exercise.progressionType || 'top_all_sets',
   };
 }
 
-export function ExerciseModal({ planName, exercise, onSave, onClose }) {
+export function ExerciseModal({ planName, exercise, onSave, onClose, unit = 'kg' }) {
   const { t, lang } = useT();
-  const [form, setForm] = useState(() => initialForm(exercise, lang));
+  const [form, setForm] = useState(() => initialForm(exercise, lang, unit));
   const editedFields = useRef(new Set());
   const field = key => event => {
     editedFields.current.add(key);
@@ -48,7 +48,7 @@ export function ExerciseModal({ planName, exercise, onSave, onClose }) {
       if (known) {
         if (!prev.tempo || prev.tempo === '2010') next.tempo = known.tempo || '2010';
         next.rest = String(known.rest || 90);
-        next.step = fmt(known.step, lang);
+        next.step = fmt(known.step, lang, unit);
       }
       return next;
     });
@@ -66,7 +66,7 @@ export function ExerciseModal({ planName, exercise, onSave, onClose }) {
         quick: known.name,
         ...(!exercise && !editedFields.current.has('tempo') && (!prev.tempo || prev.tempo === '2010') ? { tempo: known.tempo || '2010' } : {}),
         ...(!exercise && !editedFields.current.has('rest') ? { rest: String(known.rest || 90) } : {}),
-        ...(!exercise && !editedFields.current.has('step') ? { step: fmt(known.step, lang) } : {}),
+        ...(!exercise && !editedFields.current.has('step') ? { step: fmt(known.step, lang, unit) } : {}),
       }));
     } else {
       setForm(prev => ({ ...prev, name, quick: known ? known.name : '' }));
@@ -129,7 +129,7 @@ export function ExerciseModal({ planName, exercise, onSave, onClose }) {
             <input type="text" id="modalExTempo" className="modal-input" placeholder={t('modals.tempoPlaceholder')} value={form.tempo} onChange={field('tempo')} />
           </div>
           {!hideWeightProgression && <div className="form-group" style={{ flex: 1 }}>
-            <label className="form-label">{t('modals.step')}</label>
+            <label className="form-label">{t('modals.step', { unit })}</label>
             <input type="text" inputMode="decimal" id="modalExStep" className="modal-input" value={form.step} onChange={field('step')} />
           </div>}
         </div>
@@ -157,13 +157,13 @@ export function ExerciseModal({ planName, exercise, onSave, onClose }) {
   );
 }
 
-export function WeightModal({ value, onSave, onClose }) {
+export function WeightModal({ value, onSave, onClose, unit = 'kg' }) {
   const { t, lang } = useT();
-  const [text, setText] = useState(() => fmt(value, lang));
+  const [text, setText] = useState(() => fmt(value, lang, unit));
   return (
     <div className="modal-overlay" style={overlayStyle}>
       <div className="modal-box" style={{ maxWidth: 320, textAlign: 'center' }}>
-        <div className="modal-title">{t('modals.enterWeight')}</div>
+        <div className="modal-title">{t('modals.enterWeight', { unit })}</div>
         <input
           type="text"
           inputMode="decimal"
@@ -213,6 +213,7 @@ export function CustomRepsModal({ onSave, onClose, timed = false }) {
 
 export function SummaryModal({ data, history, plan, settings, onClose }) {
   const { t, lang } = useT();
+  const unit = settings?.unit === 'lb' ? 'lb' : 'kg';
   const remaining = remainingWorkoutsThisWeek(history, data.week, plan, settings);
   const advanced = Boolean(data.weekProg && data.weekProg.advanced);
   return (
@@ -256,7 +257,7 @@ export function SummaryModal({ data, history, plan, settings, onClose }) {
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
             <span style={{ color: 'var(--text-muted)' }}>{t('modals.volumeRow')}</span>
-            <span id="sumTotalVolume" style={{ fontWeight: 800, color: 'var(--success-green)' }}>{data.volume.toLocaleString(dateLocale(lang))} kg</span>
+            <span id="sumTotalVolume" style={{ fontWeight: 800, color: 'var(--success-green)' }}>{Math.round(toDisplayWeight(data.volume, unit)).toLocaleString(dateLocale(lang))} {unit}</span>
           </div>
         </div>
 
@@ -427,6 +428,93 @@ export function PlanDrawer({ session, index, onSelect, onClose, onFinish }) {
         <button type="button" className="btn btn-danger" style={{ marginTop: 20 }} onClick={onFinish}>
           {t('modals.finishWorkout')}
         </button>
+      </div>
+    </div>
+  );
+}
+
+
+// Plate calculator: input and results are in DISPLAY units (kg or lb).
+export function PlatesModal({ weightKg, unit = 'kg', onClose }) {
+  const { t, lang } = useT();
+  const [text, setText] = useState(() => formatWeightDisplay(weightKg, lang, unit));
+  const total = parseWeightInput(text);
+  const result = platesForWeight(total, unit);
+  // bar/plates/remainder are already display-unit numbers — format without converting
+  const fmtNum = value => (lang === 'en' ? String(value) : String(value).replace('.', ','));
+  return (
+    <div className="modal-overlay" style={overlayStyle}>
+      <div className="modal-box" style={{ maxWidth: 340 }}>
+        <div className="modal-title">{t('modals.platesTitle')}</div>
+        <div className="form-group">
+          <label className="form-label" htmlFor="modalPlatesInput">{t('modals.platesWeight', { unit })}</label>
+          <input
+            type="text"
+            inputMode="decimal"
+            id="modalPlatesInput"
+            className="modal-input"
+            style={{ fontSize: '1.4rem', textAlign: 'center', fontWeight: 900 }}
+            value={text}
+            autoFocus
+            onFocus={event => event.target.select()}
+            onChange={event => setText(event.target.value)}
+          />
+        </div>
+        <p className="plates-bar">{t('modals.platesBar', { bar: fmtNum(result.bar), unit })}</p>
+        {result.belowBar ? (
+          <p className="plates-note plates-warn">{t('modals.platesBelow', { bar: fmtNum(result.bar), unit })}</p>
+        ) : result.exact && result.perSide.length === 0 ? (
+          <p className="plates-note">{t('modals.platesJustBar')}</p>
+        ) : (
+          <>
+            <div className="form-label">{t('modals.platesPerSide')}</div>
+            <ul className="plates-list">
+              {result.perSide.map(({ plate, count }) => (
+                <li key={plate}><strong>{count}×</strong> {fmtNum(plate)} {unit}</li>
+              ))}
+            </ul>
+            {!result.exact && <p className="plates-note plates-warn">{t('modals.platesRemainder', { rest: fmtNum(result.remainder), unit })}</p>}
+          </>
+        )}
+        <p className="plates-total">{t('modals.platesTotal', { total: fmtNum(total), unit })}</p>
+        <div className="modal-buttons">
+          <button type="button" className="btn btn-gold" onClick={onClose}>{t('common.close')}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function AchievementsModal({ history, settings, onClose }) {
+  const { t } = useT();
+  const badges = achievementsState(history, settings);
+  const earned = badges.filter(b => b.earned).length;
+  const streak = weekStreak(history, settings?.currentWeek);
+  return (
+    <div className="modal-overlay" style={overlayStyle}>
+      <div className="modal-box" style={{ maxWidth: 440 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+          <div className="modal-title" style={{ marginBottom: 0 }}>{t('start.achievementsTitle')}</div>
+          <button type="button" className="btn btn-outline btn-mini" onClick={onClose}>✕</button>
+        </div>
+        <p className="achievements-streak">{t('start.streakLine', { count: streak })} · {t('start.badgesCount', { earned, total: badges.length })}</p>
+        <div className="achievements-list">
+          {badges.map(badge => (
+            <div key={badge.id} className={`achievement-row${badge.earned ? ' earned' : ''}`}>
+              <span className="achievement-icon">{badge.icon}</span>
+              <div className="achievement-text">
+                <strong>{t(`start.badge.${badge.id}`)}</strong>
+                <span>{t(`start.badgeDesc.${badge.id}`)}</span>
+              </div>
+              <span className="achievement-status">
+                {badge.earned ? `✓ ${t('start.badgeEarned')}` : `${Math.min(badge.value, badge.target)}/${badge.target}`}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="modal-buttons">
+          <button type="button" className="btn btn-gold" onClick={onClose}>{t('common.close')}</button>
+        </div>
       </div>
     </div>
   );

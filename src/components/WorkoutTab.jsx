@@ -1,17 +1,8 @@
-import { formatRecordedSet, formatTime, formatWeightDisplay, isBodyweightExercise, isTimedExercise, repButtonValues, repsDisplay, workoutIds } from '../logic.js';
+import { formatRecordedSet, formatTime, formatWeightDisplay, isBodyweightExercise, isTimedExercise, repButtonValues, repsDisplay, weightStepValues, workoutIds } from '../logic.js';
 import { useT } from '../i18n.jsx';
 import { exerciseDisplayName, workoutDisplayName } from '../i18n/core.js';
 
 const fmt = formatWeightDisplay;
-
-const WEIGHT_STEPS = [
-  [-2.5, 'step-minus'],
-  [-1, 'step-minus'],
-  [-0.5, 'step-minus'],
-  [0.5, 'step-plus'],
-  [1, 'step-plus'],
-  [2.5, 'step-plus'],
-];
 
 function timerClass(timer) {
   if (timer.isRunning) return 'timer-btn-main timer-running';
@@ -89,8 +80,10 @@ function ActiveWorkout(props) {
   const {
     session, index, timer, onOpenDrawer, onOpenWeight, onAdjustWeight, onToggleWeight, onRecord, onOpenReps,
     onRemoveSet, onAddSet, onRemoveSetTarget, onNavigate, onFinish, onToggleTimer, onAdjustTimer, onResetTimer,
+    onOpenPlates, settings,
   } = props;
   const { t, lang } = useT();
+  const unit = settings?.unit === 'lb' ? 'lb' : 'kg';
   const ex = session.exercises[index];
   const bodyweight = isBodyweightExercise(ex);
   const weightEnabled = !bodyweight || (ex.weightEnabled ?? (Number(ex.currentWeight) > 0 || Number(ex.progressionStep) > 0));
@@ -106,7 +99,7 @@ function ActiveWorkout(props) {
       ? { label: t('workout.summarize'), action: onFinish }
       : { label: t('workout.next'), action: () => onNavigate(1) };
   const timerText = timerLabel(timer, t);
-  const unit = timed ? t('common.secondsShort') : t('common.reps');
+  const repUnit = timed ? t('common.secondsShort') : t('common.reps');
 
   return (
     <section className="tab-view active" id="view-workout">
@@ -124,7 +117,7 @@ function ActiveWorkout(props) {
           <div className="exercise-header-compact">
             <h2 className="exercise-name-header">{exerciseDisplayName(ex.name, lang)}</h2>
             <div className="exercise-tags">
-              <span className="tag">{t('workout.setsTag', { sets: ex.setsTarget, reps: repsDisplay(ex), unit })}</span>
+              <span className="tag">{t('workout.setsTag', { sets: ex.setsTarget, reps: repsDisplay(ex), unit: repUnit })}</span>
               <span className="tag tag-tempo">{t('workout.tempoTag', { tempo: ex.tempo || '2010' })}</span>
               <span className="tag">{t('workout.restTag', { seconds: ex.restSeconds || 90 })}</span>
             </div>
@@ -139,28 +132,29 @@ function ActiveWorkout(props) {
               <span className="strip-lbl">{ex.isProgressionHit ? t('workout.todayHit') : t('workout.today')}</span>
               <div className="strip-val-row">
                 <span className="strip-val">
-                  {ex.isProgressionHit || ex.suggestedWeight > 0 ? `${fmt(ex.suggestedWeight, lang)} kg` : t('workout.chooseWeight')}
+                  {ex.isProgressionHit || ex.suggestedWeight > 0 ? `${fmt(ex.suggestedWeight, lang, unit)} ${unit}` : t('workout.chooseWeight')}
                 </span>
                 {ex.isProgressionHit && (
                   <span className="progres-badge" style={{ display: 'inline-flex' }}>
-                    +{fmt(ex.progressionStep, lang)} kg
+                    +{fmt(ex.progressionStep, lang, unit)} {unit}
                   </span>
                 )}
               </div>
             </div>}
           </div>
 
-          {bodyweight && <label className="weight-toggle"><input type="checkbox" checked={weightEnabled} onChange={event => onToggleWeight(event.target.checked)} /> {t('workout.extraWeight')}</label>}
+          {bodyweight && <label className="weight-toggle"><input type="checkbox" checked={weightEnabled} onChange={event => onToggleWeight(event.target.checked)} /> {t('workout.extraWeight', { unit })}</label>}
           {weightEnabled && <div className="weight-adjuster-section">
             <div className="weight-display-wrapper">
               <button type="button" className="weight-display-btn" onClick={onOpenWeight} title={t('workout.enterManually')}>
-                <span>{fmt(ex.currentWeight, lang)}</span>
-                <span className="weight-unit">kg</span>
+                <span>{fmt(ex.currentWeight, lang, unit)}</span>
+                <span className="weight-unit">{unit}</span>
               </button>
+              <button type="button" className="btn-plates" onClick={onOpenPlates} title={t('workout.plates')}>🧮</button>
             </div>
             <div className="weight-quick-buttons">
-              {WEIGHT_STEPS.map(([delta, cls]) => (
-                <button type="button" key={delta} className={`btn-step ${cls}`} onClick={() => onAdjustWeight(delta)}>
+              {[...weightStepValues(unit).slice().reverse().map(v => -v), ...weightStepValues(unit)].map(delta => (
+                <button type="button" key={delta} className={`btn-step ${delta < 0 ? 'step-minus' : 'step-plus'}`} onClick={() => onAdjustWeight(delta)}>
                   {delta < 0 ? '−' : '+'}{fmt(Math.abs(delta), lang)}
                 </button>
               ))}
@@ -189,7 +183,7 @@ function ActiveWorkout(props) {
                     <div className="set-row completed" key={`set-${i}`}>
                       <div>
                         <span className="set-status-icon" style={{ color: 'var(--success-green)' }}>✓</span>{' '}
-                        <span>{setNumber}. <strong>{formatRecordedSet(set, ex, lang)}</strong></span>
+                        <span>{setNumber}. <strong>{formatRecordedSet(set, ex, lang, unit)}</strong></span>
                       </div>
                       <button type="button" className="set-actions-btn" onClick={() => onRemoveSet(i)} title={t('workout.removeSetTitle')}>
                         {t('workout.removeSet')}
@@ -202,7 +196,7 @@ function ActiveWorkout(props) {
                     <div className="set-row active" key={`set-${i}`}>
                       <div>
                         <span className="set-status-icon">○</span>{' '}
-                        <span>{setNumber}. <strong>{weightEnabled ? `${fmt(ex.currentWeight, lang)} kg × ?${timed ? ' s' : ''}` : `? ${timed ? 's' : t('common.reps')}`}</strong></span>
+                        <span>{setNumber}. <strong>{weightEnabled ? `${fmt(ex.currentWeight, lang, unit)} ${unit} × ?${timed ? ' s' : ''}` : `? ${timed ? 's' : t('common.reps')}`}</strong></span>
                       </div>
                       <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--accent-gold)' }}>{t('workout.current')}</span>
                     </div>
@@ -213,7 +207,7 @@ function ActiveWorkout(props) {
                     <div>
                       <span className="set-status-icon" style={{ color: 'var(--text-muted)' }}>○</span>{' '}
                       <span>
-                        {setNumber}. <span style={{ color: 'var(--text-muted)' }}>{weightEnabled ? `${fmt(ex.currentWeight, lang)} kg × ?${timed ? ' s' : ''}` : `? ${timed ? 's' : t('common.reps')}`}</span>
+                        {setNumber}. <span style={{ color: 'var(--text-muted)' }}>{weightEnabled ? `${fmt(ex.currentWeight, lang, unit)} ${unit} × ?${timed ? ' s' : ''}` : `? ${timed ? 's' : t('common.reps')}`}</span>
                       </span>
                     </div>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t('workout.waiting')}</span>

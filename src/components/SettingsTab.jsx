@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { useT } from '../i18n.jsx';
 
-export function SettingsTab({ settings, onSound, onVibrate, onTest, onExport, onImport, onClear }) {
+export function SettingsTab({ settings, onSound, onVibrate, onTest, onExport, onImport, onClear, onUnit, onAutoRest }) {
   const { t, lang, setLang } = useT();
   const fileInput = useRef(null);
   return (
@@ -15,6 +15,15 @@ export function SettingsTab({ settings, onSound, onVibrate, onTest, onExport, on
           <div style={{ display: 'flex', gap: 8 }}>
             <button type="button" id="langPlBtn" className={`btn btn-mini ${lang === 'pl' ? 'btn-gold' : 'btn-outline'}`} onClick={() => setLang('pl')}>Polski</button>
             <button type="button" id="langEnBtn" className={`btn btn-mini ${lang === 'en' ? 'btn-gold' : 'btn-outline'}`} onClick={() => setLang('en')}>English</button>
+          </div>
+        </div>
+
+        <div className="settings-section-title">{t('settings.unitSection')}</div>
+        <div className="settings-row" style={{ marginBottom: 16 }}>
+          <span>kg / lb</span>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" id="unitKgBtn" className={`btn btn-mini ${settings.unit !== 'lb' ? 'btn-gold' : 'btn-outline'}`} onClick={() => onUnit('kg')}>kg</button>
+            <button type="button" id="unitLbBtn" className={`btn btn-mini ${settings.unit === 'lb' ? 'btn-gold' : 'btn-outline'}`} onClick={() => onUnit('lb')}>lb</button>
           </div>
         </div>
 
@@ -50,6 +59,10 @@ export function SettingsTab({ settings, onSound, onVibrate, onTest, onExport, on
         <div className="settings-row">
           <span>{t('settings.vibrate')}</span>
           <input type="checkbox" id="settingVibrateToggle" style={{ width: 20, height: 20 }} checked={settings.vibrateEnabled !== false} onChange={event => onVibrate(event.target.checked)} />
+        </div>
+        <div className="settings-row">
+          <span>{t('settings.autoRest')}</span>
+          <input type="checkbox" id="settingAutoRestToggle" style={{ width: 20, height: 20 }} checked={settings.autoStartRest === true} onChange={event => onAutoRest(event.target.checked)} />
         </div>
         <button type="button" className="btn btn-outline" style={{ marginTop: 10, width: '100%', borderColor: 'var(--accent-gold)', color: 'var(--accent-gold)', fontSize: '0.85rem' }} onClick={onTest}>
           {t('settings.test')}
