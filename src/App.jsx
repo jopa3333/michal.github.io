@@ -711,7 +711,7 @@ export default function App() {
       case 'weight':
         return <WeightModal value={currentWeight} unit={unit} onClose={() => setModal(null)} onSave={saveWeight} />;
       case 'plates':
-        return <PlatesModal weightKg={currentWeight} unit={unit} onClose={() => setModal(null)} />;
+        return <PlatesModal weightKg={currentWeight} unit={unit} mode={modal.mode} onClose={() => setModal(null)} />;
       case 'achievements':
         return <AchievementsModal history={history} settings={settings} onClose={() => setModal(null)} />;
       case 'reps':
@@ -836,7 +836,7 @@ export default function App() {
             onToggleTimer={() => (timerRef.current.isRunning ? pauseTimer() : startTimer(restAt(exIndex)))}
             onAdjustTimer={adjustTimer}
             onResetTimer={() => resetTimer(restAt(exIndex))}
-            onOpenPlates={() => setModal({ kind: 'plates' })}
+            onOpenPlates={mode => setModal({ kind: 'plates', mode })}
           />
         )}
         {tab === 'plan' && (

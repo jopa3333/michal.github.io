@@ -402,8 +402,27 @@ const PLATE_SETS = {
   kg: { bar: 20, plates: [25, 20, 15, 10, 5, 2.5, 1.25] },
   lb: { bar: 45, plates: [45, 25, 10, 5, 2.5] },
 };
-export function platesForWeight(total, unit = 'kg') {
-  const { bar, plates } = PLATE_SETS[unit] || PLATE_SETS.kg;
+// Which exercises load plates: 'barbell' (bar 20 kg / 45 lb), 'machine'
+// (plate-loaded, no bar — the entered weight IS the plates), or null
+// (dumbbells, cables, stack machines, bodyweight — no calculator).
+// Names are canonical Polish; unknown custom names default to barbell.
+export function plateModeForExercise(name) {
+  const n = String(name || '').trim().toLowerCase();
+  if (!n) return null;
+  if (n.includes('hantl')) return null;
+  if (/(pompki|podciąganie|dipsy|poręczach|plank|deska|wznosy nóg|kółko|brzuszki|spięcia brzucha na ławce)/.test(n)) return null;
+  if (/(hammer|leg press|suwnica|hack|t-bar)/.test(n)) return 'machine';
+  if (n.includes('sztang')) return 'barbell';
+  if (/(wyciąg|bramie|face pull|linką|allahy|narciarz|ściąganie|przyciąganie)/.test(n)) return null;
+  if (/(maszyna|butterfly|chest press|shoulder press|modlitewnik)/.test(n)) return null;
+  if (/(martwy ciąg|przysiad|wyciskanie|wiosłowanie|szrugsy|hip thrust)/.test(n)) return 'barbell';
+  if (/(uginanie ramion|uginanie nóg|prostowanie nóg|odwodzenie|łydk|wspięcia|rozpiętki|wznosy)/.test(n)) return null;
+  return 'barbell';
+}
+export function platesForWeight(total, unit = 'kg', mode = 'barbell') {
+  const set = PLATE_SETS[unit] || PLATE_SETS.kg;
+  const bar = mode === 'machine' ? 0 : set.bar;
+  const plates = set.plates;
   const value = Number(total) || 0;
   if (value < bar) return { bar, perSide: [], remainder: 0, belowBar: true, exact: false };
   let side = Math.round(((value - bar) / 2) * 100) / 100;

@@ -68,6 +68,49 @@ test('plate calculator splits plates per side in kg and lb', async ({ page }) =>
   await expect(page.locator('.plates-list')).toContainText('2× 45 lb');
 });
 
+test('plate calculator is hidden for dumbbell and cable exercises', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.start-hero .btn-gold').click();
+  // Exercise 1: barbell squat — calculator present.
+  await expect(page.locator('.btn-plates')).toHaveCount(1);
+  await page.locator('.btn-next-ex').click();
+  await expect(page.locator('.exercise-name-header')).toHaveText('Wyciskanie hantli siedząc');
+  await expect(page.locator('.btn-plates')).toHaveCount(0);
+  await page.locator('.btn-next-ex').click();
+  await expect(page.locator('.exercise-name-header')).toHaveText('Ściąganie drążka do klatki');
+  await expect(page.locator('.btn-plates')).toHaveCount(0);
+});
+
+test('plate-loaded machines open the calculator in machine mode without a bar', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.pill-btn', { hasText: 'TRENING B' }).click();
+  await page.locator('.start-hero .btn-gold').click();
+  // Exercise 1: deadlift — barbell mode.
+  await page.locator('.btn-plates').click();
+  await expect(page.locator('#platesModeBarbell')).toHaveClass(/btn-gold/);
+  await expect(page.locator('.plates-bar')).toContainText('Sztanga: 20 kg');
+  await page.getByRole('button', { name: 'Zamknij' }).click();
+  // Exercise 2: leg press — machine mode, no bar.
+  await page.locator('.btn-next-ex').click();
+  await expect(page.locator('.exercise-name-header')).toHaveText('Leg press');
+  await page.locator('.btn-plates').click();
+  await expect(page.locator('#platesModeMachine')).toHaveClass(/btn-gold/);
+  await expect(page.locator('.plates-bar')).toContainText('bez sztangi');
+  await page.locator('#modalPlatesInput').fill('100');
+  await expect(page.locator('.plates-list')).toContainText('2× 25 kg');
+  // Manual override back to barbell subtracts the 20 kg bar.
+  await page.locator('#platesModeBarbell').click();
+  await expect(page.locator('.plates-bar')).toContainText('Sztanga: 20 kg');
+  await expect(page.locator('.plates-list')).toContainText('1× 25 kg');
+  await expect(page.locator('.plates-list')).toContainText('1× 15 kg');
+  await page.getByRole('button', { name: 'Zamknij' }).click();
+  // Exercise 3: hammer row — machine mode again.
+  await page.locator('.btn-next-ex').click();
+  await expect(page.locator('.exercise-name-header')).toHaveText('Wiosłowanie na hammerze');
+  await page.locator('.btn-plates').click();
+  await expect(page.locator('#platesModeMachine')).toHaveClass(/btn-gold/);
+});
+
 test('beating a historical best shows the gold record toast', async ({ page }) => {
   const history = [{
     sessionId: 'old_pr',

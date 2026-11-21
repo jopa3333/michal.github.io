@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   achievementsState, exerciseRecord, formatRecordedSet, formatWeightDisplay,
-  fromDisplayWeight, isPersonalRecord, platesForWeight, toDisplayWeight,
+  fromDisplayWeight, isPersonalRecord, plateModeForExercise, platesForWeight, toDisplayWeight,
   weekStreak, weightStepValues,
 } from '../../src/logic.js';
+import { DEFAULT_PLAN, EXERCISE_DATABASE } from '../../src/data.js';
 
 describe('kg/lb units (storage stays kg)', () => {
   it('converts both ways with sane rounding', () => {
@@ -52,6 +53,60 @@ describe('plate calculator', () => {
     const result = platesForWeight(22, 'kg');
     expect(result.exact).toBe(false);
     expect(result.remainder).toBe(1);
+  });
+
+  it('machine mode has no bar: the whole weight is plates split per side', () => {
+    expect(platesForWeight(100, 'kg', 'machine')).toMatchObject({ bar: 0, perSide: [{ plate: 25, count: 2 }], exact: true, belowBar: false });
+    expect(platesForWeight(50, 'kg', 'machine')).toMatchObject({ bar: 0, perSide: [{ plate: 25, count: 1 }], exact: true });
+    expect(platesForWeight(90, 'lb', 'machine')).toMatchObject({ bar: 0, perSide: [{ plate: 45, count: 1 }], exact: true });
+    const result = platesForWeight(22, 'kg', 'machine');
+    expect(result.exact).toBe(false);
+    expect(result.remainder).toBe(1);
+    expect(platesForWeight(0, 'kg', 'machine')).toMatchObject({ perSide: [], exact: true, belowBar: false });
+  });
+});
+
+describe('plate mode per exercise', () => {
+  it('barbell exercises keep the bar calculator', () => {
+    for (const name of [
+      'Przysiad z sztangą na plecach', 'Przysiad ze sztangą na plecach',
+      'Wyciskanie sztangi leżąc na ławce poziomej', 'Martwy ciąg na prostych nogach',
+      'Wyciskanie żołnierskie stojąc ze sztangą (OHP)', 'Uginanie na modlitewniku ze sztangą łamaną',
+      'Hip Thrust ze sztangą na biodrach',
+    ]) expect(plateModeForExercise(name), name).toBe('barbell');
+  });
+
+  it('plate-loaded machines use machine mode (no bar)', () => {
+    for (const name of [
+      'Wiosłowanie na hammerze', 'Wyciskanie na hammerze', 'Leg press',
+      'Suwnica na nogi (Leg Press)', 'Hack Przysiad (maszyna)', 'Wiosłowanie na maszynie T-Bar',
+    ]) expect(plateModeForExercise(name), name).toBe('machine');
+  });
+
+  it('dumbbells, cables, stack machines and bodyweight get no calculator', () => {
+    for (const name of [
+      'Wyciskanie hantli siedząc', 'Wznosy w bok', 'Wznosy hantli bokiem stojąc',
+      'Pompki na poręczach', 'Pompki klasyczne', 'Podciąganie na drążku nachwytem',
+      'Wznosy nóg do klatki', 'Plank (deska klasyczna)', 'Ściąganie drążka do klatki',
+      'Allahy', 'Prostowanie ramion na wyciągu', 'Uginanie ramion z supinacją',
+      'Uginanie ramion z oparciem o kolano', 'Wyciskanie na maszynie Chest Press',
+      'Odwrotny butterfly', 'Uginanie nóg', 'Łydka stojąc', 'Wspięcia na łydki siedząc',
+      'Rozpiętki z hantlami na ławce poziomej',
+    ]) expect(plateModeForExercise(name), name).toBeNull();
+  });
+
+  it('classifies every built-in exercise without crashing', () => {
+    const names = [
+      ...EXERCISE_DATABASE.map(e => e.name),
+      ...Object.values(DEFAULT_PLAN).flatMap(w => w.exercises.map(e => e.name)),
+    ];
+    for (const name of names) {
+      expect(['barbell', 'machine', null], name).toContain(plateModeForExercise(name));
+    }
+    // No dumbbell exercise may ever offer plates.
+    for (const name of names.filter(n => n.toLowerCase().includes('hantl'))) {
+      expect(plateModeForExercise(name), name).toBeNull();
+    }
   });
 });
 

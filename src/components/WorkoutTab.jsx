@@ -1,4 +1,4 @@
-import { formatRecordedSet, formatTime, formatWeightDisplay, isBodyweightExercise, isTimedExercise, repButtonValues, repsDisplay, weightStepValues, workoutIds } from '../logic.js';
+import { formatRecordedSet, formatTime, formatWeightDisplay, isBodyweightExercise, isTimedExercise, plateModeForExercise, repButtonValues, repsDisplay, weightStepValues, workoutIds } from '../logic.js';
 import { useT } from '../i18n.jsx';
 import { exerciseDisplayName, workoutDisplayName } from '../i18n/core.js';
 
@@ -88,6 +88,7 @@ function ActiveWorkout(props) {
   const bodyweight = isBodyweightExercise(ex);
   const weightEnabled = !bodyweight || (ex.weightEnabled ?? (Number(ex.currentWeight) > 0 || Number(ex.progressionStep) > 0));
   const timed = isTimedExercise(ex);
+  const plateMode = plateModeForExercise(ex.name);
   const completed = ex.completedSets.length;
   const isCompleted = completed >= ex.setsTarget;
   const isLast = index === session.exercises.length - 1;
@@ -150,7 +151,7 @@ function ActiveWorkout(props) {
                 <span>{fmt(ex.currentWeight, lang, unit)}</span>
                 <span className="weight-unit">{unit}</span>
               </button>
-              <button type="button" className="btn-plates" onClick={onOpenPlates} title={t('workout.plates')}>🧮</button>
+              {plateMode && <button type="button" className="btn-plates" onClick={() => onOpenPlates(plateMode)} title={t('workout.plates')}>🧮</button>}
             </div>
             <div className="weight-quick-buttons">
               {[...weightStepValues(unit).slice().reverse().map(v => -v), ...weightStepValues(unit)].map(delta => (

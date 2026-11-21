@@ -435,17 +435,23 @@ export function PlanDrawer({ session, index, onSelect, onClose, onFinish }) {
 
 
 // Plate calculator: input and results are in DISPLAY units (kg or lb).
-export function PlatesModal({ weightKg, unit = 'kg', onClose }) {
+// mode: 'barbell' (bar 20 kg / 45 lb) or 'machine' (plate-loaded, no bar).
+export function PlatesModal({ weightKg, unit = 'kg', mode = 'barbell', onClose }) {
   const { t, lang } = useT();
   const [text, setText] = useState(() => formatWeightDisplay(weightKg, lang, unit));
+  const [plateMode, setPlateMode] = useState(mode === 'machine' ? 'machine' : 'barbell');
   const total = parseWeightInput(text);
-  const result = platesForWeight(total, unit);
+  const result = platesForWeight(total, unit, plateMode);
   // bar/plates/remainder are already display-unit numbers — format without converting
   const fmtNum = value => (lang === 'en' ? String(value) : String(value).replace('.', ','));
   return (
     <div className="modal-overlay" style={overlayStyle}>
       <div className="modal-box" style={{ maxWidth: 340 }}>
         <div className="modal-title">{t('modals.platesTitle')}</div>
+        <div className="plates-mode-row">
+          <button type="button" id="platesModeBarbell" className={`btn btn-mini ${plateMode === 'barbell' ? 'btn-gold' : 'btn-outline'}`} onClick={() => setPlateMode('barbell')}>{t('modals.platesModeBarbell')}</button>
+          <button type="button" id="platesModeMachine" className={`btn btn-mini ${plateMode === 'machine' ? 'btn-gold' : 'btn-outline'}`} onClick={() => setPlateMode('machine')}>{t('modals.platesModeMachine')}</button>
+        </div>
         <div className="form-group">
           <label className="form-label" htmlFor="modalPlatesInput">{t('modals.platesWeight', { unit })}</label>
           <input
@@ -460,11 +466,13 @@ export function PlatesModal({ weightKg, unit = 'kg', onClose }) {
             onChange={event => setText(event.target.value)}
           />
         </div>
-        <p className="plates-bar">{t('modals.platesBar', { bar: fmtNum(result.bar), unit })}</p>
+        {plateMode === 'machine'
+          ? <p className="plates-bar">{t('modals.platesMachineNote')}</p>
+          : <p className="plates-bar">{t('modals.platesBar', { bar: fmtNum(result.bar), unit })}</p>}
         {result.belowBar ? (
           <p className="plates-note plates-warn">{t('modals.platesBelow', { bar: fmtNum(result.bar), unit })}</p>
         ) : result.exact && result.perSide.length === 0 ? (
-          <p className="plates-note">{t('modals.platesJustBar')}</p>
+          <p className="plates-note">{plateMode === 'machine' ? t('modals.platesNone') : t('modals.platesJustBar')}</p>
         ) : (
           <>
             <div className="form-label">{t('modals.platesPerSide')}</div>

@@ -9,17 +9,15 @@ export function SettingsTab({ settings, onSound, onVibrate, onTest, onExport, on
       <div className="card">
         <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--accent-gold)', marginBottom: 16 }}>{t('settings.title')}</h2>
 
-        <div className="settings-section-title">{t('settings.languageSection')}</div>
-        <div className="settings-row" style={{ marginBottom: 16 }}>
+        <div className="settings-section-title">{t('settings.localeSection')}</div>
+        <div className="settings-row compact">
           <span>{t('common.language')}</span>
           <div style={{ display: 'flex', gap: 8 }}>
             <button type="button" id="langPlBtn" className={`btn btn-mini ${lang === 'pl' ? 'btn-gold' : 'btn-outline'}`} onClick={() => setLang('pl')}>Polski</button>
             <button type="button" id="langEnBtn" className={`btn btn-mini ${lang === 'en' ? 'btn-gold' : 'btn-outline'}`} onClick={() => setLang('en')}>English</button>
           </div>
         </div>
-
-        <div className="settings-section-title">{t('settings.unitSection')}</div>
-        <div className="settings-row" style={{ marginBottom: 16 }}>
+        <div className="settings-row compact" style={{ marginBottom: 8 }}>
           <span>kg / lb</span>
           <div style={{ display: 'flex', gap: 8 }}>
             <button type="button" id="unitKgBtn" className={`btn btn-mini ${settings.unit !== 'lb' ? 'btn-gold' : 'btn-outline'}`} onClick={() => onUnit('kg')}>kg</button>

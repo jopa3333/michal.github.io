@@ -1764,6 +1764,10 @@
       border-bottom: 1px solid rgba(20, 107, 151, 0.3);
     }
 
+    .settings-row.compact {
+      padding: 7px 0;
+    }
+
     /* ==========================================================================
        11. MODALE (Zgodne z Farmada Formatki)
        ========================================================================== */
@@ -2030,6 +2034,12 @@
       padding: 8px 12px;
       cursor: pointer;
       margin-left: 8px;
+    }
+
+    .plates-mode-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
     }
 
     .plates-bar {

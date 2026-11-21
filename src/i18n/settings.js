@@ -1,8 +1,7 @@
 export default {
   pl: {
     'settings.title': 'Ustawienia Aplikacji',
-    'settings.languageSection': 'Język aplikacji',
-    'settings.unitSection': 'Jednostki wagi',
+    'settings.localeSection': 'Język i jednostki',
     'settings.autoRest': 'Auto-start przerwy po serii',
     'settings.backup': 'Kopia zapasowa danych',
     'settings.backupInfo': 'Wszystkie Twoje plany i historia treningów zapisują się w pamięci tej przeglądarki. Możesz w każdej chwili pobrać plik kopii zapasowej.',
@@ -15,12 +14,11 @@ export default {
     'settings.iphoneNote': 'Jeśli na iPhonie nie słyszysz dźwięku, upewnij się, że przełącznik wyciszenia z boku telefonu (Silent Switch) jest wyłączony oraz głośność multimediów jest podkręcona.',
     'settings.dataSection': 'Zarządzanie danymi',
     'settings.clear': '🗑️ Wyczyść całą historię treningów',
-    'settings.footer': 'Trening 2026 • Wersja lokalna offline • Montserrat & Native Web Audio',
+    'settings.footer': 'Trening 💪 Twój progres, Twoje tempo.',
   },
   en: {
     'settings.title': 'App Settings',
-    'settings.languageSection': 'App language',
-    'settings.unitSection': 'Weight units',
+    'settings.localeSection': 'Language & units',
     'settings.autoRest': 'Auto-start rest after a set',
     'settings.backup': 'Data backup',
     'settings.backupInfo': 'All your plans and workout history are stored in this browser. You can download a backup file at any time.',
@@ -33,6 +31,6 @@ export default {
     'settings.iphoneNote': 'If you hear no sound on iPhone, make sure the Silent Switch on the side of the phone is off and the media volume is turned up.',
     'settings.dataSection': 'Data management',
     'settings.clear': '🗑️ Clear all workout history',
-    'settings.footer': 'Trening 2026 • Local offline version • Montserrat & Native Web Audio',
+    'settings.footer': 'Trening 💪 Your progress, your pace.',
   },
 };
