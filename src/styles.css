@@ -1921,3 +1921,98 @@
       align-items: center;
       justify-content: space-between;
     }
+
+
+    /* ==========================================================================
+       14. PULPIT (START)
+       ========================================================================== */
+    .dashboard {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .dashboard-title {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: 1px;
+    }
+
+    .dashboard-continue {
+      width: 100%;
+    }
+
+    .dashboard-stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .stat-tile {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 14px 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      text-align: center;
+      min-width: 0;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 900;
+      color: var(--accent-gold);
+    }
+
+    .stat-value-date {
+      font-size: 0.95rem;
+      line-height: 1.5rem;
+      overflow-wrap: anywhere;
+    }
+
+    .stat-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 700;
+    }
+
+    .dashboard-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .dashboard-card-title {
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .dashboard-card-text {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+
+    .badge-soon {
+      display: inline-block;
+      background: rgba(255, 215, 0, 0.15);
+      color: var(--accent-gold);
+      border: 1px solid rgba(255, 215, 0, 0.45);
+      font-size: 0.65rem;
+      padding: 2px 8px;
+      border-radius: 10px;
+      letter-spacing: 1px;
+    }

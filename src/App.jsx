@@ -115,7 +115,7 @@ export default function App() {
   const [settings, setSettings] = useState(boot.settings);
   const [savedPlans, setSavedPlans] = useState(boot.savedPlans);
   const [session, setSession] = useState(boot.session);
-  const [tab, setTab] = useState(boot.session ? 'workout' : 'start');
+  const [tab, setTab] = useState('workout');
   const [exerciseIndex, setExerciseIndex] = useState(() => Number.isInteger(boot.session?.currentExerciseIndex) ? boot.session.currentExerciseIndex : 0);
   const [planTab, setPlanTab] = useState(() => logic.workoutIds(boot.plan)[0] || 'A');
   const [notice, setNotice] = useState(null);
@@ -411,7 +411,7 @@ export default function App() {
     if (!anySets) {
       if (window.confirm(t('app.confirmCancelNoSets'))) {
         setSession(null);
-        setTab('start');
+        setTab('workout');
         notify(t('app.cancelled'));
       }
       return;
@@ -774,13 +774,11 @@ export default function App() {
         )}
         {tab === 'start' && (
           <StartTab
-            plan={plan}
             settings={settings}
             session={session}
-            onStart={startWorkout}
+            history={history}
             onContinue={() => goTab('workout')}
-            onSelect={id => setSettings({ ...settings, selectedStartWorkoutId: id })}
-            onWeek={adjustWeekSetting}
+            onOpenSettings={() => goTab('settings')}
           />
         )}
         {tab === 'workout' && (
@@ -791,6 +789,7 @@ export default function App() {
             index={exIndex}
             timer={timer}
             onStart={startWorkout}
+            onSelect={id => setSettings({ ...settings, selectedStartWorkoutId: id })}
             onWeek={adjustWeekSetting}
             onOpenDrawer={() => setModal({ kind: 'drawer' })}
             onOpenWeight={() => setModal({ kind: 'weight' })}

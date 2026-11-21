@@ -36,15 +36,19 @@ test('settings switcher translates the app both ways', async ({ page }) => {
   await page.locator('#nav-settings').click();
   await page.locator('#langEnBtn').click();
   await expect(page.locator('.logo-title')).toHaveText('GYM');
-  await page.locator('#nav-start').click();
+  await page.locator('#nav-workout').click();
   await expect(page.locator('.start-title')).toHaveText('WORKOUT A');
   await expect(page.locator('.preview-exercise-name').first()).toHaveText('Barbell Back Squat');
+  await page.locator('#nav-start').click();
+  await expect(page.locator('.dashboard-title')).toHaveText('YOUR DASHBOARD');
   await page.locator('#nav-settings').click();
   await page.locator('#langPlBtn').click();
   await expect(page.locator('.logo-title')).toHaveText('SIŁOWNIA');
-  await page.locator('#nav-start').click();
+  await page.locator('#nav-workout').click();
   await expect(page.locator('.start-title')).toHaveText('TRENING A');
   await expect(page.locator('.preview-exercise-name').first()).toHaveText('Przysiad z sztangą na plecach');
+  await page.locator('#nav-start').click();
+  await expect(page.locator('.dashboard-title')).toHaveText('TWÓJ PULPIT');
 });
 
 test('existing user data skips the gate and defaults to Polish', async ({ page }) => {

@@ -40,7 +40,7 @@ async function seed(page, values) {
   await page.reload();
 }
 
-async function startWorkoutFromStart(page) {
+async function startWorkoutFromPicker(page) {
   await page.locator('.start-hero .btn-gold').click();
   await expect(page.locator('.assistant-ex-count')).toHaveText('ĆWICZENIE 1 Z 7');
 }
@@ -82,7 +82,7 @@ test('start screen shows today\'s plan and loads without errors', async ({ page 
 
 test('a finished workout is saved to history with the right totals', async ({ page }) => {
   await page.goto('/');
-  await startWorkoutFromStart(page);
+  await startWorkoutFromPicker(page);
 
   await page.locator('.btn-step', { hasText: '+2,5' }).click();
   await expect(page.locator('.weight-display-btn span').first()).toHaveText('2,5');
@@ -100,7 +100,7 @@ test('a finished workout is saved to history with the right totals', async ({ pa
 test('active workout header fits on one line on a narrow phone', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 700 });
   await page.goto('/');
-  await startWorkoutFromStart(page);
+  await startWorkoutFromPicker(page);
   const layout = await page.locator('.app-header').evaluate(header => {
     const elements = [...header.querySelectorAll('.logo-icon, .logo-title, .logo-badge, .workout-active-pill span')];
     const boxes = elements.map(element => element.getBoundingClientRect());
@@ -114,7 +114,7 @@ test('active workout header fits on one line on a narrow phone', async ({ page }
 test('workout plan drawer title and close button avoid the phone status area', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 700 });
   await page.goto('/');
-  await startWorkoutFromStart(page);
+  await startWorkoutFromPicker(page);
   await page.evaluate(key => {
     const session = JSON.parse(localStorage.getItem(key));
     session.workoutName = 'KLATKA + TRICEPS';
@@ -134,7 +134,7 @@ test('workout plan drawer title and close button avoid the phone status area', a
 
 test('rest timer runs in the background, shows the floating bar and resets after a set', async ({ page }) => {
   await page.goto('/');
-  await startWorkoutFromStart(page);
+  await startWorkoutFromPicker(page);
 
   await expect(page.locator('.timer-btn-main')).toContainText('START 3:00');
   await page.locator('.timer-btn-main').click();
@@ -158,7 +158,7 @@ test('rest timer runs in the background, shows the floating bar and resets after
 test('the rest timer announces the end of the break', async ({ page }) => {
   await page.clock.install();
   await page.goto('/');
-  await startWorkoutFromStart(page);
+  await startWorkoutFromPicker(page);
 
   await page.locator('.timer-btn-main').click();
   await page.clock.fastForward(181_000);
@@ -199,7 +199,7 @@ test('a completed timer uses one persistent banner after the app wakes up', asyn
   });
   await page.clock.install();
   await page.goto('/');
-  await startWorkoutFromStart(page);
+  await startWorkoutFromPicker(page);
   await page.locator('.timer-btn-main').click();
   await page.clock.fastForward(181_000);
   await page.evaluate(() => {
@@ -233,7 +233,7 @@ test('a muted timer still shows one system banner without voice', async ({ page 
   });
   await page.clock.install();
   await seed(page, { [KEYS.settings]: { soundEnabled: false, vibrateEnabled: false } });
-  await startWorkoutFromStart(page);
+  await startWorkoutFromPicker(page);
   await page.locator('.timer-btn-main').click();
   // Starting a timer performs a silent, one-off speech unlock on some browsers.
   // Count only notifications made when the break ends.
@@ -459,7 +459,7 @@ test('exercise library heading fits on one line at mobile width', async ({ page 
 
 test('bodyweight exercise can record reps without or with weight and keeps history after reload', async ({ page }) => {
   await page.goto('/');
-  await startWorkoutFromStart(page);
+  await startWorkoutFromPicker(page);
   await page.locator('.btn-plan-toggle').click();
   await page.locator('.drawer-ex-item', { hasText: 'Wznosy nóg do klatki' }).click();
   const checkbox = page.getByRole('checkbox', { name: 'Dodatkowe obciążenie (kg)' });
@@ -517,7 +517,7 @@ test('hanging leg raises offer repetitions 8 to 12 and custom entry instead of M
   await page.locator('.plan-mgmt-header .btn').click();
   await page.getByRole('button', { name: '📚 Gotowe plany' }).click();
   await page.locator('.template-card', { hasText: 'Split partii mięśniowych — 5 dni' }).getByRole('button', { name: 'Użyj tego planu' }).click();
-  await page.locator('#nav-start').click();
+  await page.locator('#nav-workout').click();
   await page.getByRole('button', { name: 'TRENING D' }).click();
   await page.locator('.start-hero .btn-gold').click();
   await page.locator('.btn-plan-toggle').click();
@@ -543,7 +543,7 @@ test('plank records seconds separately from rest timer and preserves history', a
   await page.locator('.plan-mgmt-header .btn').click();
   await page.getByRole('button', { name: '📚 Gotowe plany' }).click();
   await page.locator('.template-card', { hasText: 'FBW — 3 dni' }).getByRole('button', { name: 'Użyj tego planu' }).click();
-  await page.locator('#nav-start').click();
+  await page.locator('#nav-workout').click();
   await page.locator('.start-hero .btn-gold').click();
   await page.locator('.btn-plan-toggle').click();
   await page.locator('.drawer-ex-item', { hasText: 'Plank (deska klasyczna)' }).click();
@@ -581,7 +581,7 @@ test('name autocomplete applies library defaults and bodyweight mode', async ({ 
   await exercise.getByRole('button', { name: '✏️ Edytuj' }).click();
   await expect(modal.locator('#modalExStep')).toHaveCount(0);
   await modal.getByRole('button', { name: 'Anuluj' }).click();
-  await page.locator('#nav-start').click();
+  await page.locator('#nav-workout').click();
   await page.locator('.start-hero .btn-gold').click();
   await page.locator('.btn-plan-toggle').click();
   await page.locator('.drawer-ex-item', { hasText: 'Wznosy nóg w zwisie na drążku' }).click();
@@ -685,7 +685,8 @@ test('finishing three workouts in one week moves the app to the next week', asyn
 
   for (const id of ['A', 'B', 'C']) {
     await page.locator('#nav-workout').click();
-    await page.locator('.workout-choice-card', { hasText: `TRENING ${id}` }).click();
+    await page.locator('.pill-btn', { hasText: `TRENING ${id}` }).click();
+    await page.locator('.start-hero .btn-gold').click();
     await page.locator('.rep-btn').first().click();
     await page.locator('.btn-finish-link').click();
     await expect(page.locator('.modal-title', { hasText: 'Trening Ukończony!' })).toBeVisible();
@@ -699,7 +700,7 @@ test('finishing three workouts in one week moves the app to the next week', asyn
   }
 
   await expect(page.locator('.logo-badge')).toHaveText('TYDZIEŃ 2');
-  await page.locator('#nav-start').click();
+  await page.locator('#nav-workout').click();
   await expect(page.locator('.start-title')).toHaveText('TRENING A');
 });
 
@@ -714,7 +715,7 @@ test('supports creating a five-day plan and applying a five-day gym template', a
   await page.getByRole('button', { name: 'Utwórz' }).click();
 
   await expect(page.locator('.plan-tab-btn')).toHaveCount(5);
-  await page.locator('#nav-start').click();
+  await page.locator('#nav-workout').click();
   await expect(page.locator('.pill-btn')).toHaveCount(5);
 
   await page.locator('#nav-plan').click();
@@ -740,7 +741,7 @@ test.describe('touch workout selector', () => {
     await page.locator('.plan-mgmt-header .btn').click();
     await page.getByRole('button', { name: '📚 Gotowe plany' }).click();
     await page.locator('.template-card', { hasText: 'PPL + Góra / Dół — 5 dni' }).getByRole('button', { name: 'Użyj tego planu' }).click();
-    await page.locator('#nav-start').click();
+    await page.locator('#nav-workout').click();
     const buttons = page.locator('.pill-btn');
     await buttons.nth(3).scrollIntoViewIfNeeded();
     await buttons.nth(3).tap();
@@ -771,7 +772,7 @@ test('backup reminder appears at the twentieth completed workout and stays close
   const initialHistory = Array.from({ length: 19 }, (_, i) => ({ ...legacyHistory[0], sessionId: `old_${i}`, week: 0 }));
   await seed(page, { [KEYS.history]: initialHistory });
   await expect(page.getByText('Zrób szybką kopię swoich wyników w ustawieniach na wypadek zmiany telefonu')).toHaveCount(0);
-  await startWorkoutFromStart(page);
+  await startWorkoutFromPicker(page);
   await page.locator('.rep-btn').first().click();
   await finishWorkout(page);
   const reminder = page.getByRole('region', { name: 'Przypomnienie o kopii zapasowej' });
@@ -783,8 +784,8 @@ test('backup reminder appears at the twentieth completed workout and stays close
   await expect(reminder).toHaveCount(0);
   await page.reload();
   await expect(reminder).toHaveCount(0);
-  await page.locator('#nav-start').click();
-  await startWorkoutFromStart(page);
+  await page.locator('#nav-workout').click();
+  await startWorkoutFromPicker(page);
   await page.locator('.rep-btn').first().click();
   await finishWorkout(page);
   await expect(reminder).toHaveCount(0);
@@ -793,7 +794,7 @@ test('backup reminder appears at the twentieth completed workout and stays close
 test('backup reminder appears at forty even if historical workouts were deleted', async ({ page }) => {
   const settings = { currentWeek: 1, selectedStartWorkoutId: 'A', activePlanId: 'plan_default', activePlanName: 'Plan domyślny', soundEnabled: false, vibrateEnabled: false, completedWorkoutCount: 39, backupReminderPending: false };
   await seed(page, { [KEYS.history]: [legacyHistory[0]], [KEYS.settings]: settings });
-  await startWorkoutFromStart(page);
+  await startWorkoutFromPicker(page);
   await page.locator('.rep-btn').first().click();
   await finishWorkout(page);
   const reminder = page.getByRole('region', { name: 'Przypomnienie o kopii zapasowej' });
@@ -808,7 +809,7 @@ test('start title for the five-day split stays on one line on a narrow phone', a
   await page.locator('.plan-mgmt-header .btn').click();
   await page.getByRole('button', { name: '📚 Gotowe plany' }).click();
   await page.locator('.template-card', { hasText: 'Split partii mięśniowych — 5 dni' }).getByRole('button', { name: 'Użyj tego planu' }).click();
-  await page.locator('#nav-start').click();
+  await page.locator('#nav-workout').click();
   await page.getByRole('button', { name: 'TRENING E' }).click();
   const title = page.locator('.start-title');
   await expect(title).toHaveText('GÓRA UZUPEŁNIAJĄCA');
@@ -854,7 +855,7 @@ test('long split workout names fit inside their tabs on a narrow phone', async (
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
-test('five-day workout card title and exercise badge stay on one line on a phone', async ({ page }) => {
+test('five-day workout preview header stays on one line on a phone', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 700 });
   await page.goto('/');
   await page.locator('#nav-plan').click();
@@ -862,30 +863,27 @@ test('five-day workout card title and exercise badge stay on one line on a phone
   await page.getByRole('button', { name: '📚 Gotowe plany' }).click();
   await page.locator('.template-card', { hasText: 'Split partii mięśniowych — 5 dni' }).getByRole('button', { name: 'Użyj tego planu' }).click();
   await page.locator('#nav-workout').click();
-  const card = page.locator('.workout-choice-card', { hasText: 'GÓRA UZUPEŁNIAJĄCA' });
-  const layout = await card.evaluate(element => {
-    const title = element.querySelector('.w-card-title');
-    const badge = element.querySelector('.badge');
-    const rect = node => { const range = document.createRange(); range.selectNodeContents(node); const rects = [...range.getClientRects()]; const rows = []; for (const r of rects) { const row = rows.find(v => Math.abs(v.top - r.top) < 1); if (row) row.right = Math.max(row.right, r.right); else rows.push({ left: r.left, right: r.right, top: r.top, bottom: r.bottom }); } return rows; };
-    const cardBounds = element.getBoundingClientRect();
-    return { title: rect(title), badge: rect(badge), cardLeft: cardBounds.left, cardRight: cardBounds.right };
+  await page.getByRole('button', { name: 'TRENING E' }).click();
+  const header = page.locator('.preview-title');
+  const layout = await header.evaluate(element => {
+    const [label, count] = element.children;
+    const rect = node => { const range = document.createRange(); range.selectNodeContents(node); const rects = [...range.getClientRects()]; return { lines: new Set(rects.map(r => Math.round(r.top))).size, left: Math.min(...rects.map(r => r.left)), right: Math.max(...rects.map(r => r.right)) }; };
+    const box = element.getBoundingClientRect();
+    return { label: rect(label), count: rect(count), left: box.left, right: box.right };
   });
-  expect(layout.title).toHaveLength(1);
-  expect(layout.badge).toHaveLength(1);
-  expect(layout.title[0].right).toBeLessThanOrEqual(layout.badge[0].left);
-  expect(layout.badge[0].right).toBeLessThanOrEqual(layout.cardRight);
-  expect(Math.abs(layout.title[0].top - layout.badge[0].top)).toBeLessThan(10);
+  expect(layout.label.lines).toBe(1);
+  expect(layout.count.lines).toBe(1);
+  expect(layout.label.right).toBeLessThanOrEqual(layout.count.left);
+  expect(layout.count.right).toBeLessThanOrEqual(layout.right);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
-test('workout picker has short start labels while the start screen keeps its label', async ({ page }) => {
+test('workout picker shows the full start label and starts the selected workout', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('#view-start .btn-gold')).toHaveText('🚀 ROZPOCZNIJ TRENING');
-  await page.locator('#nav-workout').click();
-  const buttons = page.locator('.workout-choice-card button');
-  await expect(buttons).toHaveCount(3);
-  for (const button of await buttons.all()) await expect(button).toHaveText('ROZPOCZNIJ');
-  await buttons.nth(1).click();
+  await expect(page.locator('#view-workout .btn-gold')).toHaveText('🚀 ROZPOCZNIJ TRENING');
+  await page.locator('.pill-btn', { hasText: 'TRENING B' }).click();
+  await expect(page.locator('.start-title')).toHaveText('TRENING B');
+  await page.locator('.start-hero .btn-gold').click();
   await expect(page.locator('.assistant-ex-count')).toBeVisible();
 });
 
@@ -901,7 +899,7 @@ test('four and five day plans finish only after all days in any order', async ({
     await page.locator('.template-card', { hasText: title }).getByRole('button', { name: 'Użyj tego planu' }).click();
     const initialWeek = await page.locator('.logo-badge').textContent();
     for (let i = 0; i < order.length; i++) {
-      await page.locator('#nav-start').click();
+      await page.locator('#nav-workout').click();
       await page.locator('.pill-btn', { hasText: `TRENING ${order[i]}` }).click();
       await page.locator('.start-hero .btn-gold').click();
       await page.locator('.rep-btn').first().click();
@@ -966,4 +964,37 @@ test('a backup can be exported and restored, and a broken file is rejected', asy
   await page.locator('#importJsonFileInput').setInputFiles({ name: 'broken.json', mimeType: 'application/json', buffer: Buffer.from('{"nope":true}') });
   await expect.poll(() => dialogs.length).toBe(1);
   expect(dialogs[0]).toContain('Plik nie zawiera poprawnych danych planu lub historii');
+});
+
+
+test('start dashboard shows stats, backup shortcut and the coming-soon Google card', async ({ page }) => {
+  await seed(page, { [KEYS.history]: legacyHistory });
+  await page.locator('#nav-start').click();
+  await expect(page.locator('.dashboard-title')).toHaveText('TWÓJ PULPIT');
+  const tiles = page.locator('.stat-tile');
+  await expect(tiles).toHaveCount(3);
+  await expect(tiles.nth(0)).toContainText('Treningi łącznie');
+  await expect(tiles.nth(0).locator('.stat-value')).toHaveText('2');
+  await expect(tiles.nth(1)).toContainText('W tym tygodniu');
+  await expect(tiles.nth(1).locator('.stat-value')).toHaveText('2');
+  await expect(tiles.nth(2)).toContainText('Ostatni trening');
+  await expect(tiles.nth(2)).toContainText('2026');
+  await expect(page.locator('.dashboard-card', { hasText: 'Konto Google' })).toContainText('WKRÓTCE');
+  await page.locator('.dashboard-card', { hasText: 'Kopia zapasowa' }).getByRole('button', { name: 'Otwórz ustawienia' }).click();
+  await expect(page.getByRole('button', { name: /Pobierz kopię/ })).toBeVisible();
+});
+
+test('app lands on the workout picker and the dashboard continues an active session', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#view-workout .start-hero')).toBeVisible();
+  await page.locator('#nav-start').click();
+  await expect(page.locator('.stat-tile').nth(2)).toContainText('Brak');
+  await expect(page.locator('.dashboard-continue')).toHaveCount(0);
+  await page.locator('#nav-workout').click();
+  await page.locator('.start-hero .btn-gold').click();
+  await expect(page.locator('.assistant-ex-count')).toBeVisible();
+  await page.locator('#nav-start').click();
+  await expect(page.locator('.dashboard-continue')).toBeVisible();
+  await page.locator('.dashboard-continue').click();
+  await expect(page.locator('.assistant-ex-count')).toHaveText('ĆWICZENIE 1 Z 7');
 });

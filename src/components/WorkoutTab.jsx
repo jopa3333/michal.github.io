@@ -30,46 +30,55 @@ export function WorkoutTab(props) {
   return session ? <ActiveWorkout {...props} /> : <WorkoutPicker {...props} />;
 }
 
-function WorkoutPicker({ plan, settings, onStart, onWeek }) {
+// Pre-start screen: 1:1 the hero layout that used to live in StartTab.
+function WorkoutPicker({ plan, settings, onStart, onSelect, onWeek }) {
   const { t, lang } = useT();
+  const ids = workoutIds(plan);
+  const workoutId = ids.includes(settings.selectedStartWorkoutId) ? settings.selectedStartWorkoutId : ids[0];
+  const workout = plan[workoutId];
+  const displayName = workoutDisplayName(workout.name, lang);
+
   return (
     <section className="tab-view active" id="view-workout">
-      <div id="workoutSelectionContainer">
-        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#fff' }}>{t('workout.choose')}</h2>
+      <div className="start-hero">
+        <div className="start-subtitle">{t('start.today')}</div>
+        <h1 className={`start-title${displayName.length >= 18 ? ' start-title-long' : ''}`}>{displayName}</h1>
+
+        <div className="start-meta-row">
           <div className="week-stepper">
-            <button type="button" className="stepper-btn" onClick={() => onWeek(-1)}>−</button>
-            <span className="stepper-val">{t('workout.weekBadge', { week: settings.currentWeek })}</span>
-            <button type="button" className="stepper-btn" onClick={() => onWeek(1)}>+</button>
+            <button type="button" className="stepper-btn" onClick={() => onWeek(-1)} title={t('start.prevWeek')}>−</button>
+            <span className="stepper-val">{t('start.weekBadge', { week: settings.currentWeek })}</span>
+            <button type="button" className="stepper-btn" onClick={() => onWeek(1)} title={t('start.nextWeek')}>+</button>
           </div>
         </div>
 
-        <div className="workout-picker-grid">
-          {workoutIds(plan).map(id => {
-            const workout = plan[id];
-            if (!workout) return null;
-            const names = workout.exercises.map(e => exerciseDisplayName(e.name, lang)).slice(0, 4).join(', ') + (workout.exercises.length > 4 ? '...' : '');
-            return (
-              <div className="workout-choice-card" key={id} onClick={() => onStart(id)}>
-                <div className="w-card-header">
-                  <span className="w-card-title">{workoutDisplayName(workout.name, lang)}</span>
-                  <span className="badge badge-gold">{t('common.exercisesCount', { count: workout.exercises.length })}</span>
-                </div>
-                <div className="w-card-exercises">{names}</div>
-                <button
-                  type="button"
-                  className="btn btn-gold btn-large"
-                  style={{ marginTop: 8 }}
-                  onClick={event => {
-                    event.stopPropagation();
-                    onStart(id);
-                  }}
-                >
-                  {t('workout.start')}
-                </button>
-              </div>
-            );
-          })}
+        <button type="button" className="btn btn-large btn-gold" onClick={() => onStart(workoutId)}>
+          {t('start.start')}
+        </button>
+
+        <div className="preview-box">
+          <div className="preview-title">
+            <span>{t('start.planToday')}</span>
+            <span>{t('common.exercisesCount', { count: workout.exercises.length })}</span>
+          </div>
+          <ul className="preview-list">
+            {workout.exercises.map((ex, index) => (
+              <li className="preview-item" key={ex.id}>
+                <span className="num">{index + 1}.</span>
+                <strong className="preview-exercise-name">{exerciseDisplayName(ex.name, lang)}</strong>
+                <span className="preview-exercise-reps">({ex.sets} × {repsDisplay(ex)}{isTimedExercise(ex) ? ' s' : ''})</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="manual-picker-label">{t('start.otherWorkout')}</div>
+        <div className={`workout-selector-pills${ids.length > 4 ? ' many' : ''}`}>
+          {ids.map(id => (
+            <button type="button" key={id} className={`pill-btn${workoutId === id ? ' active' : ''}`} onClick={() => onSelect(id)}>
+              {t('start.workoutPill', { id })}
+            </button>
+          ))}
         </div>
       </div>
     </section>
