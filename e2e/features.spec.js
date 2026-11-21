@@ -111,6 +111,52 @@ test('plate-loaded machines open the calculator in machine mode without a bar', 
   await expect(page.locator('#platesModeMachine')).toHaveClass(/btn-gold/);
 });
 
+test('history filters per plan with plan-scoped weeks and a deleted-plan bucket', async ({ page }) => {
+  const settings = { currentWeek: 1, selectedStartWorkoutId: 'A', unit: 'kg', activePlanId: 'plan_default', activePlanName: 'Mój plan', legacyProgressPlanId: 'plan_default' };
+  const savedPlans = [
+    { id: 'plan_default', name: 'Mój plan', workouts: {}, workoutOrder: ['A', 'B', 'C'] },
+    { id: 'plan_2', name: 'Drugi plan', workouts: {}, workoutOrder: ['A', 'B', 'C'] },
+  ];
+  const ex = name => [{ name, sets: [{ weight: 50, reps: 5 }] }];
+  const history = [
+    { sessionId: 's3', planId: 'plan_gone', workoutId: 'A', workoutName: 'TRENING A', week: 2, date: '2026-02-03T10:00:00.000Z', totalSets: 1, totalVolume: 250, exercises: ex('Przysiad z sztangą na plecach') },
+    { sessionId: 's2', planId: 'plan_2', workoutId: 'A', workoutName: 'PUSH', week: 3, date: '2026-02-02T10:00:00.000Z', totalSets: 1, totalVolume: 100, exercises: ex('Wyciskanie hantli siedząc') },
+    { sessionId: 's1', planId: 'plan_default', workoutId: 'A', workoutName: 'TRENING A', week: 1, date: '2026-01-05T10:00:00.000Z', totalSets: 1, totalVolume: 250, exercises: ex('Przysiad z sztangą na plecach') },
+    { sessionId: 's0', workoutId: 'B', workoutName: 'TRENING B', week: 1, date: '2026-01-03T10:00:00.000Z', totalSets: 1, totalVolume: 250, exercises: ex('Martwy ciąg na prostych nogach') },
+  ];
+  await seed(page, { trening2026_settings_v1: settings, trening2026_saved_plans_v1: savedPlans, trening2026_history_v1: history });
+  await page.locator('#nav-history').click();
+
+  // Default view: the active plan only — its own session plus the legacy one without planId.
+  await expect(page.locator('#histPlanSelect')).toHaveValue('plan_default');
+  await expect(page.locator('.history-session-card')).toHaveCount(2);
+  // Week options are scoped to the selected plan: placeholder + week 1 only.
+  await expect(page.locator('#histWeekSelect option')).toHaveCount(2);
+  await expect(page.locator('#histWeekSelect')).toContainText('Tydzień 1');
+
+  // Second plan: only its session, only its weeks.
+  await page.locator('#histPlanSelect').selectOption({ label: 'Drugi plan' });
+  await expect(page.locator('.history-session-card')).toHaveCount(1);
+  await expect(page.locator('.session-title')).toHaveText('PUSH');
+  await expect(page.locator('#histWeekSelect')).toContainText('Tydzień 3');
+
+  // Deleted plans land in one bucket.
+  await page.locator('#histPlanSelect').selectOption({ label: 'Usunięty plan' });
+  await expect(page.locator('.history-session-card')).toHaveCount(1);
+
+  // Clearing filters returns to the active plan.
+  await page.locator('#histPlanSelect').selectOption({ label: 'Drugi plan' });
+  await page.locator('.btn-clear-filter').click();
+  await expect(page.locator('.history-session-card')).toHaveCount(2);
+
+  // All plans: every session carries a plan tag.
+  await page.locator('#histPlanSelect').selectOption('all');
+  await expect(page.locator('.history-session-card')).toHaveCount(4);
+  await expect(page.locator('.session-plan-tag', { hasText: 'Mój plan' })).toHaveCount(2);
+  await expect(page.locator('.session-plan-tag', { hasText: 'Drugi plan' })).toHaveCount(1);
+  await expect(page.locator('.session-plan-tag', { hasText: 'Usunięty plan' })).toHaveCount(1);
+});
+
 test('beating a historical best shows the gold record toast', async ({ page }) => {
   const history = [{
     sessionId: 'old_pr',

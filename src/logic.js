@@ -299,6 +299,38 @@ export function filterHistory(history, workout, week) {
   return history.filter(s => matchesWorkout(s, workout) && (week === 'all' || String(s.week) === String(week)));
 }
 
+// ---- History per plan ----
+// Sessions record planId since multi-plan support; older ones belong to the
+// plan that was active back then (legacyProgressPlanId). Plans that no longer
+// exist are grouped under one "deleted plan" bucket.
+export const DELETED_PLAN_ID = '__deleted__';
+export function sessionPlanId(session, settings) {
+  return session?.planId || settings?.legacyProgressPlanId || settings?.activePlanId || 'plan_default';
+}
+export function historyPlanGroups(history, savedPlans, settings) {
+  const plans = Array.isArray(savedPlans) ? savedPlans : [];
+  const known = new Set(plans.map(p => p.id));
+  const present = new Set((history || []).map(s => sessionPlanId(s, settings)));
+  const activeId = settings?.activePlanId || 'plan_default';
+  const groups = [];
+  // Active plan first (even with no history yet), then other saved plans that have history.
+  const ordered = plans.slice().sort((a, b) => (a.id === activeId ? -1 : b.id === activeId ? 1 : 0));
+  for (const p of ordered) {
+    if (p.id === activeId || present.has(p.id)) groups.push({ id: p.id, name: p.name, deleted: false });
+  }
+  if (!known.has(activeId)) groups.unshift({ id: activeId, name: settings?.activePlanName || activeId, deleted: false });
+  if ([...present].some(id => !known.has(id))) groups.push({ id: DELETED_PLAN_ID, name: null, deleted: true });
+  return groups;
+}
+export function filterHistoryByPlan(history, planFilter, settings, savedPlans) {
+  if (!planFilter || planFilter === 'all') return history;
+  const known = new Set((savedPlans || []).map(p => p.id));
+  return history.filter(s => {
+    const id = sessionPlanId(s, settings);
+    return planFilter === DELETED_PLAN_ID ? !known.has(id) : id === planFilter;
+  });
+}
+
 export function weekOptions(history, workout) {
   const base = history.filter(s => matchesWorkout(s, workout));
   return [...new Set(base.map(s => s.week).filter(w => w != null))].sort((a, b) => a - b);

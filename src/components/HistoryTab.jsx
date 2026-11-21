@@ -1,20 +1,28 @@
-import { exerciseEntries, exerciseNames, filterHistory, formatRecordedSet, toDisplayWeight, weekOptions, workoutIds } from '../logic.js';
+import { exerciseEntries, exerciseNames, filterHistory, filterHistoryByPlan, formatRecordedSet, historyPlanGroups, sessionPlanId, toDisplayWeight, weekOptions, workoutIds } from '../logic.js';
 import { useT } from '../i18n.jsx';
 import { dateLocale, exerciseDisplayName, workoutDisplayName } from '../i18n/core.js';
 
-export function HistoryTab({ history, plan, workout, week, exerciseMode, exerciseName, unit = 'kg', onWorkout, onWeek, onWeekSelect, onToggleExerciseMode, onReset, onExerciseName, onDelete }) {
+export function HistoryTab({ history, plan, workout, week, exerciseMode, exerciseName, unit = 'kg', planFilter = 'all', savedPlans = [], settings = null, onWorkout, onWeek, onWeekSelect, onToggleExerciseMode, onReset, onExerciseName, onDelete, onPlan }) {
   const { t, lang } = useT();
-  const ids = [...new Set([...workoutIds(plan), ...history.map(item => item.workoutId).filter(id => /^[A-E]$/.test(id))])].sort();
+  const planGroups = historyPlanGroups(history, savedPlans, settings);
+  const planLabel = id => {
+    const group = planGroups.find(g => g.id === id);
+    if (group) return group.deleted ? t('history.deletedPlan') : group.name;
+    return t('history.deletedPlan');
+  };
+  const planHistory = filterHistoryByPlan(history, planFilter, settings, savedPlans);
+  const ids = [...new Set([...workoutIds(plan), ...planHistory.map(item => item.workoutId).filter(id => /^[A-E]$/.test(id))])].sort();
   const workoutPills = [['all', t('history.allWorkouts')], ...ids.map(id => [id, t('history.workoutPill', { id })])];
-  const weeks = weekOptions(history, workout);
-  const filtered = filterHistory(history, workout, week);
-  const names = exerciseNames(history, plan);
+  const weeks = weekOptions(planHistory, workout);
+  const filtered = filterHistory(planHistory, workout, week);
+  const names = exerciseNames(planHistory, planFilter === 'all' || planFilter === settings?.activePlanId ? plan : {});
   const selectedExercise = names.includes(exerciseName) ? exerciseName : names[0] || '';
-  const isFiltered = workout !== 'all' || week !== 'all' || exerciseMode;
+  const isFiltered = planFilter !== 'all' || workout !== 'all' || week !== 'all' || exerciseMode;
 
   let statusText = t('history.allSessions');
   if (isFiltered) {
     const parts = [];
+    if (planFilter !== 'all') parts.push(planLabel(planFilter));
     if (workout !== 'all') parts.push(t('history.workoutPill', { id: workout }));
     if (week !== 'all') parts.push(`${t('common.week')} ${week}`);
     if (exerciseMode) parts.push(t('history.byExercise'));
@@ -27,6 +35,17 @@ export function HistoryTab({ history, plan, workout, week, exerciseMode, exercis
         <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#fff', marginBottom: 10 }}>{t('history.title')}</h2>
 
         <div className="history-filters-box">
+          {planGroups.length > 1 && (
+            <div>
+              <div className="hist-filter-label"><span>{t('history.planFilter')}</span></div>
+              <select id="histPlanSelect" className="hist-week-select" value={planFilter} onChange={event => onPlan && onPlan(event.target.value)}>
+                <option value="all">{t('history.allPlans')}</option>
+                {planGroups.map(g => (
+                  <option key={g.id} value={g.id}>{g.deleted ? t('history.deletedPlan') : g.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div>
             <div className="hist-filter-label"><span>{t('history.chooseWorkout')}</span></div>
             <div className={`hist-pills-row${workoutPills.length > 4 ? ' scrollable' : ''}`}>
@@ -44,7 +63,7 @@ export function HistoryTab({ history, plan, workout, week, exerciseMode, exercis
               <button type="button" className={`hist-pill${week === 'all' ? ' active' : ''}`} onClick={() => onWeek('all')}>
                 {t('history.allWeeks')}
               </button>
-              <select className="hist-week-select" value={week === 'all' ? 'all' : String(week)} onChange={event => onWeekSelect(event.target.value)}>
+              <select id="histWeekSelect" className="hist-week-select" value={week === 'all' ? 'all' : String(week)} onChange={event => onWeekSelect(event.target.value)}>
                 <option value="all">{t('history.weekPlaceholder')}</option>
                 {weeks.map(value => (
                   <option key={value} value={value}>{t('history.weekOption', { value })}</option>
@@ -93,14 +112,14 @@ export function HistoryTab({ history, plan, workout, week, exerciseMode, exercis
         ) : exerciseMode ? (
           <ExerciseHistory sessions={filtered} exerciseName={selectedExercise} unit={unit} />
         ) : (
-          <AllSessions history={history} sessions={filtered} unit={unit} onDelete={onDelete} />
+          <AllSessions history={history} sessions={filtered} unit={unit} onDelete={onDelete} planTagFor={planFilter === 'all' ? session => planLabel(sessionPlanId(session, settings)) : null} />
         )}
       </div>
     </section>
   );
 }
 
-function AllSessions({ history, sessions, unit = 'kg', onDelete }) {
+function AllSessions({ history, sessions, unit = 'kg', onDelete, planTagFor = null }) {
   const { t, lang } = useT();
   if (sessions.length === 0) {
     return (
@@ -126,6 +145,7 @@ function AllSessions({ history, sessions, unit = 'kg', onDelete }) {
           <div className="session-header-left">
             <span className="session-title">{workoutDisplayName(session.workoutName, lang)}</span>
             <span className="session-week-tag">{t('common.week')} {session.week}</span>
+            {planTagFor && <span className="session-plan-tag">{planTagFor(session)}</span>}
           </div>
           <span className="session-date">{dateFormatted}</span>
         </div>

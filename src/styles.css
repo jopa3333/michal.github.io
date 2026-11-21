@@ -1694,7 +1694,7 @@
       align-items: center;
       gap: 6px;
       min-width: 0;
-      white-space: nowrap;
+      flex-wrap: wrap;
     }
 
     .session-title {
@@ -1702,6 +1702,23 @@
       font-weight: 800;
       color: var(--accent-gold);
       white-space: nowrap;
+    }
+
+    .session-plan-tag {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      background: rgba(20, 107, 151, 0.15);
+      border: 1px solid rgba(20, 107, 151, 0.4);
+      padding: 2px 7px;
+      border-radius: 6px;
+      white-space: nowrap;
+      letter-spacing: 0.3px;
+      flex-shrink: 0;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .session-week-tag {

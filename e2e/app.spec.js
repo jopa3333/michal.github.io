@@ -379,7 +379,8 @@ test('history filters by workout, week and exercise, and can delete an entry', a
   await page.locator('#nav-history').click();
 
   await expect(page.locator('.history-session-card')).toHaveCount(2);
-  await expect(page.locator('.history-status-strip')).toContainText('Wszystkie sesje');
+  // Default view is scoped to the active plan, so the strip shows its name.
+  await expect(page.locator('.history-status-strip')).toContainText('Mój Plan Główny (A/B/C)');
   // Newest first: the seeded list starts with TRENING B, so it must be the first card.
   await expect(page.locator('.history-session-card').first()).toContainText('TRENING B');
 

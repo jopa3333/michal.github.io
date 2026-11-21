@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  achievementsState, exerciseRecord, formatRecordedSet, formatWeightDisplay,
-  fromDisplayWeight, isPersonalRecord, plateModeForExercise, platesForWeight, toDisplayWeight,
+  achievementsState, DELETED_PLAN_ID, exerciseRecord, filterHistoryByPlan, formatRecordedSet, formatWeightDisplay,
+  fromDisplayWeight, historyPlanGroups, isPersonalRecord, plateModeForExercise, platesForWeight, sessionPlanId, toDisplayWeight,
   weekStreak, weightStepValues,
 } from '../../src/logic.js';
 import { DEFAULT_PLAN, EXERCISE_DATABASE } from '../../src/data.js';
@@ -166,5 +166,39 @@ describe('streak and achievements', () => {
   it('prefers the lifetime counter over history length', () => {
     const state = achievementsState([], { completedWorkoutCount: 50, currentWeek: 1 });
     expect(state.find(b => b.id === 'w50').earned).toBe(true);
+  });
+});
+
+describe('history per plan', () => {
+  const settings = { activePlanId: 'plan_1', legacyProgressPlanId: 'plan_legacy' };
+  const savedPlans = [{ id: 'plan_1', name: 'Plan 1' }, { id: 'plan_2', name: 'Plan 2' }];
+  const history = [
+    { sessionId: 'a', planId: 'plan_1', week: 1 },
+    { sessionId: 'b', planId: 'plan_2', week: 1 },
+    { sessionId: 'c', planId: 'plan_gone', week: 2 },
+    { sessionId: 'd', week: 3 }, // legacy: no planId
+  ];
+
+  it('attributes sessions to their plan, legacy ones to the legacy plan', () => {
+    expect(sessionPlanId(history[0], settings)).toBe('plan_1');
+    expect(sessionPlanId(history[3], settings)).toBe('plan_legacy');
+    expect(sessionPlanId({}, {})).toBe('plan_default');
+  });
+
+  it('groups plans: active first, then saved plans with history, then deleted bucket', () => {
+    const groups = historyPlanGroups(history, savedPlans, settings);
+    // plan_legacy and plan_gone no longer exist — both fall into the deleted bucket.
+    expect(groups.map(g => g.id)).toEqual(['plan_1', 'plan_2', DELETED_PLAN_ID]);
+    expect(groups.find(g => g.id === DELETED_PLAN_ID).deleted).toBe(true);
+    // Active plan stays visible even without any history.
+    const empty = historyPlanGroups([], savedPlans, settings);
+    expect(empty.map(g => g.id)).toEqual(['plan_1']);
+  });
+
+  it('filters history by plan including the deleted bucket', () => {
+    expect(filterHistoryByPlan(history, 'all', settings, savedPlans)).toHaveLength(4);
+    expect(filterHistoryByPlan(history, 'plan_2', settings, savedPlans).map(s => s.sessionId)).toEqual(['b']);
+    expect(filterHistoryByPlan(history, 'plan_legacy', settings, savedPlans).map(s => s.sessionId)).toEqual(['d']);
+    expect(filterHistoryByPlan(history, DELETED_PLAN_ID, settings, savedPlans).map(s => s.sessionId)).toEqual(['c', 'd']);
   });
 });

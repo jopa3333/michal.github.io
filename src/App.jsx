@@ -45,7 +45,7 @@ const DEFAULT_SETTINGS = {
   unit: 'kg',
   autoStartRest: false,
 };
-const DEFAULT_HISTORY_FILTERS = { workout: 'all', week: 'all', exerciseMode: false, exerciseName: '' };
+const DEFAULT_HISTORY_FILTERS = { workout: 'all', week: 'all', exerciseMode: false, exerciseName: '', plan: null };
 
 function readInitialState() {
   const plan = loadFromStorage(KEYS.plan, logic.clone(DEFAULT_PLAN));
@@ -865,6 +865,10 @@ export default function App() {
             week={historyFilters.week}
             exerciseMode={historyFilters.exerciseMode}
             exerciseName={historyFilters.exerciseName}
+            planFilter={historyFilters.plan ?? settings.activePlanId}
+            savedPlans={savedPlans}
+            settings={settings}
+            onPlan={id => setHistoryFilters(prev => ({ ...prev, plan: id, week: 'all' }))}
             onWorkout={id => setHistoryFilters(prev => ({ ...prev, workout: id, week: 'all' }))}
             onWeek={week => setHistoryFilters(prev => ({ ...prev, week }))}
             onWeekSelect={value => setHistoryFilters(prev => ({ ...prev, week: value === 'all' ? 'all' : parseInt(value, 10) }))}
