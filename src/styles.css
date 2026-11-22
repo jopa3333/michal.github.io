@@ -1704,6 +1704,43 @@
       white-space: nowrap;
     }
 
+    .progress-chart-box {
+      background: rgba(2, 44, 67, 0.55);
+      border: 1px solid rgba(255, 215, 0, 0.25);
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin: 8px 0 14px 0;
+    }
+    .progress-chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .progress-chart-svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .chart-dot { fill: var(--accent-gold); }
+    .chart-dot.pr { fill: #fff; stroke: var(--accent-gold); stroke-width: 2px; }
+    .chart-pr-mark { font-size: 10px; }
+    .chart-axis-lbl { font-size: 9px; fill: var(--text-muted); }
+    .progress-chart-delta {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--accent-gold);
+      text-align: center;
+      margin-top: 2px;
+    }
+    .progress-chart-note {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin: 4px 0 0 0;
+    }
+
     .session-plan-tag {
       display: inline-block;
       font-size: 0.72rem;

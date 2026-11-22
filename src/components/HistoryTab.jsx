@@ -1,6 +1,6 @@
-import { exerciseEntries, exerciseNames, filterHistory, filterHistoryByPlan, formatRecordedSet, historyPlanGroups, sessionPlanId, toDisplayWeight, weekOptions, workoutIds } from '../logic.js';
+import { exerciseEntries, exerciseNames, filterHistory, filterHistoryByPlan, formatRecordedSet, formatWeightDisplay, historyPlanGroups, progressSeries, sessionPlanId, toDisplayWeight, weekOptions, workoutIds } from '../logic.js';
 import { useT } from '../i18n.jsx';
-import { dateLocale, exerciseDisplayName, workoutDisplayName } from '../i18n/core.js';
+import { canonicalExerciseName, dateLocale, exerciseDisplayName, workoutDisplayName } from '../i18n/core.js';
 
 export function HistoryTab({ history, plan, workout, week, exerciseMode, exerciseName, unit = 'kg', planFilter = 'all', savedPlans = [], settings = null, onWorkout, onWeek, onWeekSelect, onToggleExerciseMode, onReset, onExerciseName, onDelete, onPlan }) {
   const { t, lang } = useT();
@@ -11,12 +11,26 @@ export function HistoryTab({ history, plan, workout, week, exerciseMode, exercis
     return t('history.deletedPlan');
   };
   const planHistory = filterHistoryByPlan(history, planFilter, settings, savedPlans);
-  const ids = [...new Set([...workoutIds(plan), ...planHistory.map(item => item.workoutId).filter(id => /^[A-E]$/.test(id))])].sort();
+  // Exercises defined in the selected plan (for non-active saved plans, read savedPlans[i].workouts).
+  const selectedSaved = savedPlans.find(p => p.id === planFilter);
+  const workoutsForNames = planFilter === 'all' || planFilter === settings?.activePlanId
+    ? plan
+    : selectedSaved?.workouts || {};
+  const ids = [...new Set([...workoutIds(workoutsForNames), ...planHistory.map(item => item.workoutId).filter(id => /^[A-E]$/.test(id))])].sort();
   const workoutPills = [['all', t('history.allWorkouts')], ...ids.map(id => [id, t('history.workoutPill', { id })])];
   const weeks = weekOptions(planHistory, workout);
   const filtered = filterHistory(planHistory, workout, week);
-  const names = exerciseNames(planHistory, planFilter === 'all' || planFilter === settings?.activePlanId ? plan : {});
-  const selectedExercise = names.includes(exerciseName) ? exerciseName : names[0] || '';
+  const names = exerciseNames(planHistory, workoutsForNames);
+  const typedRaw = String(exerciseName ?? '');
+  const typedCanonical = typedRaw.trim() ? canonicalExerciseName(typedRaw.trim()) : '';
+  // Partial typing filter in "All plans": if no exact match yet, pick the first matching name.
+  const partialMatch = typedCanonical && !names.some(n => n.toLowerCase() === typedCanonical.toLowerCase())
+    ? names.find(n => exerciseDisplayName(n, lang).toLowerCase().includes(typedRaw.trim().toLowerCase()) || n.toLowerCase().includes(typedCanonical.toLowerCase()))
+    : null;
+  const selectedExercise = planFilter === 'all'
+    ? (partialMatch || typedCanonical || names[0] || '')
+    : (names.includes(typedCanonical) ? typedCanonical : names[0] || '');
+  const selectValue = names.includes(selectedExercise) ? selectedExercise : (names[0] || '');
   const isFiltered = planFilter !== 'all' || workout !== 'all' || week !== 'all' || exerciseMode;
 
   let statusText = t('history.allSessions');
@@ -85,11 +99,38 @@ export function HistoryTab({ history, plan, workout, week, exerciseMode, exercis
 
           {exerciseMode && (
             <div style={{ marginTop: 6 }}>
-              <select className="modal-select" value={selectedExercise} onChange={event => onExerciseName(event.target.value)}>
-                {names.map(name => (
-                  <option key={name} value={name}>{exerciseDisplayName(name, lang)}</option>
-                ))}
-              </select>
+              {planFilter === 'all' ? (
+                <>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <input
+                      type="text"
+                      id="histExerciseInput"
+                      className="modal-input"
+                      list="histExerciseSuggestions"
+                      placeholder={t('history.exerciseInputPlaceholder')}
+                      value={typedRaw}
+                      onChange={event => onExerciseName(event.target.value)}
+                    />
+                    {typedRaw && (
+                      <button type="button" className="btn btn-outline btn-mini" onClick={() => onExerciseName('')} title={t('history.clearFilters')}>✕</button>
+                    )}
+                  </div>
+                  <datalist id="histExerciseSuggestions">
+                    {names.map(name => (
+                      <option key={name} value={exerciseDisplayName(name, lang)} />
+                    ))}
+                  </datalist>
+                </>
+              ) : (
+                <select className="modal-select" value={selectValue} onChange={event => onExerciseName(event.target.value)}>
+                  {!selectValue && selectedExercise && (
+                    <option value="">{exerciseDisplayName(selectedExercise, lang)}</option>
+                  )}
+                  {names.map(name => (
+                    <option key={name} value={name}>{exerciseDisplayName(name, lang)}</option>
+                  ))}
+                </select>
+              )}
             </div>
           )}
         </div>
@@ -186,9 +227,11 @@ function ExerciseHistory({ sessions, exerciseName, unit = 'kg' }) {
       </div>
     );
   }
+  const series = progressSeries(sessions, exerciseName);
   return (
     <div className="card">
       <h3 style={{ fontSize: '1.15rem', color: 'var(--accent-gold)', marginBottom: 6 }}>{exerciseDisplayName(exerciseName, lang)}</h3>
+      <ProgressChart series={series} unit={unit} />
       <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: 14 }}>{t('history.executionHistory')}</p>
       {entries.map((entry, index) => {
         const date = new Date(entry.date);
@@ -204,6 +247,71 @@ function ExerciseHistory({ sessions, exerciseName, unit = 'kg' }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function ProgressChart({ series, unit }) {
+  const { t, lang } = useT();
+  const { measurement, points } = series;
+  if (!points || points.length === 0) return null;
+  const unitLabel = measurement === 'weight' ? unit : measurement === 'seconds' ? t('common.secondsShort') : t('common.reps');
+  const disp = v => (measurement === 'weight' ? toDisplayWeight(v, unit) : v);
+  const fmt = v => (measurement === 'weight' ? formatWeightDisplay(v, lang, unit) : String(v));
+  const shortDate = iso => {
+    const d = new Date(iso);
+    return !isNaN(d) ? d.toLocaleDateString(dateLocale(lang), { day: '2-digit', month: '2-digit' }) : String(iso).slice(0, 10);
+  };
+  if (points.length < 2) {
+    const only = points[0];
+    return (
+      <div className="progress-chart-box" data-testid="progress-chart">
+        <div className="progress-chart-header">
+          <span>{t('history.chartTitle')}</span>
+          <strong>{fmt(only.value)} {unitLabel}</strong>
+        </div>
+        <p className="progress-chart-note">{t('history.chartTooFew')}</p>
+      </div>
+    );
+  }
+  const values = points.map(p => disp(p.value));
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const W = 300;
+  const H = 110;
+  const padX = 18;
+  const padTop = 22;
+  const padBot = 20;
+  const coords = points.map((p, i) => {
+    const x = padX + (i / (points.length - 1)) * (W - padX * 2);
+    const y = max === min ? (padTop + H - padBot) / 2 : padTop + (1 - (disp(p.value) - min) / span) * (H - padTop - padBot);
+    return { ...p, x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 };
+  });
+  const line = coords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x},${c.y}`).join(' ');
+  const rawDelta = Math.round((disp(points[points.length - 1].value) - disp(points[0].value)) * 100) / 100;
+  const deltaStr = lang === 'en' ? String(Math.abs(rawDelta)) : String(Math.abs(rawDelta)).replace('.', ',');
+  const deltaText = rawDelta === 0
+    ? t('history.chartSame')
+    : t('history.chartDelta', { sign: rawDelta > 0 ? '+' : '−', delta: deltaStr, unit: unitLabel });
+  return (
+    <div className="progress-chart-box" data-testid="progress-chart">
+      <div className="progress-chart-header">
+        <span>{t('history.chartTitle')}</span>
+        <span>{fmt( points.reduce((m, p) => Math.min(m, p.value), Infinity) )} – {fmt( points.reduce((m, p) => Math.max(m, p.value), -Infinity) )} {unitLabel}</span>
+      </div>
+      <svg className="progress-chart-svg" viewBox={`0 0 ${W} ${H}`} role="img">
+        <path d={line} fill="none" stroke="var(--accent-gold)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        {coords.map((c, i) => (
+          <g key={`${c.date}-${i}`}>
+            <circle cx={c.x} cy={c.y} r={c.isPR ? 4.5 : 3.5} className={c.isPR ? 'chart-dot pr' : 'chart-dot'} />
+            {c.isPR && <text x={c.x} y={c.y - 7} textAnchor="middle" className="chart-pr-mark">🏆</text>}
+          </g>
+        ))}
+        <text x={padX} y={H - 4} className="chart-axis-lbl">{shortDate(points[0].date)}</text>
+        <text x={W - padX} y={H - 4} textAnchor="end" className="chart-axis-lbl">{shortDate(points[points.length - 1].date)}</text>
+      </svg>
+      <div className="progress-chart-delta">{deltaText}</div>
     </div>
   );
 }

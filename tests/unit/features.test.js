@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   achievementsState, DELETED_PLAN_ID, exerciseRecord, filterHistoryByPlan, formatRecordedSet, formatWeightDisplay,
-  fromDisplayWeight, historyPlanGroups, isPersonalRecord, plateModeForExercise, platesForWeight, sessionPlanId, toDisplayWeight,
+  fromDisplayWeight, historyPlanGroups, isPersonalRecord, plateModeForExercise, platesForWeight, progressSeries, sessionPlanId, toDisplayWeight,
   weekStreak, weightStepValues,
 } from '../../src/logic.js';
 import { DEFAULT_PLAN, EXERCISE_DATABASE } from '../../src/data.js';
@@ -200,5 +200,33 @@ describe('history per plan', () => {
     expect(filterHistoryByPlan(history, 'plan_2', settings, savedPlans).map(s => s.sessionId)).toEqual(['b']);
     expect(filterHistoryByPlan(history, 'plan_legacy', settings, savedPlans).map(s => s.sessionId)).toEqual(['d']);
     expect(filterHistoryByPlan(history, DELETED_PLAN_ID, settings, savedPlans).map(s => s.sessionId)).toEqual(['c', 'd']);
+  });
+});
+
+describe('progress chart series', () => {
+  it('picks the heaviest set per session in chronological order and marks PRs', () => {
+    // History is newest-first.
+    const sessions = [
+      { date: '2026-02-10', week: 3, workoutName: 'A', exercises: [{ name: 'Przysiad z sztangą na plecach', sets: [{ weight: 100, reps: 5 }, { weight: 105, reps: 3 }] }] },
+      { date: '2026-02-03', week: 2, workoutName: 'A', exercises: [{ name: 'Przysiad z sztangą na plecach', sets: [{ weight: 95, reps: 5 }] }] },
+      { date: '2026-01-27', week: 1, workoutName: 'A', exercises: [{ name: 'Przysiad z sztangą na plecach', sets: [{ weight: 100, reps: 5 }] }] },
+    ];
+    const series = progressSeries(sessions, 'Przysiad z sztangą na plecach');
+    expect(series.measurement).toBe('weight');
+    expect(series.points.map(p => p.value)).toEqual([100, 95, 105]);
+    expect(series.points.map(p => p.isPR)).toEqual([false, false, true]);
+  });
+
+  it('uses reps for unweighted exercises and seconds for timed ones', () => {
+    const raises = [
+      { date: '2026-02-10', week: 2, workoutName: 'A', exercises: [{ name: 'Wznosy nóg do klatki', sets: [{ weight: 0, reps: 14 }] }] },
+      { date: '2026-02-03', week: 1, workoutName: 'A', exercises: [{ name: 'Wznosy nóg do klatki', sets: [{ weight: 0, reps: 10 }, { weight: 0, reps: 12 }] }] },
+    ];
+    const repSeries = progressSeries(raises, 'Wznosy nóg do klatki');
+    expect(repSeries.measurement).toBe('reps');
+    expect(repSeries.points.map(p => [p.value, p.isPR])).toEqual([[12, false], [14, true]]);
+
+    const plank = [{ date: '2026-02-03', week: 1, workoutName: 'A', exercises: [{ name: 'Plank (deska klasyczna)', sets: [{ weight: 0, reps: 60, measurement: 'seconds' }] }] }];
+    expect(progressSeries(plank, 'Plank (deska klasyczna)').measurement).toBe('seconds');
   });
 });

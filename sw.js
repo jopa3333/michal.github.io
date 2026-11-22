@@ -9,7 +9,7 @@
    (pilnuje tego tests/unit/sw.test.js).
    ============================================================ */
 
-const CACHE_NAME = 'trening2026-v25';
+const CACHE_NAME = 'trening2026-v29';
 const ASSETS = [
   './',
   './index.html',

@@ -356,6 +356,25 @@ export function exerciseEntries(sessions, exerciseName) {
   return entries;
 }
 
+// ---- Progress chart: top set per workout, chronological (oldest first) ----
+// measurement: 'weight' (kg canonical), 'reps' when no session ever had weight,
+// 'seconds' for timed exercises. isPR marks a strict improvement over all
+// previous points (the first point is never a PR).
+export function progressSeries(sessions, exerciseName) {
+  const entries = exerciseEntries(sessions, exerciseName); // newest-first
+  if (entries.length === 0) return { measurement: 'weight', points: [] };
+  const timed = entries[0].sets.some(s => s.measurement === 'seconds');
+  const hasWeight = entries.some(e => e.sets.some(s => Number(s.weight) > 0));
+  const measurement = timed ? 'seconds' : hasWeight ? 'weight' : 'reps';
+  const points = entries.slice().reverse().map(entry => {
+    const values = entry.sets.map(s => (measurement === 'weight' ? Number(s.weight) || 0 : Number(s.reps) || 0));
+    return { date: entry.date, week: entry.week, workoutName: entry.workoutName, value: Math.max(...values) };
+  });
+  let best = -Infinity;
+  points.forEach((p, i) => { p.isPR = i > 0 && p.value > best; best = Math.max(best, p.value); });
+  return { measurement, points };
+}
+
 export function emptyPlan(days = 3) {
   return Object.fromEntries(Array.from({ length: Math.max(3, Math.min(5, Number(days) || 3)) }, (_, index) => {
     const id = String.fromCharCode(65 + index);

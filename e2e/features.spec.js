@@ -195,6 +195,57 @@ test('dashboard badges open the achievements modal with earned and locked entrie
   await expect(page.locator('.achievements-list')).toHaveCount(0);
 });
 
+test('exercise preview renders the progress chart with PR marker, lb conversion and plan scope', async ({ page }) => {
+  const settings = { currentWeek: 3, selectedStartWorkoutId: 'A', unit: 'kg', activePlanId: 'plan_default', activePlanName: 'Mój plan', legacyProgressPlanId: 'plan_default' };
+  const savedPlans = [
+    { id: 'plan_default', name: 'Mój plan', workouts: {}, workoutOrder: ['A', 'B', 'C'] },
+    { id: 'plan_other', name: 'Inny plan', workouts: {}, workoutOrder: ['A', 'B', 'C'] },
+  ];
+  const history = [
+    { sessionId: 's4', planId: 'plan_other', workoutId: 'A', workoutName: 'TRENING A', week: 1, date: '2026-02-15T10:00:00.000Z', totalSets: 1, totalVolume: 200, exercises: [{ name: 'Przysiad z sztangą na plecach', sets: [{ weight: 200, reps: 1 }] }] },
+    { sessionId: 's3', planId: 'plan_default', workoutId: 'A', workoutName: 'TRENING A', week: 3, date: '2026-02-12T10:00:00.000Z', totalSets: 1, totalVolume: 500, exercises: [{ name: 'Przysiad z sztangą na plecach', sets: [{ weight: 100, reps: 5 }] }] },
+    { sessionId: 's2', planId: 'plan_default', workoutId: 'A', workoutName: 'TRENING A', week: 2, date: '2026-02-05T10:00:00.000Z', totalSets: 1, totalVolume: 450, exercises: [{ name: 'Przysiad z sztangą na plecach', sets: [{ weight: 90, reps: 5 }] }] },
+    { sessionId: 's1', planId: 'plan_default', workoutId: 'A', workoutName: 'TRENING A', week: 1, date: '2026-01-29T10:00:00.000Z', totalSets: 1, totalVolume: 400, exercises: [{ name: 'Przysiad z sztangą na plecach', sets: [{ weight: 80, reps: 5 }] }, { name: 'Wznosy nóg do klatki', sets: [{ weight: 0, reps: 12 }] }] },
+  ];
+  await seed(page, { trening2026_settings_v1: settings, trening2026_saved_plans_v1: savedPlans, trening2026_history_v1: history });
+  await page.locator('#nav-history').click();
+  await page.getByRole('button', { name: /Wykres i podgląd ćwiczenia/ }).click();
+  await page.locator('.history-filters-box select.modal-select').selectOption('Przysiad z sztangą na plecach');
+
+  const chart = page.getByTestId('progress-chart');
+  // Scoped to active plan: 80 -> 90 -> 100 kg (the 200 kg session from plan_other is excluded).
+  await expect(chart).toContainText('80 – 100 kg');
+  await expect(chart).toContainText('+20 kg od pierwszego treningu');
+  await expect(chart.locator('.chart-dot.pr')).toHaveCount(2);
+
+  // Plan selected: only the dropdown is shown, not the text input.
+  await expect(page.locator('#histExerciseInput')).toHaveCount(0);
+  await page.locator('.history-filters-box select.modal-select').selectOption('Wznosy nóg do klatki');
+  await expect(chart).toContainText('12 powt.');
+  await expect(chart).toContainText('Zapisz jeszcze jeden trening');
+  await expect(chart.locator('svg')).toHaveCount(0);
+
+  // "All plans" selected: only the search input with suggestions is shown, not the dropdown.
+  await page.locator('#histPlanSelect').selectOption('all');
+  await expect(page.locator('.history-filters-box select.modal-select')).toHaveCount(0);
+  await expect(page.locator('#histExerciseSuggestions option')).not.toHaveCount(0);
+  // Partial typing matches immediately without losing spaces or getting stuck.
+  await page.locator('#histExerciseInput').fill('Przysiad ');
+  await expect(page.locator('#histExerciseInput')).toHaveValue('Przysiad ');
+  await expect(chart).toContainText('80 – 200 kg');
+  // Switching to a plan whose exercises do not include the typed string falls back cleanly.
+  await page.locator('#histPlanSelect').selectOption('plan_other');
+  await expect(page.locator('.history-filters-box select.modal-select')).toHaveValue('Przysiad z sztangą na plecach');
+  await page.locator('#histPlanSelect').selectOption('plan_default');
+
+  // Unit switch converts the chart too.
+  await page.locator('#nav-settings').click();
+  await page.locator('#unitLbBtn').click();
+  await page.locator('#nav-history').click();
+  await page.locator('.history-filters-box select.modal-select').selectOption('Przysiad z sztangą na plecach');
+  await expect(chart).toContainText('176,4 – 220,5 lb');
+});
+
 test('auto-start rest runs the timer right after a logged set', async ({ page }) => {
   await page.goto('/');
   await page.locator('#nav-settings').click();

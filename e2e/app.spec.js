@@ -397,7 +397,7 @@ test('history filters by workout, week and exercise, and can delete an entry', a
   await page.getByRole('button', { name: /Wyczyść filtry/ }).click();
   await expect(page.locator('.history-session-card')).toHaveCount(2);
 
-  await page.getByRole('button', { name: /Podgląd wg ćwiczenia/ }).click();
+  await page.getByRole('button', { name: /Wykres i podgląd ćwiczenia/ }).click();
   await page.locator('.history-filters-box select.modal-select').selectOption('Przysiad z sztangą na plecach');
   await expect(page.locator('.card').filter({ hasText: 'Historia wykonania w kolejnych treningach' })).toContainText('100 kg × 5');
 
