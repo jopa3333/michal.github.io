@@ -658,6 +658,25 @@ export default function App() {
     notify(t('app.exported'), 'gold');
   }
 
+  function exportCsv(sessionsToExport = history) {
+    if (!sessionsToExport || sessionsToExport.length === 0) {
+      notify(t('app.exportCsvEmpty'), 'error');
+      return;
+    }
+    const now = new Date().toISOString();
+    const csv = logic.historyToCsv(sessionsToExport, { lang, unit, savedPlans, settings });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `trening_historia_${now.slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    notify(t('app.exportedCsv'), 'gold');
+  }
+
   function importFile(file) {
     const reader = new FileReader();
     reader.onload = event => {
@@ -876,6 +895,7 @@ export default function App() {
             onReset={() => setHistoryFilters(DEFAULT_HISTORY_FILTERS)}
             onExerciseName={name => setHistoryFilters(prev => ({ ...prev, exerciseName: name }))}
             onDelete={deleteSession}
+            onExportCsv={exportCsv}
           />
         )}
         {tab === 'settings' && (
@@ -888,6 +908,7 @@ export default function App() {
               notify(t('app.testPlayed'), 'gold');
             }}
             onExport={exportData}
+            onExportCsv={() => exportCsv(history)}
             onImport={importFile}
             onClear={clearHistory}
             onUnit={changeUnit}

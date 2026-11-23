@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   achievementsState, DELETED_PLAN_ID, exerciseRecord, filterHistoryByPlan, formatRecordedSet, formatWeightDisplay,
-  fromDisplayWeight, historyPlanGroups, isPersonalRecord, plateModeForExercise, platesForWeight, progressSeries, sessionPlanId, toDisplayWeight,
+  fromDisplayWeight, historyPlanGroups, historyToCsv, isPersonalRecord, plateModeForExercise, platesForWeight, progressSeries, sessionPlanId, toDisplayWeight,
   weekStreak, weightStepValues,
 } from '../../src/logic.js';
 import { DEFAULT_PLAN, EXERCISE_DATABASE } from '../../src/data.js';
@@ -228,5 +228,38 @@ describe('progress chart series', () => {
 
     const plank = [{ date: '2026-02-03', week: 1, workoutName: 'A', exercises: [{ name: 'Plank (deska klasyczna)', sets: [{ weight: 0, reps: 60, measurement: 'seconds' }] }] }];
     expect(progressSeries(plank, 'Plank (deska klasyczna)').measurement).toBe('seconds');
+  });
+});
+
+describe('CSV export', () => {
+  const settings = { activePlanId: 'plan_1', activePlanName: 'Mój plan', legacyProgressPlanId: 'plan_1' };
+  const savedPlans = [{ id: 'plan_1', name: 'Mój plan' }];
+  const sessions = [{
+    date: '2026-02-10T18:00:00.000Z',
+    planId: 'plan_1',
+    week: 2,
+    workoutName: 'TRENING A',
+    exercises: [
+      { name: 'Przysiad ze sztangą na plecach', sets: [{ weight: 82.5, reps: 5 }, { weight: 85, reps: 4 }] },
+      { name: 'Wznosy nóg do klatki', sets: [{ weight: 0, reps: 12, hasWeight: false }] },
+    ],
+  }];
+
+  it('writes UTF-8 BOM and semicolon-delimited Polish rows for Polish Excel', () => {
+    const csv = historyToCsv(sessions, { lang: 'pl', unit: 'kg', savedPlans, settings });
+    expect(csv.startsWith('\uFEFF')).toBe(true);
+    const lines = csv.slice(1).split('\r\n');
+    expect(lines[0]).toBe('Data;Plan;Tydzień;Trening;Ćwiczenie;Seria;Ciężar (kg);Powtórzenia');
+    expect(lines[1]).toBe('2026-02-10;Mój plan;2;TRENING A;Przysiad ze sztangą na plecach;1;82,5;5');
+    expect(lines[2]).toBe('2026-02-10;Mój plan;2;TRENING A;Przysiad ze sztangą na plecach;2;85;4');
+    // Unweighted bodyweight set leaves the weight cell empty instead of 0.
+    expect(lines[3]).toBe('2026-02-10;Mój plan;2;TRENING A;Wznosy nóg do klatki;1;;12');
+  });
+
+  it('writes comma-delimited English rows and converts to lb', () => {
+    const csv = historyToCsv(sessions, { lang: 'en', unit: 'lb', savedPlans, settings });
+    const lines = csv.slice(1).split('\r\n');
+    expect(lines[0]).toBe('Date,Plan,Week,Workout,Exercise,Set,Weight (lb),Reps');
+    expect(lines[1]).toBe('2026-02-10,Mój plan,2,WORKOUT A,Barbell Back Squat,1,181.9,5');
   });
 });

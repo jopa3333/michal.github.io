@@ -1,7 +1,7 @@
 // Pure logic ported from the legacy index.html script. No DOM, no React, no storage access here,
 // so it can be unit-tested directly.
 // Language-aware helpers take an optional lang ('pl' default, 'en') so old callers and data keep working.
-import { tFor, dateLocale, canonicalExerciseName } from './i18n/core.js';
+import { tFor, dateLocale, canonicalExerciseName, exerciseDisplayName, workoutDisplayName } from './i18n/core.js';
 import { BODYWEIGHT_ALIASES_EN, TIMED_ALIASES_EN } from './i18n/names.js';
 
 export const WORKOUT_IDS = ['A', 'B', 'C'];
@@ -373,6 +373,51 @@ export function progressSeries(sessions, exerciseName) {
   let best = -Infinity;
   points.forEach((p, i) => { p.isPR = i > 0 && p.value > best; best = Math.max(best, p.value); });
   return { measurement, points };
+}
+
+// ---- CSV export (UTF-8 BOM; semicolon in PL for Polish Excel, comma in EN) ----
+export function historyToCsv(sessions, { lang = 'pl', unit = 'kg', savedPlans = [], settings = null } = {}) {
+  const t = tFor(lang);
+  const sep = lang === 'en' ? ',' : ';';
+  const planById = new Map((savedPlans || []).map(p => [p.id, p.name]));
+  const planNameFor = session => {
+    const id = sessionPlanId(session, settings);
+    return planById.get(id) || (id === settings?.activePlanId && settings?.activePlanName) || t('history.deletedPlan');
+  };
+  const escapeCell = value => {
+    const str = String(value ?? '');
+    if (str.includes(sep) || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+  const header = [
+    t('history.csvDate'),
+    t('history.csvPlan'),
+    t('history.csvWeek'),
+    t('history.csvWorkout'),
+    t('history.csvExercise'),
+    t('history.csvSet'),
+    `${t('history.csvWeight')} (${unit})`,
+    t('history.csvReps'),
+  ].map(escapeCell).join(sep);
+  const rows = [header];
+  for (const sess of sessions || []) {
+    const dateStr = String(sess.date || '').slice(0, 10);
+    const planLabel = planNameFor(sess);
+    const workoutLabel = workoutDisplayName(sess.workoutName || sess.workoutId || '', lang);
+    for (const ex of sess.exercises || []) {
+      const exLabel = exerciseDisplayName(ex.name || '', lang);
+      (ex.sets || []).forEach((set, idx) => {
+        const timed = set.measurement === 'seconds';
+        const weighted = !timed && (set.hasWeight ?? (!isBodyweightExercise(ex) || Number(set.weight) > 0));
+        const wCell = weighted ? formatWeightDisplay(Number(set.weight) || 0, lang, unit) : '';
+        const rCell = timed ? `${set.reps} s` : String(set.reps ?? '');
+        rows.push([dateStr, planLabel, sess.week ?? '', workoutLabel, exLabel, idx + 1, wCell, rCell].map(escapeCell).join(sep));
+      });
+    }
+  }
+  return '\uFEFF' + rows.join('\r\n');
 }
 
 export function emptyPlan(days = 3) {

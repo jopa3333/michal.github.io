@@ -209,7 +209,7 @@ test('exercise preview renders the progress chart with PR marker, lb conversion 
   ];
   await seed(page, { trening2026_settings_v1: settings, trening2026_saved_plans_v1: savedPlans, trening2026_history_v1: history });
   await page.locator('#nav-history').click();
-  await page.getByRole('button', { name: /Wykres i podgląd ćwiczenia/ }).click();
+  await page.getByRole('button', { name: /Wykres ćwiczenia/ }).click();
   await page.locator('.history-filters-box select.modal-select').selectOption('Przysiad z sztangą na plecach');
 
   const chart = page.getByTestId('progress-chart');
@@ -244,6 +244,40 @@ test('exercise preview renders the progress chart with PR marker, lb conversion 
   await page.locator('#nav-history').click();
   await page.locator('.history-filters-box select.modal-select').selectOption('Przysiad z sztangą na plecach');
   await expect(chart).toContainText('176,4 – 220,5 lb');
+});
+
+test('history and settings export workout sets to a CSV file', async ({ page }) => {
+  const history = [{
+    sessionId: 's1',
+    planId: 'plan_default',
+    workoutId: 'A',
+    workoutName: 'TRENING A',
+    week: 1,
+    date: '2026-02-10T10:00:00.000Z',
+    totalSets: 2,
+    totalVolume: 825,
+    exercises: [{ name: 'Przysiad z sztangą na plecach', sets: [{ weight: 82.5, reps: 5 }, { weight: 82.5, reps: 5 }] }],
+  }];
+  await seed(page, { trening2026_history_v1: history });
+  await page.locator('#nav-history').click();
+
+  await page.setViewportSize({ width: 320, height: 700 });
+  const actionBoxes = await page.locator('.hist-actions-row .hist-action-btn').evaluateAll(btns =>
+    btns.map(b => ({ top: b.getBoundingClientRect().top, fits: b.scrollWidth <= b.clientWidth })));
+  expect(actionBoxes).toHaveLength(2);
+  expect(actionBoxes[0].top).toBe(actionBoxes[1].top);
+  expect(actionBoxes.every(b => b.fits)).toBe(true);
+
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.locator('#exportCsvHistoryBtn').click(),
+  ]);
+  expect(download.suggestedFilename()).toMatch(/^trening_historia_.*\.csv$/);
+  const path = await download.path();
+  const fs = await import('node:fs');
+  const text = fs.readFileSync(path, 'utf8');
+  expect(text).toContain('Data;Plan;Tydzień;Trening;Ćwiczenie;Seria;Ciężar (kg);Powtórzenia');
+  expect(text).toContain('2026-02-10;Mój Plan Główny (A/B/C);1;TRENING A;Przysiad z sztangą na plecach;1;82,5;5');
 });
 
 test('auto-start rest runs the timer right after a logged set', async ({ page }) => {

@@ -2,7 +2,7 @@ import { exerciseEntries, exerciseNames, filterHistory, filterHistoryByPlan, for
 import { useT } from '../i18n.jsx';
 import { canonicalExerciseName, dateLocale, exerciseDisplayName, workoutDisplayName } from '../i18n/core.js';
 
-export function HistoryTab({ history, plan, workout, week, exerciseMode, exerciseName, unit = 'kg', planFilter = 'all', savedPlans = [], settings = null, onWorkout, onWeek, onWeekSelect, onToggleExerciseMode, onReset, onExerciseName, onDelete, onPlan }) {
+export function HistoryTab({ history, plan, workout, week, exerciseMode, exerciseName, unit = 'kg', planFilter = 'all', savedPlans = [], settings = null, onWorkout, onWeek, onWeekSelect, onToggleExerciseMode, onReset, onExerciseName, onDelete, onPlan, onExportCsv }) {
   const { t, lang } = useT();
   const planGroups = historyPlanGroups(history, savedPlans, settings);
   const planLabel = id => {
@@ -86,16 +86,23 @@ export function HistoryTab({ history, plan, workout, week, exerciseMode, exercis
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, paddingTop: 4, borderTop: '1px solid rgba(20, 107, 151, 0.25)' }}>
-            <button type="button" className="btn btn-outline btn-mini" onClick={onToggleExerciseMode} style={{ fontSize: '0.75rem' }}>
+          <div className="hist-actions-row">
+            <button type="button" className="btn btn-outline btn-mini hist-action-btn" onClick={onToggleExerciseMode}>
               {t('history.exercisePreview')}
             </button>
-            {isFiltered && (
-              <button type="button" className="btn-clear-filter" onClick={onReset} style={{ display: 'inline-flex' }}>
-                {t('history.clearFilters')}
+            {filtered.length > 0 && onExportCsv && (
+              <button type="button" id="exportCsvHistoryBtn" className="btn btn-outline btn-mini hist-action-btn" onClick={() => onExportCsv(filtered)}>
+                {t('history.exportCsv')}
               </button>
             )}
           </div>
+          {isFiltered && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button type="button" className="btn-clear-filter" onClick={onReset} style={{ display: 'inline-flex' }}>
+                {t('history.clearFilters')}
+              </button>
+            </div>
+          )}
 
           {exerciseMode && (
             <div style={{ marginTop: 6 }}>
