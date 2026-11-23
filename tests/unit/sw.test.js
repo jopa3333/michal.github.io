@@ -18,9 +18,10 @@ describe('service worker copies', () => {
     expect(content).toMatch(/const CACHE_NAME = 'trening2026-v\d+';/);
   });
 
-  it('serves navigations network-first so a stale index cannot break deploys', () => {
+  it('serves navigations cache-first and precaches indexed assets so powrot z tla jest natychmiastowy', () => {
     const content = readFileSync(served, 'utf8');
     expect(content).toContain("event.request.mode === 'navigate'");
+    expect(content).toContain('precacheIndexAndAssets');
     expect(content).toContain('self.skipWaiting()');
     expect(content).toContain('self.clients.claim()');
   });
