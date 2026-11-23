@@ -406,6 +406,39 @@ test('history filters by workout, week and exercise, and can delete an entry', a
   await expect(page.locator('.history-session-card')).toHaveCount(1);
 });
 
+test('exercise picker follows the workout pill in the history chart view', async ({ page }) => {
+  await seed(page, { [KEYS.history]: legacyHistory });
+  await page.locator('#nav-history').click();
+  await page.getByRole('button', { name: /Wykres ćwiczenia/ }).click();
+
+  const picker = page.locator('.history-filters-box select.modal-select');
+  await expect(picker).toBeVisible();
+
+  // Trening A: only exercises of A, and the chart shows A history.
+  await page.locator('.hist-pill', { hasText: 'Trening A' }).click();
+  let options = await picker.locator('option').evaluateAll(opts => opts.map(o => o.value));
+  expect(options).toContain('Przysiad z sztangą na plecach');
+  expect(options).not.toContain('Martwy ciąg na prostych nogach');
+  await picker.selectOption('Przysiad z sztangą na plecach');
+  await expect(page.getByTestId('progress-chart')).toBeVisible();
+  await expect(page.getByTestId('progress-chart')).toContainText('100');
+
+  // Trening B: the picker switches to B exercises and shows B history, not A.
+  await page.locator('.hist-pill', { hasText: 'Trening B' }).click();
+  options = await picker.locator('option').evaluateAll(opts => opts.map(o => o.value));
+  expect(options).toContain('Martwy ciąg na prostych nogach');
+  expect(options).not.toContain('Przysiad z sztangą na plecach');
+  await picker.selectOption('Martwy ciąg na prostych nogach');
+  await expect(page.getByTestId('progress-chart')).toContainText('100');
+  await expect(page.locator('.card').filter({ hasText: 'TRENING B' })).toContainText('100 kg × 2');
+
+  // Wszystkie: exercises from all workouts are back.
+  await page.locator('.hist-pill', { hasText: /^Wszystkie$/ }).click();
+  options = await picker.locator('option').evaluateAll(opts => opts.map(o => o.value));
+  expect(options).toContain('Przysiad z sztangą na plecach');
+  expect(options).toContain('Martwy ciąg na prostych nogach');
+});
+
 test('toast notification clears the phone status area', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 700 });
   await page.goto('/');

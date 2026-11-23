@@ -339,8 +339,20 @@ export function weekOptions(history, workout) {
 export function exerciseNames(history, plan) {
   const names = new Set();
   history.forEach(s => (s.exercises || []).forEach(e => names.add(e.name)));
-  Object.values(plan).forEach(workout => workout.exercises.forEach(e => names.add(e.name)));
+  Object.values(plan || {}).forEach(workout => (workout.exercises || []).forEach(e => names.add(e.name)));
   return [...names].sort();
+}
+
+// Exercise picker scope in Historia follows the workout pill: with Trening A
+// selected, only exercises of workout A (from the plan definition and from
+// recorded history of A) are offered — never exercises of other workouts.
+export function exerciseNamesForWorkout(history, plan, workout) {
+  if (!workout || workout === 'all') return exerciseNames(history, plan);
+  const scoped = plan && plan[workout] ? { [workout]: plan[workout] } : {};
+  return exerciseNames(
+    (history || []).filter(s => matchesWorkout(s, workout)),
+    scoped
+  );
 }
 
 export function exerciseEntries(sessions, exerciseName) {

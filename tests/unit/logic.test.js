@@ -316,6 +316,25 @@ describe('history filters and lists', () => {
     expect([...names].sort()).toEqual(names);
   });
 
+  it('scopes exercise names to the selected workout pill', () => {
+    // 'all' keeps both history names and the full plan definition.
+    const all = logic.exerciseNamesForWorkout(history, DEFAULT_PLAN, 'all');
+    expect(all).toContain('Leg press');
+    expect(all).toContain('Przysiad z sztangą na plecach');
+
+    // Workout A: exercises of A (plan + history of A), nothing from other workouts.
+    const a = logic.exerciseNamesForWorkout(history, DEFAULT_PLAN, 'A');
+    expect(a).toContain('Przysiad z sztangą na plecach');
+    DEFAULT_PLAN.A.exercises.forEach(e => expect(a).toContain(e.name));
+    expect(a).not.toContain('Leg press');
+
+    // Workout B: plan definition of B plus history of B, no exercises of A.
+    const b = logic.exerciseNamesForWorkout(history, DEFAULT_PLAN, 'B');
+    expect(b).toContain('Leg press');
+    DEFAULT_PLAN.B.exercises.forEach(e => expect(b).toContain(e.name));
+    expect(b).not.toContain('Przysiad z sztangą na plecach');
+  });
+
   it('finds an exercise in each session regardless of case', () => {
     const entries = logic.exerciseEntries(history, '  przysiad z SZTANGĄ na plecach ');
     expect(entries.map(e => e.sets)).toEqual([sets([100, 5]), sets([80, 8])]);

@@ -1,4 +1,4 @@
-import { exerciseEntries, exerciseNames, filterHistory, filterHistoryByPlan, formatRecordedSet, formatWeightDisplay, historyPlanGroups, progressSeries, sessionPlanId, toDisplayWeight, weekOptions, workoutIds } from '../logic.js';
+import { exerciseEntries, exerciseNamesForWorkout, filterHistory, filterHistoryByPlan, formatRecordedSet, formatWeightDisplay, historyPlanGroups, progressSeries, sessionPlanId, toDisplayWeight, weekOptions, workoutIds } from '../logic.js';
 import { useT } from '../i18n.jsx';
 import { canonicalExerciseName, dateLocale, exerciseDisplayName, workoutDisplayName } from '../i18n/core.js';
 
@@ -20,7 +20,7 @@ export function HistoryTab({ history, plan, workout, week, exerciseMode, exercis
   const workoutPills = [['all', t('history.allWorkouts')], ...ids.map(id => [id, t('history.workoutPill', { id })])];
   const weeks = weekOptions(planHistory, workout);
   const filtered = filterHistory(planHistory, workout, week);
-  const names = exerciseNames(planHistory, workoutsForNames);
+  const names = exerciseNamesForWorkout(planHistory, workoutsForNames, workout);
   const typedRaw = String(exerciseName ?? '');
   const typedCanonical = typedRaw.trim() ? canonicalExerciseName(typedRaw.trim()) : '';
   // Partial typing filter in "All plans": if no exact match yet, pick the first matching name.
