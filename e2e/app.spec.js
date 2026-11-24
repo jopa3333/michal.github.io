@@ -1034,3 +1034,45 @@ test('app lands on the workout picker and the dashboard continues an active sess
   await page.locator('.dashboard-continue').click();
   await expect(page.locator('.assistant-ex-count')).toHaveText('ĆWICZENIE 1 Z 7');
 });
+
+test('motyw kolorystyczny przełącza się i zapamiętuje po odświeżeniu', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#nav-settings').click();
+
+  await expect(page.locator('#themeSelect')).toBeVisible();
+
+  await page.locator('#themeSelect').selectOption('crimson');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'crimson');
+  await expect(page.locator('text=Motyw: Szkarłat')).toBeVisible();
+
+  // Trwałość: po odświeżeniu motyw wraca bez klikania.
+  await page.reload();
+  await page.locator('#nav-settings').click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'crimson');
+  await expect(page.locator('#themeSelect')).toHaveValue('crimson');
+
+  // Nowe motywy z listy rozwijanej też działają.
+  await page.locator('#themeSelect').selectOption('indigo');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'indigo');
+
+  // Seria premium: motyw + metaliczna poświata na liczniku statystyk.
+  await page.locator('#themeSelect').selectOption('onyx');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'onyx');
+  await page.locator('#nav-start').click();
+  const statGlow = await page.evaluate(() => getComputedStyle(document.querySelector('.stat-tile .stat-value')).textShadow);
+  expect(statGlow).not.toBe('none');
+  await page.locator('#nav-settings').click();
+
+  // Powrót do domyślnego: atrybut znika (ocean to czysty :root).
+  await page.locator('#themeSelect').selectOption('ocean');
+  await expect(page.locator('html')).not.toHaveAttribute('data-theme', 'crimson');
+
+  // Motyw farbuje też dolny pasek nawigacji (nie tylko tło sekcji).
+  const navBgOcean = await page.evaluate(() => getComputedStyle(document.querySelector('.bottom-nav')).backgroundColor);
+  await page.locator('#themeSelect').selectOption('violet');
+  const navBgViolet = await page.evaluate(() => getComputedStyle(document.querySelector('.bottom-nav')).backgroundColor);
+  await page.locator('#themeSelect').selectOption('crimson');
+  const navBgCrimson = await page.evaluate(() => getComputedStyle(document.querySelector('.bottom-nav')).backgroundColor);
+  expect(navBgViolet).not.toBe(navBgOcean);
+  expect(navBgCrimson).not.toBe(navBgOcean);
+});

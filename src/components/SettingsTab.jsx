@@ -1,7 +1,8 @@
 import { useRef } from 'react';
 import { useT } from '../i18n.jsx';
+import { THEMES } from '../themes.js';
 
-export function SettingsTab({ settings, onSound, onVibrate, onTest, onExport, onExportCsv, onImport, onClear, onUnit, onAutoRest }) {
+export function SettingsTab({ settings, onSound, onVibrate, onTest, onExport, onExportCsv, onImport, onClear, onUnit, onAutoRest, activeTheme, onTheme }) {
   const { t, lang, setLang } = useT();
   const fileInput = useRef(null);
   return (
@@ -50,6 +51,31 @@ export function SettingsTab({ settings, onSound, onVibrate, onTest, onExport, on
           />
         </div>
 
+        <div className="settings-section-title">{t('settings.themeSection')}</div>
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: 12 }}>{t('settings.themeInfo')}</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+          <span
+            aria-hidden="true"
+            id="activeThemeSwatch"
+            style={{
+              width: 22, height: 22, borderRadius: '50%', flex: '0 0 auto',
+              background: (THEMES.find(theme => theme.id === (activeTheme || 'ocean')) || THEMES[0]).swatch.accent,
+              border: '2px solid var(--border-color)',
+              boxShadow: '0 0 8px rgba(0,0,0,0.4)',
+            }}
+          />
+          <select
+            id="themeSelect"
+            className="hist-week-select"
+            value={activeTheme || 'ocean'}
+            onChange={event => onTheme(event.target.value)}
+          >
+            {THEMES.map(theme => (
+              <option key={theme.id} value={theme.id}>{t(theme.key)}</option>
+            ))}
+          </select>
+        </div>
+
         <div className="settings-section-title">{t('settings.soundSection')}</div>
         <div className="settings-row">
           <span>{t('settings.sounds')}</span>
@@ -75,7 +101,7 @@ export function SettingsTab({ settings, onSound, onVibrate, onTest, onExport, on
           <button type="button" className="btn btn-danger" onClick={onClear}>{t('settings.clear')}</button>
         </div>
 
-        <div style={{ marginTop: 24, paddingTop: 12, borderTop: '1px solid rgba(20, 107, 151, 0.3)', fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+        <div style={{ marginTop: 24, paddingTop: 12, borderTop: '1px solid rgba(var(--border-rgb), 0.3)', fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center' }}>
           {t('settings.footer')}
         </div>
       </div>

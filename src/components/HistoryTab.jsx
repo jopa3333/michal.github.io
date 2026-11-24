@@ -208,7 +208,7 @@ function AllSessions({ history, sessions, unit = 'kg', onDelete, onShare, planTa
             );
           })}
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(20, 107, 151, 0.3)', paddingTop: 8, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(var(--border-rgb), 0.3)', paddingTop: 8, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
           <span>
             {t('history.volumeLabel')} <strong>{Math.round(toDisplayWeight(session.totalVolume || 0, unit)).toLocaleString(dateLocale(lang))} {unit}</strong> ({t('common.setsCount', { count: session.totalSets || 0 })})
           </span>
@@ -252,7 +252,7 @@ function ExerciseHistory({ sessions, exerciseName, unit = 'kg' }) {
         const dateText = !isNaN(date) ? date.toLocaleDateString(dateLocale(lang)) : entry.date;
         const setsText = entry.sets.map(s => formatRecordedSet(s, { name: exerciseName }, lang, unit)).join('  |  ');
         return (
-          <div key={`${entry.date}-${index}`} style={{ padding: '10px 0', borderBottom: '1px solid rgba(20, 107, 151, 0.3)' }}>
+          <div key={`${entry.date}-${index}`} style={{ padding: '10px 0', borderBottom: '1px solid rgba(var(--border-rgb), 0.3)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: '0.85rem' }}>
               <strong style={{ color: '#fff' }}>{workoutDisplayName(entry.workoutName, lang)} · {t('common.week')} {entry.week}</strong>
               <span style={{ color: 'var(--text-muted)' }}>{dateText}</span>

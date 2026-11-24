@@ -84,7 +84,7 @@ export function ExerciseModal({ planName, exercise, onSave, onClose, unit = 'kg'
       <div className="modal-box">
         <div className="modal-title">{title}</div>
 
-        <div className="form-group" style={{ background: 'rgba(2, 44, 67, 0.6)', padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(20, 107, 151, 0.35)' }}>
+        <div className="form-group" style={{ background: 'rgba(var(--bg-dark-rgb), 0.6)', padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(var(--border-rgb), 0.35)' }}>
           <label className="form-label" htmlFor="exerciseLibrary" style={{ marginBottom: 4 }}>{t('modals.library')}</label>
           <select id="exerciseLibrary" className="modal-select" value={form.quick} onChange={event => pickFromDatabase(event.target.value)} style={{ fontSize: '0.85rem' }}>
             <option value="">{t('modals.libraryPlaceholder')}</option>
@@ -242,7 +242,7 @@ export function SummaryModal({ data, history, plan, settings, onClose, onShare }
           )}
         </p>
 
-        <div style={{ background: 'rgba(2, 44, 67, 0.7)', borderRadius: 10, padding: 14, marginBottom: 20, textAlign: 'left' }}>
+        <div style={{ background: 'rgba(var(--bg-dark-rgb), 0.7)', borderRadius: 10, padding: 14, marginBottom: 20, textAlign: 'left' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: '0.9rem' }}>
             <span style={{ color: 'var(--text-muted)' }}>{t('modals.workoutRow')}</span>
             <span id="sumWorkoutName" style={{ fontWeight: 800, color: '#fff' }}>{workoutDisplayName(data.name, lang)}</span>

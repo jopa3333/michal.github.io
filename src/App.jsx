@@ -6,6 +6,7 @@ import * as audio from './audio.js';
 import * as logic from './logic.js';
 import * as gdrive from './gdrive.js';
 import { useT } from './i18n.jsx';
+import { THEMES, applyTheme, themeById } from './themes.js';
 import {
   getStoredLang, getLang, tFor, exerciseDisplayName, workoutDisplayName, planDisplayName, templateText,
 } from './i18n/core.js';
@@ -45,6 +46,7 @@ const DEFAULT_SETTINGS = {
   vibrateEnabled: true,
   unit: 'kg',
   autoStartRest: false,
+  theme: 'ocean',
 };
 const DEFAULT_HISTORY_FILTERS = { workout: 'all', week: 'all', exerciseMode: false, exerciseName: '', plan: null };
 
@@ -146,6 +148,8 @@ export default function App() {
   useEffect(() => saveToStorage(KEYS.plan, plan), [plan]);
   useEffect(() => saveToStorage(KEYS.history, history), [history]);
   useEffect(() => saveToStorage(KEYS.settings, settings), [settings]);
+  // Motyw kolorystyczny przykłada się od razu po starcie i przy każdej zmianie.
+  useEffect(() => applyTheme(settings.theme), [settings.theme]);
   useEffect(() => saveToStorage(KEYS.savedPlans, savedPlans), [savedPlans]);
   useEffect(() => saveToStorage(KEYS.active, session), [session]);
 
@@ -844,6 +848,12 @@ export default function App() {
     notify(t('app.toggled', { label, state: enabled ? t('app.on') : t('app.off') }));
   }
 
+  function changeTheme(id) {
+    if (!THEMES.some(theme => theme.id === id)) return;
+    setSettings({ ...settingsRef.current, theme: id });
+    notify(t('app.themeChanged', { name: t(themeById(id).key) }), 'gold');
+  }
+
   // ---- Render ----
 
   const currentWeight = currentExercise ? currentExercise.currentWeight : 0;
@@ -1056,6 +1066,8 @@ export default function App() {
             onClear={clearHistory}
             onUnit={changeUnit}
             onAutoRest={enabled => toggleSetting('autoStartRest', enabled, t('settings.autoRest'))}
+            activeTheme={settings.theme || 'ocean'}
+            onTheme={changeTheme}
           />
         )}
       </main>
