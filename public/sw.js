@@ -1,5 +1,5 @@
 /* ============================================================
-   SERVICE WORKER — Trening 2026 PWA (Wersja v32)
+   SERVICE WORKER — Trening 2026 PWA (Wersja v33)
    Nawigacja: cache-first z odświeżaniem w tle. Android często
    porzuca proces karty PWA w tle, a powrót wymusza pełne
    przeładowanie — serwowanie index.html z cache zamiast z sieci
@@ -14,7 +14,7 @@
    (pilnuje tego tests/unit/sw.test.js).
    ============================================================ */
 
-const CACHE_NAME = 'trening2026-v32';
+const CACHE_NAME = 'trening2026-v33';
 const ASSETS = [
   './',
   './index.html',
@@ -76,6 +76,10 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
+
+  // Zapytania do innych domen (Google — logowanie, Drive API) omijają
+  // cache: SW nie może podstawić starej odpowiedzi zamiast live danych.
+  if (new URL(event.request.url).origin !== self.location.origin) return;
 
   // Nawigacja (wejście na stronę): od razu z cache, sieć tylko
   // odświeża cache w tle (po wpinaniu nowych zasobów do cache).

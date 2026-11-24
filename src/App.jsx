@@ -4,6 +4,7 @@ import { DEFAULT_PLAN, PLAN_TEMPLATES } from './data.js';
 import { KEYS, loadFromStorage, saveToStorage } from './storage.js';
 import * as audio from './audio.js';
 import * as logic from './logic.js';
+import * as gdrive from './gdrive.js';
 import { useT } from './i18n.jsx';
 import {
   getStoredLang, getLang, tFor, exerciseDisplayName, workoutDisplayName, planDisplayName, templateText,
@@ -453,16 +454,23 @@ export default function App() {
     const previousCount = Number.isSafeInteger(settings.completedWorkoutCount) && settings.completedWorkoutCount >= 0
       ? settings.completedWorkoutCount : history.length;
     const completedWorkoutCount = previousCount + 1;
-    setHistory(nextHistory);
-    setSettings({
+    const finalSettings = {
       ...nextSettings,
       completedWorkoutCount,
       backupReminderPending: Boolean(settings.backupReminderPending) || completedWorkoutCount % 20 === 0,
-    });
+    };
+    setHistory(nextHistory);
+    setSettings(finalSettings);
     setSession(null);
     setTimer(prev => ({ ...prev, isRunning: false, targetEndTime: null }));
     audio.playTone(settingsRef.current, 523.25, 0.3, 'sine', 0.2);
     setModal({ kind: 'summary', data: { name: session.workoutName, week: session.week, sets: totalSets, volume, weekProg } });
+
+    // Cicha automatyczna kopia na Google Drive po skończonym treningu.
+    const drive = settings.googleDrive || {};
+    if (drive.autoBackup && drive.email && (drive.clientId || '').trim()) {
+      driveBackupNow({ silent: true, historyOverride: nextHistory, settingsOverride: finalSettings });
+    }
   }
 
   function closeSummary() {
@@ -645,7 +653,7 @@ export default function App() {
     const now = new Date().toISOString();
     const upserted = logic.upsertCurrentPlan(savedPlans, settings, plan, now);
     setSavedPlans(upserted);
-    const payload = { version: 'trening2026_1.1', exportDate: now, settings, plan, savedPlans: upserted, history };
+    const payload = logic.buildBackupPayload({ settings, plan, savedPlans: upserted, history }, now);
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -677,6 +685,25 @@ export default function App() {
     notify(t('app.exportedCsv'), 'gold');
   }
 
+  // Wspólne stosowanie kopii dla pliku JSON i przywracania z Google Drive.
+  function applyImportedBackup(imported) {
+    if (!imported.plan || !imported.history) throw new Error(t('app.importInvalid'));
+    setPlan(imported.plan);
+    setPlanTab(logic.workoutIds(imported.plan)[0] || 'A');
+    setHistoryFilters(DEFAULT_HISTORY_FILTERS);
+    setHistory(imported.history);
+    if (Array.isArray(imported.savedPlans)) setSavedPlans(imported.savedPlans);
+    if (imported.settings) {
+      // Logowanie Google jest per urządzenie — przywrócenie kopii z innego
+      // urządzenia nie może rozłączać obecnego logowania na tym urządzeniu.
+      setSettings({
+        ...imported.settings,
+        googleDrive: (settingsRef.current && settingsRef.current.googleDrive) || imported.settings.googleDrive || null,
+        legacyProgressPlanId: imported.settings.legacyProgressPlanId || imported.settings.activePlanId || 'plan_default',
+      });
+    }
+  }
+
   function importFile(file) {
     const reader = new FileReader();
     reader.onload = event => {
@@ -684,12 +711,7 @@ export default function App() {
         const imported = JSON.parse(event.target.result);
         if (!imported.plan || !imported.history) throw new Error(t('app.importInvalid'));
         if (!window.confirm(t('app.confirmImport'))) return;
-        setPlan(imported.plan);
-        setPlanTab(logic.workoutIds(imported.plan)[0] || 'A');
-        setHistoryFilters(DEFAULT_HISTORY_FILTERS);
-        setHistory(imported.history);
-        if (Array.isArray(imported.savedPlans)) setSavedPlans(imported.savedPlans);
-        if (imported.settings) setSettings({ ...imported.settings, legacyProgressPlanId: imported.settings.legacyProgressPlanId || imported.settings.activePlanId || 'plan_default' });
+        applyImportedBackup(imported);
         notify(t('app.imported'), 'gold');
       } catch (error) {
         window.alert(t('app.importError', { message: error.message }));
@@ -702,6 +724,99 @@ export default function App() {
     if (!window.confirm(t('app.confirmClearHistory'))) return;
     setHistory([]);
     notify(t('app.historyCleared'), 'error');
+  }
+
+  // ---- Kopia w chmurze na Google Drive (panel na Pulpicie) ----
+
+  function driveState() {
+    return settings.googleDrive || {};
+  }
+
+  const [driveBusy, setDriveBusy] = useState(null);
+
+  function setDriveData(patch) {
+    setSettings(prev => ({ ...prev, googleDrive: { ...(prev.googleDrive || {}), ...patch } }));
+  }
+
+  async function driveLogin() {
+    setDriveBusy('login');
+    try {
+      const token = await gdrive.requestToken({ clientId: gdrive.CLIENT_ID });
+      const info = await gdrive.fetchUserInfo(token);
+      setDriveData({ email: info.email, name: info.name });
+      notify(t('app.driveLoginOk', { email: info.email }), 'gold');
+    } catch (error) {
+      notify(t('app.driveLoginError'), 'error');
+    } finally {
+      setDriveBusy(null);
+    }
+  }
+
+  function driveLogout() {
+    gdrive.clearToken(gdrive.CLIENT_ID);
+    setDriveData({ email: null, name: null, autoBackup: false });
+    notify(t('app.driveLoggedOut'));
+  }
+
+  function toggleDriveAuto(enabled) {
+    if (enabled && !driveState().email) {
+      notify(t('app.driveNotConnected'), 'error');
+      return;
+    }
+    setDriveData({ autoBackup: enabled });
+    notify(t('app.toggled', { label: t('settings.driveAutoBackup'), state: enabled ? t('app.on') : t('app.off') }));
+  }
+
+  // historyOverride/settingsOverride: auto-kopia po treningu przekazuje
+  // świeżo policzone dane (setState jest asynchroniczne).
+  async function driveBackupNow({ silent = false, historyOverride = null, settingsOverride = null } = {}) {
+    const drive = driveState();
+    if (!drive.email) {
+      if (!silent) notify(t('app.driveNotConnected'), 'error');
+      return false;
+    }
+    const currentSettings = settingsOverride || settingsRef.current;
+    const currentHistory = historyOverride !== null ? historyOverride : history;
+    const now = new Date().toISOString();
+    try {
+      const token = await gdrive.requestToken({ clientId: gdrive.CLIENT_ID });
+      const existing = await gdrive.findBackupFile(token);
+      const upserted = logic.upsertCurrentPlan(savedPlans, currentSettings, plan, now);
+      setSavedPlans(upserted);
+      const payload = logic.buildBackupPayload({ settings: currentSettings, plan, savedPlans: upserted, history: currentHistory }, now);
+      await gdrive.uploadBackupFile(token, { fileId: existing ? existing.id : null, content: JSON.stringify(payload) });
+      setSettings(prev => ({ ...prev, googleDrive: { ...(prev.googleDrive || {}), lastBackupAt: now } }));
+      notify(t('app.driveBackupOk'), 'gold');
+      return true;
+    } catch (error) {
+      notify(t('app.driveBackupError'), 'error');
+      return false;
+    }
+  }
+
+  async function driveRestore() {
+    if (!driveState().email) {
+      notify(t('app.driveNotConnected'), 'error');
+      return;
+    }
+    setDriveBusy('restore');
+    try {
+      const token = await gdrive.requestToken({ clientId: gdrive.CLIENT_ID });
+      const file = await gdrive.findBackupFile(token);
+      if (!file) {
+        notify(t('app.driveRestoreEmpty'), 'error');
+        return;
+      }
+      const imported = await gdrive.downloadBackupFile(token, file.id);
+      if (!imported.plan || !imported.history) throw new Error('invalid');
+      if (!window.confirm(t('app.driveConfirmRestore'))) return;
+      applyImportedBackup(imported);
+      notify(t('app.driveRestored'), 'gold');
+    } catch (error) {
+      notify(t('app.driveRestoreError'), 'error');
+    } finally {
+      setDriveBusy(null);
+    }
   }
 
   function toggleSetting(key, enabled, label) {
@@ -826,9 +941,16 @@ export default function App() {
             settings={settings}
             session={session}
             history={history}
+            drive={settings.googleDrive || null}
             onContinue={() => goTab('workout')}
             onOpenSettings={() => goTab('settings')}
             onOpenAchievements={() => setModal({ kind: 'achievements' })}
+            onDriveLogin={driveLogin}
+            onDriveBackup={() => driveBackupNow()}
+            onDriveRestore={driveRestore}
+            onDriveAuto={toggleDriveAuto}
+            onDriveLogout={driveLogout}
+            driveBusy={driveBusy}
           />
         )}
         {tab === 'workout' && (

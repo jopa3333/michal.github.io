@@ -3,7 +3,11 @@ import { useT } from '../i18n.jsx';
 import { dateLocale } from '../i18n/core.js';
 
 // Start is now the account/dashboard hub; the workout picker hero lives in WorkoutTab.
-export function StartTab({ settings, session, history, onContinue, onOpenSettings, onOpenAchievements }) {
+export function StartTab({
+  settings, session, history, drive,
+  onContinue, onOpenSettings, onOpenAchievements,
+  onDriveLogin, onDriveBackup, onDriveRestore, onDriveAuto, onDriveLogout, driveBusy,
+}) {
   const { t, lang } = useT();
   const total = Number.isSafeInteger(settings.completedWorkoutCount) && settings.completedWorkoutCount >= 0
     ? settings.completedWorkoutCount
@@ -62,12 +66,44 @@ export function StartTab({ settings, session, history, onContinue, onOpenSetting
           </button>
         </div>
 
-        <div className="dashboard-card">
-          <div className="dashboard-card-title">
-            🔐 {t('start.googleTitle')} <span className="badge badge-soon">{t('start.soon')}</span>
+        {drive && drive.email ? (
+          <div className="dashboard-card">
+            <div className="dashboard-card-title">🔐 {drive.email}</div>
+            <p className="dashboard-card-text">
+              {drive.lastBackupAt
+                ? t('settings.driveLastBackup', {
+                    date: new Date(drive.lastBackupAt).toLocaleString(
+                      lang === 'pl' ? 'pl-PL' : 'en-GB',
+                      { dateStyle: 'short', timeStyle: 'short' }
+                    ),
+                  })
+                : t('settings.driveNoBackupYet')}
+            </p>
+            <div className="settings-row compact">
+              <span>{t('settings.driveAutoBackup')}</span>
+              <input type="checkbox" id="driveAutoBackupToggleStart" style={{ width: 20, height: 20 }} checked={Boolean(drive.autoBackup)} onChange={event => onDriveAuto(event.target.checked)} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
+              <button type="button" className="btn btn-outline" style={{ borderColor: 'var(--accent-gold)', color: 'var(--accent-gold)' }} disabled={driveBusy === 'restore'} onClick={onDriveBackup}>
+                ☁️ {t('settings.driveBackupNow')}
+              </button>
+              <button type="button" className="btn btn-outline" disabled={driveBusy === 'restore'} onClick={onDriveRestore}>
+                ♻️ {t('settings.driveRestore')}
+              </button>
+              <button type="button" className="btn btn-outline" style={{ fontSize: '0.8rem' }} onClick={onDriveLogout}>
+                {t('settings.driveLogout')}
+              </button>
+            </div>
           </div>
-          <p className="dashboard-card-text">{t('start.googleText')}</p>
-        </div>
+        ) : (
+          <div className="dashboard-card">
+            <div className="dashboard-card-title">🔐 {t('start.googleTitle')}</div>
+            <p className="dashboard-card-text">{t('start.googleText')}</p>
+            <button type="button" className="btn btn-primary" disabled={driveBusy === 'login'} onClick={onDriveLogin}>
+              {driveBusy === 'login' ? t('settings.driveBusy') : t('start.googleSignIn')}
+            </button>
+          </div>
+        )}
       </div>
     </section>
   );

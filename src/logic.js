@@ -470,6 +470,19 @@ export function upsertCurrentPlan(savedPlans, settings, plan, now) {
   ];
 }
 
+// Full backup payload — the same shape as the JSON export file, reused by
+// the Google Drive copy so the cloud restore behaves exactly like file import.
+export function buildBackupPayload({ settings, plan, savedPlans, history }, now = new Date().toISOString()) {
+  return {
+    version: 'trening2026_1.1',
+    exportDate: now,
+    settings: clone(settings),
+    plan: clone(plan),
+    savedPlans: clone(savedPlans),
+    history: clone(history),
+  };
+}
+
 // Validates the exercise form exactly like the legacy saveExerciseModal().
 export function exerciseFromForm(form, existingId, nowMs, lang = 'pl', weightUnit = 'kg') {
   const t = tFor(lang);

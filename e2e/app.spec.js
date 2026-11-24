@@ -1001,7 +1001,7 @@ test('a backup can be exported and restored, and a broken file is rejected', asy
 });
 
 
-test('start dashboard shows stats, backup shortcut and the coming-soon Google card', async ({ page }) => {
+test('start dashboard shows stats, backup shortcut and the Google sign-in card', async ({ page }) => {
   await seed(page, { [KEYS.history]: legacyHistory });
   await page.locator('#nav-start').click();
   await expect(page.locator('.dashboard-title')).toHaveText('TWÓJ PULPIT');
@@ -1013,7 +1013,9 @@ test('start dashboard shows stats, backup shortcut and the coming-soon Google ca
   await expect(tiles.nth(1).locator('.stat-value')).toHaveText('2');
   await expect(tiles.nth(2)).toContainText('Ostatni trening');
   await expect(tiles.nth(2)).toContainText('2026');
-  await expect(page.locator('.dashboard-card', { hasText: 'Konto Google' })).toContainText('WKRÓTCE');
+  const googleCard = page.locator('.dashboard-card', { hasText: 'Konto Google' });
+  await expect(googleCard).toContainText('Zaloguj z Google');
+  await expect(googleCard).not.toContainText('WKRÓTCE');
   await page.locator('.dashboard-card', { hasText: 'Kopia zapasowa' }).getByRole('button', { name: 'Otwórz ustawienia' }).click();
   await expect(page.getByRole('button', { name: /Pobierz kopię/ })).toBeVisible();
 });
