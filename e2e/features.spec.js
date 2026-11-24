@@ -264,8 +264,9 @@ test('history and settings export workout sets to a CSV file', async ({ page }) 
   await page.setViewportSize({ width: 320, height: 700 });
   const actionBoxes = await page.locator('.hist-actions-row .hist-action-btn').evaluateAll(btns =>
     btns.map(b => ({ top: b.getBoundingClientRect().top, fits: b.scrollWidth <= b.clientWidth })));
-  expect(actionBoxes).toHaveLength(2);
+  expect(actionBoxes).toHaveLength(3);
   expect(actionBoxes[0].top).toBe(actionBoxes[1].top);
+  expect(actionBoxes[2].top).toBe(actionBoxes[1].top);
   expect(actionBoxes.every(b => b.fits)).toBe(true);
 
   const [download] = await Promise.all([

@@ -5,6 +5,7 @@ import { KEYS, loadFromStorage, saveToStorage } from './storage.js';
 import * as audio from './audio.js';
 import * as logic from './logic.js';
 import * as gdrive from './gdrive.js';
+import * as xlsx from './xlsx.js';
 import { useT } from './i18n.jsx';
 import { THEMES, applyTheme, themeById } from './themes.js';
 import {
@@ -689,6 +690,27 @@ export default function App() {
     notify(t('app.exportedCsv'), 'gold');
   }
 
+  function exportXlsx(sessionsToExport = history) {
+    if (!sessionsToExport || sessionsToExport.length === 0) {
+      notify(t('app.exportCsvEmpty'), 'error');
+      return;
+    }
+    const now = new Date().toISOString();
+    const sheets = logic.historyXlsxSheets(sessionsToExport, { lang, unit, savedPlans, settings })
+      .map(sheet => ({ ...sheet, xml: xlsx.sheetXml(sheet) }));
+    const bytes = xlsx.buildXlsx(sheets);
+    const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `trening_historia_${now.slice(0, 10)}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    notify(t('app.exportedXlsx'), 'gold');
+  }
+
   // Wspólne stosowanie kopii dla pliku JSON i przywracania z Google Drive.
   function applyImportedBackup(imported) {
     if (!imported.plan || !imported.history) throw new Error(t('app.importInvalid'));
@@ -1048,6 +1070,7 @@ export default function App() {
             onExerciseName={name => setHistoryFilters(prev => ({ ...prev, exerciseName: name }))}
             onDelete={deleteSession}
             onExportCsv={exportCsv}
+            onExportXlsx={exportXlsx}
             onShare={shareSession}
           />
         )}
@@ -1062,6 +1085,7 @@ export default function App() {
             }}
             onExport={exportData}
             onExportCsv={() => exportCsv(history)}
+            onExportXlsx={() => exportXlsx(history)}
             onImport={importFile}
             onClear={clearHistory}
             onUnit={changeUnit}

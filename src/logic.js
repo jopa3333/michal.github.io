@@ -455,6 +455,68 @@ export function historyToCsv(sessions, { lang = 'pl', unit = 'kg', savedPlans = 
   return '\uFEFF' + rows.join('\r\n');
 }
 
+// Dane do eksportu XLSX: dwa arkusze (serie + podsumowanie treningów).
+// Zwraca [{ name, columns, rows, numericStyles }] — XML składa src/xlsx.js.
+export function historyXlsxSheets(sessions, { lang = 'pl', unit = 'kg', savedPlans = [], settings = null } = {}) {
+  const t = tFor(lang);
+  const planById = new Map((savedPlans || []).map(p => [p.id, p.name]));
+  const planNameFor = session => {
+    const id = sessionPlanId(session, settings);
+    return planById.get(id) || (id === settings?.activePlanId && settings?.activePlanName) || t('history.deletedPlan');
+  };
+
+  const setsColumns = [
+    t('history.csvDate'), t('history.csvPlan'), t('history.csvWeek'), t('history.csvWorkout'),
+    t('history.csvExercise'), t('history.csvSet'), `${t('history.csvWeight')} (${unit})`, t('history.csvReps'),
+  ];
+  // W Excelu trzymamy pełną precyzję jednostki (lb z dwoma miejscami),
+  // bo liczby liczą kolumny s=2 (format 0.00) — csv/display okrągla inaczej.
+  const weightValue = kg => {
+    const num = Number(kg) || 0;
+    const converted = unit === 'lb' ? num * LB_PER_KG : num;
+    return Math.round(converted * 100) / 100;
+  };
+  const setsRows = [];
+  const summaryColumns = [t('history.csvDate'), t('history.csvPlan'), t('history.csvWeek'), t('history.csvWorkout'), t('history.summaryWorkoutSets'), `${t('history.summaryWorkoutVolume')} (${unit})`];
+  const summaryRows = [];
+
+  for (const sess of sessions || []) {
+    const dateStr = String(sess.date || '').slice(0, 10);
+    const planLabel = planNameFor(sess);
+    const workoutLabel = workoutDisplayName(sess.workoutName || sess.workoutId || '', lang);
+    for (const ex of sess.exercises || []) {
+      const exLabel = exerciseDisplayName(ex.name || '', lang);
+      (ex.sets || []).forEach((set, idx) => {
+        const timed = set.measurement === 'seconds';
+        const weighted = !timed && (set.hasWeight ?? (!isBodyweightExercise(ex) || Number(set.weight) > 0));
+        const weight = weighted ? weightValue(Number(set.weight) || 0) : '';
+        const reps = timed ? Number(set.reps) || 0 : Number(set.reps) || '';
+        setsRows.push([dateStr, planLabel, sess.week ?? '', workoutLabel, exLabel, idx + 1, weight, reps]);
+      });
+    }
+    summaryRows.push([
+      dateStr, planLabel, sess.week ?? '', workoutLabel,
+      Number(sess.totalSets) || 0,
+      weightValue(Number(sess.totalVolume) || 0),
+    ]);
+  }
+
+  return [
+    {
+      name: t('history.xlsxSetsSheet'),
+      columns: setsColumns,
+      rows: setsRows,
+      numericStyles: { 2: 2, 6: 2, 7: 3 },
+    },
+    {
+      name: t('history.xlsxSummarySheet'),
+      columns: summaryColumns,
+      rows: summaryRows,
+      numericStyles: { 2: 2, 4: 0, 5: 2 },
+    },
+  ];
+}
+
 export function emptyPlan(days = 3) {
   return Object.fromEntries(Array.from({ length: Math.max(3, Math.min(5, Number(days) || 3)) }, (_, index) => {
     const id = String.fromCharCode(65 + index);

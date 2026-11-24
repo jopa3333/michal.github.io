@@ -1076,3 +1076,28 @@ test('motyw kolorystyczny przełącza się i zapamiętuje po odświeżeniu', asy
   expect(navBgViolet).not.toBe(navBgOcean);
   expect(navBgCrimson).not.toBe(navBgOcean);
 });
+
+test('eksport XLSX działa w Ustawieniach i w Historii (pełny pakiet Excel)', async ({ page }) => {
+  await seed(page, { [KEYS.history]: legacyHistory });
+  await page.locator('#nav-settings').click();
+
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.locator('#exportXlsxSettingsBtn').click(),
+  ]);
+  expect(download.suggestedFilename()).toMatch(/^trening_historia_\d{4}-\d{2}-\d{2}\.xlsx$/);
+  const xlsxPath = await download.path();
+  const fs = await import('node:fs');
+  const header = fs.readFileSync(xlsxPath).subarray(0, 4);
+  expect(Array.from(header)).toEqual([0x50, 0x4b, 0x03, 0x04]); // PK\x03\x04 = XLSX/ZIP
+
+  // Historia: przycisk XLSX eksportuje przefiltrowane sesje.
+  await page.locator('#nav-history').click();
+  await expect(page.locator('#exportXlsxHistoryBtn')).toBeVisible();
+  const [downloadFiltered] = await Promise.all([
+    page.waitForEvent('download'),
+    page.locator('#exportXlsxHistoryBtn').click(),
+  ]);
+  expect(downloadFiltered.suggestedFilename()).toMatch(/\.xlsx$/);
+  await expect(page.locator('text=Gotowe — plik Excel (XLSX) pobrany')).toBeVisible();
+});

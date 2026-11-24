@@ -2,7 +2,7 @@ import { exerciseEntries, exerciseNamesForWorkout, filterHistory, filterHistoryB
 import { useT } from '../i18n.jsx';
 import { canonicalExerciseName, dateLocale, exerciseDisplayName, workoutDisplayName } from '../i18n/core.js';
 
-export function HistoryTab({ history, plan, workout, week, exerciseMode, exerciseName, unit = 'kg', planFilter = 'all', savedPlans = [], settings = null, onWorkout, onWeek, onWeekSelect, onToggleExerciseMode, onReset, onExerciseName, onDelete, onPlan, onExportCsv, onShare }) {
+export function HistoryTab({ history, plan, workout, week, exerciseMode, exerciseName, unit = 'kg', planFilter = 'all', savedPlans = [], settings = null, onWorkout, onWeek, onWeekSelect, onToggleExerciseMode, onReset, onExerciseName, onDelete, onPlan, onExportCsv, onExportXlsx, onShare }) {
   const { t, lang } = useT();
   const planGroups = historyPlanGroups(history, savedPlans, settings);
   const planLabel = id => {
@@ -93,6 +93,11 @@ export function HistoryTab({ history, plan, workout, week, exerciseMode, exercis
             {filtered.length > 0 && onExportCsv && (
               <button type="button" id="exportCsvHistoryBtn" className="btn btn-outline btn-mini hist-action-btn" onClick={() => onExportCsv(filtered)}>
                 {t('history.exportCsv')}
+              </button>
+            )}
+            {filtered.length > 0 && onExportXlsx && (
+              <button type="button" id="exportXlsxHistoryBtn" className="btn btn-outline btn-mini hist-action-btn" onClick={() => onExportXlsx(filtered)}>
+                {t('history.exportXlsx')}
               </button>
             )}
           </div>

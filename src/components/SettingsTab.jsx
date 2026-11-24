@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { useT } from '../i18n.jsx';
 import { THEMES } from '../themes.js';
 
-export function SettingsTab({ settings, onSound, onVibrate, onTest, onExport, onExportCsv, onImport, onClear, onUnit, onAutoRest, activeTheme, onTheme }) {
+export function SettingsTab({ settings, onSound, onVibrate, onTest, onExport, onExportCsv, onExportXlsx, onImport, onClear, onUnit, onAutoRest, activeTheme, onTheme }) {
   const { t, lang, setLang } = useT();
   const fileInput = useRef(null);
   return (
@@ -34,6 +34,7 @@ export function SettingsTab({ settings, onSound, onVibrate, onTest, onExport, on
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
           <button type="button" className="btn btn-primary" onClick={onExport}>{t('settings.export')}</button>
           <button type="button" id="exportCsvSettingsBtn" className="btn btn-outline" onClick={onExportCsv}>{t('settings.exportCsv')}</button>
+          <button type="button" id="exportXlsxSettingsBtn" className="btn btn-outline" onClick={onExportXlsx}>{t('settings.exportXlsx')}</button>
           <button type="button" className="btn btn-outline" onClick={() => fileInput.current && fileInput.current.click()}>
             {t('settings.import')}
           </button>
