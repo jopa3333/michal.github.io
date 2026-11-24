@@ -464,11 +464,11 @@ export default function App() {
     setSession(null);
     setTimer(prev => ({ ...prev, isRunning: false, targetEndTime: null }));
     audio.playTone(settingsRef.current, 523.25, 0.3, 'sine', 0.2);
-    setModal({ kind: 'summary', data: { name: session.workoutName, week: session.week, sets: totalSets, volume, weekProg } });
+    setModal({ kind: 'summary', data: { name: session.workoutName, week: session.week, sets: totalSets, volume, weekProg, record } });
 
     // Cicha automatyczna kopia na Google Drive po skończonym treningu.
     const drive = settings.googleDrive || {};
-    if (drive.autoBackup && drive.email && (drive.clientId || '').trim()) {
+    if (drive.autoBackup && drive.email) {
       driveBackupNow({ silent: true, historyOverride: nextHistory, settingsOverride: finalSettings });
     }
   }
@@ -794,6 +794,26 @@ export default function App() {
     }
   }
 
+  // ---- Udostępnianie podsumowania treningu (Web Share / schowek) ----
+
+  async function shareSession(record) {
+    if (!record) return;
+    const text = logic.buildShareText(record, lang, unit);
+    const title = 'Trening 2026';
+    try {
+      if (navigator.share) {
+        await navigator.share({ title, text });
+        return;
+      }
+      await navigator.clipboard.writeText(text);
+      notify(t('share.copied'), 'gold');
+    } catch (error) {
+      // Schowane okno wyboru aplikacji to nie błąd.
+      if (error && (error.name === 'AbortError' || error.name === 'NotAllowedError')) return;
+      window.prompt(t('share.promptTitle'), text);
+    }
+  }
+
   async function driveRestore() {
     if (!driveState().email) {
       notify(t('app.driveNotConnected'), 'error');
@@ -851,7 +871,7 @@ export default function App() {
       case 'reps':
         return <CustomRepsModal timed={currentExercise ? logic.isTimedExercise(currentExercise) : false} onClose={() => setModal(null)} onSave={saveCustomReps} />;
       case 'summary':
-        return <SummaryModal data={modal.data} history={history} plan={plan} settings={settings} onClose={closeSummary} />;
+        return <SummaryModal data={modal.data} history={history} plan={plan} settings={settings} onClose={closeSummary} onShare={() => shareSession(modal.data.record)} />;
       case 'savedPlans':
         return (
           <SavedPlansModal
@@ -1018,6 +1038,7 @@ export default function App() {
             onExerciseName={name => setHistoryFilters(prev => ({ ...prev, exerciseName: name }))}
             onDelete={deleteSession}
             onExportCsv={exportCsv}
+            onShare={shareSession}
           />
         )}
         {tab === 'settings' && (

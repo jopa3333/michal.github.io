@@ -2,7 +2,7 @@ import { exerciseEntries, exerciseNamesForWorkout, filterHistory, filterHistoryB
 import { useT } from '../i18n.jsx';
 import { canonicalExerciseName, dateLocale, exerciseDisplayName, workoutDisplayName } from '../i18n/core.js';
 
-export function HistoryTab({ history, plan, workout, week, exerciseMode, exerciseName, unit = 'kg', planFilter = 'all', savedPlans = [], settings = null, onWorkout, onWeek, onWeekSelect, onToggleExerciseMode, onReset, onExerciseName, onDelete, onPlan, onExportCsv }) {
+export function HistoryTab({ history, plan, workout, week, exerciseMode, exerciseName, unit = 'kg', planFilter = 'all', savedPlans = [], settings = null, onWorkout, onWeek, onWeekSelect, onToggleExerciseMode, onReset, onExerciseName, onDelete, onPlan, onExportCsv, onShare }) {
   const { t, lang } = useT();
   const planGroups = historyPlanGroups(history, savedPlans, settings);
   const planLabel = id => {
@@ -160,14 +160,14 @@ export function HistoryTab({ history, plan, workout, week, exerciseMode, exercis
         ) : exerciseMode ? (
           <ExerciseHistory sessions={filtered} exerciseName={selectedExercise} unit={unit} />
         ) : (
-          <AllSessions history={history} sessions={filtered} unit={unit} onDelete={onDelete} planTagFor={planFilter === 'all' ? session => planLabel(sessionPlanId(session, settings)) : null} />
+          <AllSessions history={history} sessions={filtered} unit={unit} onDelete={onDelete} onShare={onShare} planTagFor={planFilter === 'all' ? session => planLabel(sessionPlanId(session, settings)) : null} />
         )}
       </div>
     </section>
   );
 }
 
-function AllSessions({ history, sessions, unit = 'kg', onDelete, planTagFor = null }) {
+function AllSessions({ history, sessions, unit = 'kg', onDelete, onShare, planTagFor = null }) {
   const { t, lang } = useT();
   if (sessions.length === 0) {
     return (
@@ -212,9 +212,16 @@ function AllSessions({ history, sessions, unit = 'kg', onDelete, planTagFor = nu
           <span>
             {t('history.volumeLabel')} <strong>{Math.round(toDisplayWeight(session.totalVolume || 0, unit)).toLocaleString(dateLocale(lang))} {unit}</strong> ({t('common.setsCount', { count: session.totalSets || 0 })})
           </span>
-          <button type="button" className="btn btn-outline btn-mini" style={{ color: 'var(--danger-red)', borderColor: 'transparent' }} onClick={() => onDelete(realIndex)}>
-            {t('history.deleteEntry')}
-          </button>
+          <span style={{ display: 'flex', gap: 6 }}>
+            {onShare && (
+              <button type="button" className="btn btn-outline btn-mini share-session-btn" style={{ borderColor: 'transparent', color: 'var(--accent-gold)' }} onClick={() => onShare(session)}>
+                {t('share.button')}
+              </button>
+            )}
+            <button type="button" className="btn btn-outline btn-mini" style={{ color: 'var(--danger-red)', borderColor: 'transparent' }} onClick={() => onDelete(realIndex)}>
+              {t('history.deleteEntry')}
+            </button>
+          </span>
         </div>
       </div>
     );

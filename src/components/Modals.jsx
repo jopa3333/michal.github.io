@@ -211,7 +211,7 @@ export function CustomRepsModal({ onSave, onClose, timed = false }) {
   );
 }
 
-export function SummaryModal({ data, history, plan, settings, onClose }) {
+export function SummaryModal({ data, history, plan, settings, onClose, onShare }) {
   const { t, lang } = useT();
   const unit = settings?.unit === 'lb' ? 'lb' : 'kg';
   const remaining = remainingWorkoutsThisWeek(history, data.week, plan, settings);
@@ -260,6 +260,12 @@ export function SummaryModal({ data, history, plan, settings, onClose }) {
             <span id="sumTotalVolume" style={{ fontWeight: 800, color: 'var(--success-green)' }}>{Math.round(toDisplayWeight(data.volume, unit)).toLocaleString(dateLocale(lang))} {unit}</span>
           </div>
         </div>
+
+        {onShare && data.record && (
+          <button type="button" id="summaryShareBtn" className="btn btn-outline btn-large" style={{ marginBottom: 10, borderColor: 'var(--accent-gold)', color: 'var(--accent-gold)' }} onClick={onShare}>
+            {t('share.button')}
+          </button>
+        )}
 
         <button type="button" className="btn btn-gold btn-large" onClick={onClose}>
           {t('modals.goToHistory')}

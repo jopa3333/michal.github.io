@@ -404,3 +404,49 @@ describe('plan helpers', () => {
     expect(exercise.progressionStep).toBe(0);
   });
 });
+
+describe('buildShareText', () => {
+  const record = {
+    workoutId: 'A',
+    workoutName: 'TRENING A',
+    week: 3,
+    date: '2026-03-08T10:00:00.000Z',
+    totalSets: 3,
+    totalVolume: 999,
+    exercises: [
+      { name: 'Przysiad z sztangą na plecach', sets: [{ weight: 100, reps: 5 }, { weight: 90, reps: 8 }] },
+      { name: 'Plank (deska klasyczna)', sets: [{ weight: 0, reps: 60, measurement: 'seconds' }] },
+    ],
+  };
+
+  it('buduje polskie podsumowanie z nagłówkiem, statystykami, seriami i stopką', () => {
+    const text = logic.buildShareText(record, 'pl', 'kg');
+    expect(text).toContain('TRENING A');
+    expect(text).toContain('Tydzień 3');
+    expect(text).toContain('Serie: 3');
+    expect(text).toContain('999 kg');
+    expect(text).toContain('Przysiad z sztangą na plecach');
+    expect(text).toContain('100 kg × 5');
+    expect(text).toContain('60 s');
+    expect(text).toContain('Trening 2026');
+  });
+
+  it('wybiera najcięższą serię ćwiczenia (nie pierwszą)', () => {
+    const text = logic.buildShareText(record, 'pl', 'kg');
+    expect(text).toContain('100 kg × 5');
+    expect(text).not.toContain('90 kg');
+  });
+
+  it('liczy objętość w funtach i pisze po angielsku', () => {
+    const text = logic.buildShareText(record, 'en', 'lb');
+    expect(text).toContain('Week 3');
+    expect(text).toContain('lb');
+    expect(text).toContain('Your progress, your pace.');
+  });
+
+  it('pomija ćwiczenia bez zapisanych serii', () => {
+    const text = logic.buildShareText({ ...record, exercises: [{ name: 'Pompki', sets: [] }] }, 'pl', 'kg');
+    expect(text).not.toContain('Pompki');
+    expect(text).toContain('Tydzień 3');
+  });
+});

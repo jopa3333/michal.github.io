@@ -300,6 +300,29 @@ export function filterHistory(history, workout, week) {
 }
 
 // ---- History per plan ----
+// Tekst podsumowania treningu do udostępnienia (Web Share / schowek).
+// Najlepsza seria każdego ćwiczenia (najcięższa, a przy czasie najdłuższa).
+export function buildShareText(record, lang = 'pl', unit = 'kg') {
+  const t = tFor(lang);
+  const formatNumber = value => Math.round(value).toLocaleString(dateLocale(lang));
+  const lines = [
+    t('share.heading', { name: workoutDisplayName(record.workoutName, lang), week: record.week }),
+    t('share.stats', { sets: record.totalSets || 0, volume: formatNumber(toDisplayWeight(record.totalVolume || 0, unit)), unit }),
+  ];
+  for (const ex of record.exercises || []) {
+    const sets = (ex.sets || []).filter(s => s.reps !== undefined && s.reps !== null);
+    if (sets.length === 0) continue;
+    const best = sets.reduce((top, s) => {
+      const value = s.measurement === 'seconds' ? Number(s.reps) : Number(s.weight);
+      const topValue = top.measurement === 'seconds' ? Number(top.reps) : Number(top.weight);
+      return value > topValue ? s : top;
+    });
+    lines.push(`• ${exerciseDisplayName(ex.name, lang)}: ${formatRecordedSet(best, ex, lang, unit)}`);
+  }
+  lines.push(t('share.footer'));
+  return lines.join('\n');
+}
+
 // Sessions record planId since multi-plan support; older ones belong to the
 // plan that was active back then (legacyProgressPlanId). Plans that no longer
 // exist are grouped under one "deleted plan" bucket.
