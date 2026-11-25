@@ -2349,11 +2349,13 @@
       font-size: 1.5rem;
       font-weight: 900;
       color: var(--accent-gold);
+      /* Ta sama wysokość linii dla cyfr i daty — wartość w każdym
+         kafelku zaczyna się i kończy na tym samym poziomie. */
+      line-height: 1.5rem;
     }
 
     .stat-value-date {
-      font-size: 0.95rem;
-      line-height: 1.5rem;
+      font-size: 1rem;
       overflow-wrap: anywhere;
     }
 
