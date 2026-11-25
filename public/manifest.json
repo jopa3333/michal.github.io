@@ -4,8 +4,8 @@
   "description": "Aplikacja do prowadzenia treningu siłowego offline",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#022c43",
-  "theme_color": "#022c43",
+  "background_color": "#0a0a0c",
+  "theme_color": "#0a0a0c",
   "orientation": "portrait-primary",
   "lang": "pl",
   "icons": [
