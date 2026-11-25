@@ -74,7 +74,8 @@ function readInitialState() {
   if (!settings.activePlanId) settings = { ...settings, activePlanId: savedPlans[0].id, activePlanName: savedPlans[0].name };
   if (!settings.legacyProgressPlanId) settings = { ...settings, legacyProgressPlanId: settings.activePlanId };
   const progress = logic.applyWeekProgress(history, settings, plan);
-  return { plan, history, settings: progress.settings, weekProg: progress.weekProg, session, savedPlans };
+  settings = logic.healSuggestedWorkout(history, progress.settings, plan);
+  return { plan, history, settings, weekProg: progress.weekProg, session, savedPlans };
 }
 
 // First launch: no language chosen yet and no existing user data.

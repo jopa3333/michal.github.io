@@ -166,16 +166,29 @@ test('beating a historical best shows the gold record toast', async ({ page }) =
     date: '2026-01-05T10:00:00.000Z',
     totalSets: 1,
     totalVolume: 250,
-    exercises: [{ id: 'ex_a_1', name: 'Przysiad z sztangą na plecach', targetSets: 3, sets: [{ weight: 50, reps: 5 }] }],
+    exercises: [{ id: 'ex_b_1', name: 'Martwy ciąg na prostych nogach', targetSets: 3, sets: [{ weight: 50, reps: 5 }] }],
   }];
   await seed(page, { [KEYS.history]: history });
+  await expect(page.locator('.start-title')).toContainText('TRENING B');
   await page.locator('.start-hero .btn-gold').click();
   await page.locator('.weight-display-btn').click();
   await page.locator('#modalWeightInput').fill('60');
   await page.getByRole('button', { name: 'Ustaw ciężar' }).click();
-  await page.locator('.rep-btn', { hasText: /^5$/ }).click();
-  await expect(page.locator('#notif-msg')).toContainText('🏆 Nowy rekord: 60 kg × 5!');
+  await page.locator('.rep-btn', { hasText: /^6$/ }).click();
+  await expect(page.locator('#notif-msg')).toContainText('🏆 Nowy rekord: 60 kg × 6!');
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('trening2026_settings_v1')).prCount)).toBe(1);
+});
+
+test('startup heals a stale suggestion that points at a workout already done this week', async ({ page }) => {
+  const history = [{
+    sessionId: 'stale_a', workoutId: 'A', workoutName: 'TRENING A', week: 1,
+    date: '2026-01-05T10:00:00.000Z', totalSets: 1, totalVolume: 250,
+    exercises: [{ id: 'ex_a_1', name: 'Przysiad z sztangą na plecach', targetSets: 3, sets: [{ weight: 50, reps: 5 }] }],
+  }];
+  const settings = { currentWeek: 1, selectedStartWorkoutId: 'A' };
+  await seed(page, { [KEYS.history]: history, [KEYS.settings]: settings });
+  await expect(page.locator('.start-title')).toContainText('TRENING B');
+  await expect(page.locator('.pill-btn.active')).toContainText('B');
 });
 
 test('dashboard badges open the achievements modal with earned and locked entries', async ({ page }) => {

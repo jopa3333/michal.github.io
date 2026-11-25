@@ -232,6 +232,20 @@ describe('week progression', () => {
     expect(logic.remainingWorkoutsThisWeek([], undefined)).toEqual(['A', 'B', 'C']);
   });
 
+  it('heals a stale suggestion that points at a workout already done this week', () => {
+    const history = [session(2, 'A', 'd', [])];
+    const settings = { currentWeek: 2, selectedStartWorkoutId: 'A' };
+    expect(logic.healSuggestedWorkout(history, settings).selectedStartWorkoutId).toBe('B');
+  });
+
+  it('keeps a valid suggestion and an empty week untouched at startup', () => {
+    const history = [session(2, 'A', 'd', [])];
+    expect(logic.healSuggestedWorkout(history, { currentWeek: 2, selectedStartWorkoutId: 'B' }).selectedStartWorkoutId).toBe('B');
+    expect(logic.healSuggestedWorkout(history, { currentWeek: 3, selectedStartWorkoutId: 'A' }).selectedStartWorkoutId).toBe('A');
+    // Pusty tydzień: nic nie przerobione, każdy wybór jest poprawny.
+    expect(logic.healSuggestedWorkout([], { currentWeek: 2, selectedStartWorkoutId: 'A' }).selectedStartWorkoutId).toBe('A');
+  });
+
   it('keeps progress for each plan separate while retaining legacy records for their original plan', () => {
     const plan = logic.emptyPlan(4);
     const history = [

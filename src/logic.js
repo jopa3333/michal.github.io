@@ -221,6 +221,16 @@ export function remainingWorkoutsThisWeek(history, week, plan, settings) {
   return ids.filter(id => !done.has(id.toUpperCase()));
 }
 
+// Po starcie apki: jeśli zapisana podpowiedź jest już przerobiona w tym
+// tygodniu, wskaż pierwszy jeszcze niezrobiony trening tygodnia. Dzięki temu
+// nieaktualny zapis (np. z innego urządzenia) nie wisi na przerobionym treningu.
+export function healSuggestedWorkout(history, settings, plan) {
+  const remaining = remainingWorkoutsThisWeek(history, settings.currentWeek, plan, settings);
+  const selected = String(settings.selectedStartWorkoutId || '').toUpperCase();
+  if (remaining.length === 0 || remaining.includes(selected)) return { ...settings };
+  return { ...settings, selectedStartWorkoutId: remaining[0] };
+}
+
 // Advances the week when every workout of the current week is done.
 export function applyWeekProgress(history, settings, plan) {
   const startWeek = Number(settings.currentWeek) || 1;
