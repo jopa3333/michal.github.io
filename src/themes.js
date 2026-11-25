@@ -30,9 +30,15 @@ export function themeById(id) {
 
 // Ustawia motyw na <html data-theme="..."> — ocean to brak atrybutu,
 // żeby domyślny wygląd nigdy nie zależał od kolejności ładowania.
+// Android barwi pasek adresu/systemowy z <meta name="theme-color">,
+// więc przepisujemy go kolorem bazowym motywu (iPhone go ignoruje
+// i używa własnego czarnego paska, tam nic się nie zmienia).
 export function applyTheme(id) {
   if (typeof document === 'undefined') return;
   const theme = themeById(id);
-  if (theme.id === DEFAULT_THEME) document.documentElement.removeAttribute('data-theme');
-  else document.documentElement.setAttribute('data-theme', theme.id);
+  const root = document.documentElement;
+  if (theme.id === DEFAULT_THEME) root.removeAttribute('data-theme');
+  else root.setAttribute('data-theme', theme.id);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', theme.swatch.bg);
 }

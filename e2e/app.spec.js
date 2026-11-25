@@ -1067,6 +1067,13 @@ test('motyw kolorystyczny przełącza się i zapamiętuje po odświeżeniu', asy
   await page.locator('#themeSelect').selectOption('ocean');
   await expect(page.locator('html')).not.toHaveAttribute('data-theme', 'crimson');
 
+  // Android barwie pasek systemowy z meta theme-color — motyw przepisuje go swoim kolorem bazowym.
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#022c43');
+  await page.locator('#themeSelect').selectOption('onyx');
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#0a0a0c');
+  await page.locator('#themeSelect').selectOption('ocean');
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#022c43');
+
   // Motyw farbuje też dolny pasek nawigacji (nie tylko tło sekcji).
   const navBgOcean = await page.evaluate(() => getComputedStyle(document.querySelector('.bottom-nav')).backgroundColor);
   await page.locator('#themeSelect').selectOption('violet');
