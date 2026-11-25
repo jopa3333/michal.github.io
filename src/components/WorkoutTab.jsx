@@ -80,7 +80,7 @@ function ActiveWorkout(props) {
   const {
     session, index, timer, onOpenDrawer, onOpenWeight, onAdjustWeight, onToggleWeight, onRecord, onOpenReps,
     onRemoveSet, onAddSet, onRemoveSetTarget, onNavigate, onFinish, onToggleTimer, onAdjustTimer, onResetTimer,
-    onOpenPlates, settings,
+    onOpenPlates, settings, onOpenAtlas,
   } = props;
   const { t, lang } = useT();
   const unit = settings?.unit === 'lb' ? 'lb' : 'kg';
@@ -117,6 +117,16 @@ function ActiveWorkout(props) {
         <div className="exercise-main-card">
           <div className="exercise-header-compact">
             <h2 className="exercise-name-header">{exerciseDisplayName(ex.name, lang)}</h2>
+            <button
+              type="button"
+              className="btn-atlas-info"
+              onClick={() => onOpenAtlas(ex.name)}
+              title={t('atlas.showInCard')}
+              aria-label={t('atlas.showInCard')}
+              data-testid="atlas-info-btn"
+            >
+              📖
+            </button>
             <div className="exercise-tags">
               <span className="tag">{t('workout.setsTag', { sets: ex.setsTarget, reps: repsDisplay(ex), unit: repUnit })}</span>
               <span className="tag tag-tempo">{t('workout.tempoTag', { tempo: ex.tempo || '2010' })}</span>

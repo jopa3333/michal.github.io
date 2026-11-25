@@ -1,5 +1,5 @@
 /* ============================================================
-   SERVICE WORKER — Trening 2026 PWA (Wersja v33)
+   SERVICE WORKER — Trening 2026 PWA (Wersja v34)
    Nawigacja: cache-first z odświeżaniem w tle. Android często
    porzuca proces karty PWA w tle, a powrót wymusza pełne
    przeładowanie — serwowanie index.html z cache zamiast z sieci
@@ -14,7 +14,7 @@
    (pilnuje tego tests/unit/sw.test.js).
    ============================================================ */
 
-const CACHE_NAME = 'trening2026-v33';
+const CACHE_NAME = 'trening2026-v34';
 const ASSETS = [
   './',
   './index.html',

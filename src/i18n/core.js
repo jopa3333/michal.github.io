@@ -14,12 +14,13 @@ import history from './history.js';
 import start from './start.js';
 import settings from './settings.js';
 import audio from './audio.js';
+import atlas from './atlas.js';
 
 export const LANG_KEY = 'trening2026_lang_v1';
 export const LANGS = ['pl', 'en'];
 
 const DICT = { pl: {}, en: {} };
-for (const area of [COMMON, app, workout, modals, plan, history, start, settings, audio]) {
+for (const area of [COMMON, app, workout, modals, plan, history, start, settings, audio, atlas]) {
   Object.assign(DICT.pl, area.pl);
   Object.assign(DICT.en, area.en);
 }

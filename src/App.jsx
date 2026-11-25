@@ -15,6 +15,7 @@ import { HistoryTab } from './components/HistoryTab.jsx';
 import { PlanTab } from './components/PlanTab.jsx';
 import { SettingsTab } from './components/SettingsTab.jsx';
 import { StartTab } from './components/StartTab.jsx';
+import { AtlasModal } from './components/AtlasModal.jsx';
 import { WorkoutTab } from './components/WorkoutTab.jsx';
 import {
   CustomRepsModal,
@@ -909,6 +910,8 @@ export default function App() {
         return <PlatesModal weightKg={currentWeight} unit={unit} mode={modal.mode} onClose={() => setModal(null)} />;
       case 'achievements':
         return <AchievementsModal history={history} settings={settings} onClose={() => setModal(null)} />;
+      case 'atlas':
+        return <AtlasModal initialName={modal.focus || null} onClose={() => setModal(null)} />;
       case 'reps':
         return <CustomRepsModal timed={currentExercise ? logic.isTimedExercise(currentExercise) : false} onClose={() => setModal(null)} onSave={saveCustomReps} />;
       case 'summary':
@@ -1006,6 +1009,7 @@ export default function App() {
             onContinue={() => goTab('workout')}
             onOpenSettings={() => goTab('settings')}
             onOpenAchievements={() => setModal({ kind: 'achievements' })}
+            onOpenAtlas={() => setModal({ kind: 'atlas' })}
             onDriveLogin={driveLogin}
             onDriveBackup={() => driveBackupNow()}
             onDriveRestore={driveRestore}
@@ -1039,6 +1043,7 @@ export default function App() {
             onAdjustTimer={adjustTimer}
             onResetTimer={() => resetTimer(restAt(exIndex))}
             onOpenPlates={mode => setModal({ kind: 'plates', mode })}
+            onOpenAtlas={name => setModal({ kind: 'atlas', focus: name })}
           />
         )}
         {tab === 'plan' && (

@@ -5,7 +5,7 @@ import { dateLocale } from '../i18n/core.js';
 // Start is now the account/dashboard hub; the workout picker hero lives in WorkoutTab.
 export function StartTab({
   settings, session, history, drive,
-  onContinue, onOpenSettings, onOpenAchievements,
+  onContinue, onOpenSettings, onOpenAchievements, onOpenAtlas,
   onDriveLogin, onDriveBackup, onDriveRestore, onDriveAuto, onDriveLogout, driveBusy,
 }) {
   const { t, lang } = useT();
@@ -44,6 +44,11 @@ export function StartTab({
             <span className="stat-label">{t('start.statLast')}</span>
           </div>
         </div>
+
+        <button type="button" className="dashboard-card atlas-tile" onClick={onOpenAtlas} data-testid="atlas-tile">
+          <div className="dashboard-card-title">📖 {t('atlas.startTile')}</div>
+          <p className="dashboard-card-text">{t('atlas.startTileText')}</p>
+        </button>
 
         <button type="button" className="dashboard-card dashboard-badges" onClick={onOpenAchievements}>
           <div className="dashboard-card-title">
