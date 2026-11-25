@@ -435,7 +435,9 @@
       /* Przewijanie treści nie może porywać całej strony na iOS. */
       overscroll-behavior: contain;
       padding: 12px 14px;
-      padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 16px);
+      /* Pasek dolny jest w layoutu pod tym kontenerem, więc treść
+         nie musi już rezerwować na niego miejsca. */
+      padding-bottom: 16px;
       max-width: 720px;
       margin: 0 auto;
       width: 100%;
@@ -452,7 +454,7 @@
 
       .main-content {
         padding: 8px 10px;
-        padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 12px);
+        padding-bottom: 12px;
       }
     }
 
@@ -475,10 +477,10 @@
 
     /* Pasek nawigacyjny na dole - dostosowany do iPhone (Safe Area Inset) */
     .bottom-nav {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
+      /* Pasek jest zwykłym elementem na końcu kolumny flex (ekran ma
+         stałą wysokość), a nie przyklejony do okna — dzięki temu niczego
+         nie zasłania i nie może „odjechać" od dolnej krawędzi. */
+      flex-shrink: 0;
       height: calc(var(--bottom-nav-height) + var(--safe-bottom));
       padding-bottom: var(--safe-bottom);
       box-sizing: border-box;
@@ -486,7 +488,7 @@
       border-top: 1px solid var(--border-color);
       display: flex;
       justify-content: space-around;
-      align-items: flex-start;
+      align-items: stretch;
       padding-top: clamp(2px, 0.5vh, 5px);
       z-index: 1000;
       box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.4);
@@ -494,7 +496,8 @@
 
     .nav-item {
       flex: 1;
-      height: var(--bottom-nav-height);
+      /* Wysokość wynika z rozciągnięcia paska (align-items: stretch),
+         żeby guziki nie wystawały poza pasek ani nie rozpychały okna. */
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -529,12 +532,6 @@
 
     @media (min-width: 700px) {
       :root { --bottom-nav-height: 68px; }
-      .bottom-nav {
-        left: 50%;
-        right: auto;
-        width: min(100%, 720px);
-        transform: translateX(-50%);
-      }
     }
 
     .nav-item.active {
