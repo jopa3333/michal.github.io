@@ -32,5 +32,10 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
+      # GitHub ujawnia wgrany artefakt na liście z opóźnieniem — bez
+      # przerwy deploy-pages@v4 potrafi nie znaleźć świeżo wgranego
+      # artefaktu i wywalić całą publikację (częsty poślizg GitHuba).
+      - name: Odczekaj na widoczność artefaktu
+        run: sleep 20
       - id: deployment
         uses: actions/deploy-pages@v4
