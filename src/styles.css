@@ -430,16 +430,19 @@
 
     .tab-view {
       display: none;
-      animation: fadeIn 0.2s ease-out;
+      animation: fadeIn 0.15s ease-out;
     }
 
     .tab-view.active {
       display: block;
     }
 
+    /* Czyste zanikanie bez przesuwania pionowego — treść zakładki
+       nie „podskakuje" przy przełączaniu (zauważalne zwłaszcza
+       na Treningu z dużym nagłówkiem). */
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(6px); }
-      to { opacity: 1; transform: translateY(0); }
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
 
     /* Pasek nawigacyjny na dole - dostosowany do iPhone (Safe Area Inset) */
@@ -508,6 +511,12 @@
 
     .nav-item.active {
       color: var(--accent-gold);
+    }
+
+    /* Wyczuwalny odzew dotknięcia na telefonie — ikona delikatnie
+       „dociśniętego" przycisku, bez przesuwania paska. */
+    .nav-item:active {
+      transform: scale(0.9);
     }
 
     .nav-item.active::after {
