@@ -308,17 +308,38 @@
 
     html {
       background-color: var(--bg-dark);
+      /* iOS odbija krotka strone w gore i dol (rubber-band) i przy
+         odbiciu porywa przypiete dolne menu — ikonki skacza, a pod
+         paskiem odsłania sie pusty pas. Wylaczamy odbicie całej
+         strony; normalne przewijanie zostaje bez zmian. */
+      overscroll-behavior: none;
     }
 
     body {
       background-color: var(--bg-dark);
       color: var(--text-main);
       font-family: var(--font-family);
-      min-height: 100vh;
-      min-height: -webkit-fill-available;
+      /* Ekran apki ma stałą wysokość widocznego obszaru (100dvh = dynamic
+         viewport height, dopasowuje się do pasków przeglądarki). Okno się
+         nie przewija — treść przewija się w .main-content. Dzięki temu
+         iOS Safari nie chowa pasków po wejściu w zakładkę Trening i
+         przypięte dolne menu trzyma zawsze tę samą linię. */
+      height: 100vh;
+      height: 100dvh;
       display: flex;
       flex-direction: column;
-      overflow-x: hidden;
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
+
+    /* Kontener Reacta musi prowadzić łańcuch flex dalej (body -> #root ->
+       main-content), inaczej main-content nie dostaje ograniczonej wysokości
+       i rozpycha okno zamiast przewijać treść w środku. */
+    #root {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
     }
 
     button {
@@ -406,6 +427,13 @@
 
     .main-content {
       flex: 1;
+      /* W kontenerze flex dzieci domyślnie rosną do wysokości treści
+         (min-height: auto) — bez min-height: 0 zamiast przewijać się
+         w środku, rozpychałyby okno. */
+      min-height: 0;
+      overflow-y: auto;
+      /* Przewijanie treści nie może porywać całej strony na iOS. */
+      overscroll-behavior: contain;
       padding: 12px 14px;
       padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 16px);
       max-width: 720px;

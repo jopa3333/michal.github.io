@@ -270,6 +270,14 @@ export default function App() {
 
   // ---- Navigation and sessions ----
 
+  // Treść przewija się w .main-content (okno ma stałą wysokość), więc
+  // powrót na górę przy zmianie zakładki/ćwiczenia resetuje ten kontener.
+  const mainContentRef = useRef(null);
+  const scrollToTop = () => {
+    if (mainContentRef.current) mainContentRef.current.scrollTop = 0;
+    else window.scrollTo(0, 0);
+  };
+
   const exIndex = session ? Math.min(exerciseIndex, Math.max(session.exercises.length - 1, 0)) : 0;
   const restAt = index => (session && session.exercises[index] && session.exercises[index].restSeconds) || 90;
   const currentExercise = session ? session.exercises[exIndex] : null;
@@ -277,7 +285,7 @@ export default function App() {
   function goTab(id) {
     setTab(id);
     if (id === 'workout' && session) initExerciseTimer(restAt(exIndex));
-    window.scrollTo(0, 0);
+    scrollToTop();
   }
 
   function startWorkout(workoutId) {
@@ -305,7 +313,7 @@ export default function App() {
     setExerciseIndex(0);
     setTab('workout');
     initExerciseTimer(next.exercises[0].restSeconds || 90);
-    window.scrollTo(0, 0);
+    scrollToTop();
     notify(t('app.started', { name: workoutDisplayName(workout.name, lang), week: settings.currentWeek }));
   }
 
@@ -323,7 +331,7 @@ export default function App() {
     setExerciseIndex(next);
     setSession(prev => (prev ? { ...prev, currentExerciseIndex: next } : prev));
     initExerciseTimer(restAt(next));
-    window.scrollTo(0, 0);
+    scrollToTop();
   }
 
   function selectExerciseFromDrawer(index) {
@@ -482,7 +490,7 @@ export default function App() {
   function closeSummary() {
     setModal(null);
     setTab('history');
-    window.scrollTo(0, 0);
+    scrollToTop();
     notify(t('app.savedOk'), 'gold');
   }
 
@@ -982,7 +990,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="main-content">
+      <main className="main-content" ref={mainContentRef}>
         {settings.backupReminderPending && !modal && (
           <section className="backup-reminder" role="region" aria-label={t('app.backupReminderLabel')}>
             <span>{t('app.backupReminder')}</span>
