@@ -977,7 +977,13 @@ export default function App() {
 
       <header className="app-header">
         <div className="app-logo">
-          <span className="logo-icon">🏋️</span>
+          <span className="logo-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" focusable="false">
+              <rect x="1" y="8.5" width="4.4" height="7" rx="1.6" />
+              <rect x="18.6" y="8.5" width="4.4" height="7" rx="1.6" />
+              <rect x="4.6" y="10.4" width="14.8" height="3.2" rx="1.6" />
+            </svg>
+          </span>
           <span className="logo-title">{t('app.logo')}</span>
           <span className="logo-badge" id="headerWeekBadge">{t('app.weekBadge', { week: settings.currentWeek })}</span>
         </div>

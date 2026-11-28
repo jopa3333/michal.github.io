@@ -379,6 +379,13 @@
     .logo-icon {
       font-size: 24px;
       color: var(--accent-gold);
+      display: inline-flex;
+    }
+
+    .logo-icon svg {
+      width: 1em;
+      height: 1em;
+      display: block;
     }
 
     .logo-title {

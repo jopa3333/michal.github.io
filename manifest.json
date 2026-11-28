@@ -1,6 +1,6 @@
 {
-  "name": "Asystent Treningowy 2026",
-  "short_name": "Trening",
+  "name": "Trecord",
+  "short_name": "Trecord",
   "description": "Aplikacja do prowadzenia treningu siłowego offline",
   "start_url": "./index.html",
   "display": "standalone",

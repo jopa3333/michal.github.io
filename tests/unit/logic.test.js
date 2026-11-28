@@ -442,7 +442,7 @@ describe('buildShareText', () => {
     expect(text).toContain('Przysiad z sztangą na plecach');
     expect(text).toContain('100 kg × 5');
     expect(text).toContain('60 s');
-    expect(text).toContain('Trening 2026');
+    expect(text).toContain('Zapisane w Trecord');
   });
 
   it('wybiera najcięższą serię ćwiczenia (nie pierwszą)', () => {
