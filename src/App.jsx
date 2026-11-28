@@ -834,7 +834,7 @@ export default function App() {
   async function shareSession(record) {
     if (!record) return;
     const text = logic.buildShareText(record, lang, unit);
-    const title = 'Trening 2026';
+    const title = 'Trecord';
     try {
       if (navigator.share) {
         await navigator.share({ title, text });
