@@ -382,10 +382,12 @@
       display: inline-flex;
     }
 
-    .logo-icon svg {
+    .logo-icon svg,
+    .logo-icon img {
       width: 1em;
       height: 1em;
       display: block;
+      border-radius: 50%;
     }
 
     .logo-title {
@@ -453,7 +455,7 @@
     @media (max-width: 600px) {
       .app-header { padding-left: 10px; padding-right: 10px; gap: 4px; }
       .app-logo { gap: 4px; min-width: 0; white-space: nowrap; }
-      .logo-icon { font-size: 18px; }
+      .logo-icon { font-size: 22px; }
       .logo-title { font-size: 0.8rem; letter-spacing: 0; }
       .logo-badge { font-size: 0.65rem; padding: 3px 5px; white-space: nowrap; }
       .header-right { flex-shrink: 0; }
